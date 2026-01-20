@@ -9,8 +9,8 @@ import ReferenceImageUpload from './components/ReferenceImageUpload'
 import StylePresets from './components/StylePresets'
 import PromptPreview from './components/PromptPreview'
 import { generateImage, getProviderInfo } from './api/imageGen'
-import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear, getAllPresets, savePreset, deletePreset } from './services/database'
-import { startSession, endSession, updateSessionStats, getSessionStats, getActiveSession } from './services/sessionTracker'
+import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear, getAllPresets, savePreset, deletePreset, getActiveSession } from './services/database'
+import { startSession, endSession, updateSessionStats, getSessionStats } from './services/sessionTracker'
 import { initGoogleCalendar, signIn, signOut, isSignedIn, createFocusTimeEvent, updateSessionEvent } from './services/calendar'
 
 // Build optimized prompt based on Amazon listing image type
