@@ -5,8 +5,11 @@ import History from './components/History'
 import Gallery from './components/Gallery'
 import SessionPanel from './components/SessionPanel'
 import SettingsPanel from './components/SettingsPanel'
+import ReferenceImageUpload from './components/ReferenceImageUpload'
+import StylePresets from './components/StylePresets'
+import PromptPreview from './components/PromptPreview'
 import { generateImage, getProviderInfo } from './api/imageGen'
-import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear } from './services/database'
+import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear, getAllPresets, savePreset, deletePreset } from './services/database'
 import { startSession, endSession, updateSessionStats, getSessionStats, getActiveSession } from './services/sessionTracker'
 import { initGoogleCalendar, signIn, signOut, isSignedIn, createFocusTimeEvent, updateSessionEvent } from './services/calendar'
 
@@ -41,6 +44,10 @@ function App() {
   const [allImages, setAllImages] = useState([])
   const [allSessions, setAllSessions] = useState([])
 
+  // Reference images state
+  const [referenceImages, setReferenceImages] = useState([])
+  const [stylePresets, setStylePresets] = useState([])
+
   // Session state
   const [activeSession, setActiveSession] = useState(null)
   const [sessionStats, setSessionStats] = useState(null)
@@ -68,6 +75,7 @@ function App() {
         const sessions = await getAll('sessions')
         const stats = await getSessionStats()
         const active = await getActiveSession()
+        const presets = await getAllPresets()
 
         setAllImages(images)
         setHistory(images.slice(0, 50))
@@ -75,6 +83,7 @@ function App() {
         setAllSessions(sessions)
         setSessionStats(stats)
         setActiveSession(active)
+        setStylePresets(presets || [])
 
         // Initialize Google Calendar
         const calendarReady = await initGoogleCalendar()
@@ -121,7 +130,10 @@ function App() {
     try {
       const fullPrompt = buildAmazonPrompt(prompt, imageType, productCategory)
 
-      const result = await generateImage(fullPrompt, {}, (progress) => {
+      // Pass reference images to API
+      const result = await generateImage(fullPrompt, {
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined
+      }, (progress) => {
         setLoadingProgress(progress)
       })
 
@@ -136,7 +148,9 @@ function App() {
         model: result.model,
         sessionId: session.id,
         isFavorite: false,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        usedReferences: result.usedReferences || 0,
+        referenceCount: referenceImages.length
       }
 
       // Save to database
@@ -157,7 +171,7 @@ function App() {
       setIsLoading(false)
       setLoadingProgress(null)
     }
-  }, [prompt, imageType, productCategory, activeSession, isCalendarConnected, dbReady])
+  }, [prompt, imageType, productCategory, activeSession, isCalendarConnected, dbReady, referenceImages])
 
   // Session management
   const handleStartSession = useCallback(async (projectName) => {
@@ -287,6 +301,31 @@ function App() {
     setSessionStats(null)
   }, [dbReady])
 
+  // Style preset management
+  const handleSavePreset = useCallback(async (preset) => {
+    if (dbReady) {
+      await savePreset(preset)
+    }
+    setStylePresets(prev => [...prev, preset])
+  }, [dbReady])
+
+  const handleLoadPreset = useCallback((preset) => {
+    // Load reference images from the preset
+    const loadedImages = preset.images.map(img => ({
+      ...img,
+      id: `ref-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      preview: img.base64 // Use base64 as preview since we don't have object URLs
+    }))
+    setReferenceImages(loadedImages)
+  }, [])
+
+  const handleDeletePreset = useCallback(async (presetId) => {
+    if (dbReady) {
+      await deletePreset(presetId)
+    }
+    setStylePresets(prev => prev.filter(p => p.id !== presetId))
+  }, [dbReady])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -355,6 +394,25 @@ function App() {
               setImageType={setImageType}
               productCategory={productCategory}
               setProductCategory={setProductCategory}
+            />
+            <ReferenceImageUpload
+              referenceImages={referenceImages}
+              setReferenceImages={setReferenceImages}
+              disabled={isLoading}
+            />
+            <StylePresets
+              presets={stylePresets}
+              currentImages={referenceImages}
+              onSavePreset={handleSavePreset}
+              onLoadPreset={handleLoadPreset}
+              onDeletePreset={handleDeletePreset}
+              disabled={isLoading}
+            />
+            <PromptPreview
+              textPrompt={prompt}
+              referenceImages={referenceImages}
+              imageType={imageType}
+              productCategory={productCategory}
             />
             <History
               history={history}

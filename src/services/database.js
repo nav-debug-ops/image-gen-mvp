@@ -1,10 +1,10 @@
 /**
  * IndexedDB Database Service
- * Provides persistent storage for sessions, images, and project data
+ * Provides persistent storage for sessions, images, projects, and style presets
  */
 
 const DB_NAME = 'amazon-listing-generator'
-const DB_VERSION = 1
+const DB_VERSION = 2 // Upgraded for style presets
 
 let db = null
 
@@ -50,6 +50,14 @@ export async function initDatabase() {
         const eventsStore = database.createObjectStore('calendarEvents', { keyPath: 'id' })
         eventsStore.createIndex('sessionId', 'sessionId', { unique: false })
         eventsStore.createIndex('googleEventId', 'googleEventId', { unique: false })
+      }
+
+      // Style presets store - saved reference image combinations (v2)
+      if (!database.objectStoreNames.contains('stylePresets')) {
+        const presetsStore = database.createObjectStore('stylePresets', { keyPath: 'id' })
+        presetsStore.createIndex('name', 'name', { unique: false })
+        presetsStore.createIndex('createdAt', 'createdAt', { unique: false })
+        presetsStore.createIndex('projectId', 'projectId', { unique: false })
       }
     }
   })
@@ -163,6 +171,23 @@ export async function getAllProjects() {
 
 export async function saveProject(project) {
   return put('projects', project)
+}
+
+// Style preset helpers
+export async function getAllPresets() {
+  return getAll('stylePresets')
+}
+
+export async function savePreset(preset) {
+  return put('stylePresets', preset)
+}
+
+export async function deletePreset(presetId) {
+  return remove('stylePresets', presetId)
+}
+
+export async function getPresetsByProject(projectId) {
+  return getByIndex('stylePresets', 'projectId', projectId)
 }
 
 export { db }
