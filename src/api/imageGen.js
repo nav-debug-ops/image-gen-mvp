@@ -5,6 +5,7 @@
  * - Replicate (Flux, SDXL models)
  * - OpenAI (DALL-E 3)
  * - Stability AI
+ * - Google Gemini (Imagen)
  * - Demo mode (placeholder images for testing)
  *
  * Features:
@@ -32,6 +33,10 @@ export const AVAILABLE_MODELS = {
   stability: [
     { id: 'stable-diffusion-xl-1024-v1-0', name: 'SDXL 1.0', description: 'High quality', supportsImg2Img: true },
     { id: 'stable-image-core', name: 'Stable Image Core', description: 'Fast, good quality', supportsImg2Img: true }
+  ],
+  gemini: [
+    { id: 'imagen-3.0-generate-002', name: 'Imagen 3', description: 'Latest Google model, high quality', supportsImg2Img: false },
+    { id: 'imagen-3.0-fast-generate-001', name: 'Imagen 3 Fast', description: 'Faster generation', supportsImg2Img: false }
   ]
 }
 
@@ -398,6 +403,175 @@ async function generateStability(prompt, options = {}, onProgress) {
   }
 }
 
+// Google Gemini (Imagen) API
+async function generateGemini(prompt, options = {}, onProgress) {
+  const { model = 'imagen-3.0-generate-002', aspectRatio = '1:1', referenceImages } = options
+  const refPayload = buildReferencePayload(referenceImages)
+  const hasReferences = refPayload && refPayload.length > 0
+
+  onProgress?.({ status: 'starting', message: 'Connecting to Google Gemini...' })
+
+  // Map aspect ratio to Imagen format
+  const aspectRatioMap = {
+    '1:1': '1:1',
+    '16:9': '16:9',
+    '9:16': '9:16',
+    '4:3': '4:3',
+    '3:4': '3:4'
+  }
+  const imagenAspectRatio = aspectRatioMap[aspectRatio] || '1:1'
+
+  // Build the request for Imagen API
+  const requestBody = {
+    instances: [
+      {
+        prompt: prompt
+      }
+    ],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: imagenAspectRatio,
+      safetyFilterLevel: 'block_few',
+      personGeneration: 'allow_adult',
+      outputOptions: {
+        mimeType: 'image/png'
+      }
+    }
+  }
+
+  // If reference images provided, add to request (for edit mode)
+  if (hasReferences) {
+    requestBody.instances[0].image = {
+      bytesBase64Encoded: refPayload[0].base64
+    }
+    // Adjust for image editing
+    requestBody.parameters.editConfig = {
+      editMode: 'inpaint-insert',
+      maskMode: {
+        maskType: 'BACKGROUND'
+      }
+    }
+  }
+
+  // Use Vertex AI endpoint for Imagen
+  // Note: For Google AI Studio, use generativelanguage.googleapis.com
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'x-goog-api-key': API_KEY
+    },
+    body: JSON.stringify(requestBody)
+  })
+
+  onProgress?.({ status: 'processing', progress: 50, message: 'Generating image...' })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
+
+  // Extract image from response
+  const imageData = data.predictions?.[0]?.bytesBase64Encoded ||
+                    data.predictions?.[0]?.image?.bytesBase64Encoded
+
+  if (!imageData) {
+    throw new Error('No image returned from Gemini API')
+  }
+
+  return {
+    url: `data:image/png;base64,${imageData}`,
+    provider: 'gemini',
+    model,
+    usedReferences: hasReferences ? 1 : 0
+  }
+}
+
+// Alternative: Gemini 2.0 with native image generation
+async function generateGeminiNative(prompt, options = {}, onProgress) {
+  const { referenceImages } = options
+  const refPayload = buildReferencePayload(referenceImages)
+  const hasReferences = refPayload && refPayload.length > 0
+
+  onProgress?.({ status: 'starting', message: 'Connecting to Gemini 2.0...' })
+
+  // Build content parts
+  const parts = [{ text: prompt }]
+
+  // Add reference image if provided
+  if (hasReferences) {
+    parts.unshift({
+      inlineData: {
+        mimeType: 'image/png',
+        data: refPayload[0].base64
+      }
+    })
+    parts[1].text = `Using the provided image as reference: ${prompt}`
+  }
+
+  const requestBody = {
+    contents: [{
+      parts: parts
+    }],
+    generationConfig: {
+      responseModalities: ['image', 'text'],
+      responseMimeType: 'image/png'
+    }
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    }
+  )
+
+  onProgress?.({ status: 'processing', progress: 50, message: 'Generating image...' })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error?.message || `Gemini API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
+
+  // Find image part in response
+  const candidates = data.candidates || []
+  let imageBase64 = null
+
+  for (const candidate of candidates) {
+    for (const part of candidate.content?.parts || []) {
+      if (part.inlineData?.mimeType?.startsWith('image/')) {
+        imageBase64 = part.inlineData.data
+        break
+      }
+    }
+    if (imageBase64) break
+  }
+
+  if (!imageBase64) {
+    throw new Error('No image generated. Try a different prompt.')
+  }
+
+  return {
+    url: `data:image/png;base64,${imageBase64}`,
+    provider: 'gemini',
+    model: 'gemini-2.0-flash-exp',
+    usedReferences: hasReferences ? 1 : 0
+  }
+}
+
 /**
  * Main image generation function
  * @param {string} prompt - The image generation prompt
@@ -417,6 +591,12 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
         return await generateOpenAI(prompt, options, onProgress)
       case 'stability':
         return await generateStability(prompt, options, onProgress)
+      case 'gemini':
+        // Use native Gemini 2.0 for image generation (more reliable)
+        return await generateGeminiNative(prompt, options, onProgress)
+      case 'gemini-imagen':
+        // Use Imagen API directly
+        return await generateGemini(prompt, options, onProgress)
       case 'demo':
       default:
         return await generateDemo(prompt, options, onProgress)
@@ -507,6 +687,17 @@ export async function validateCredentials() {
         return {
           valid: stabResponse.ok,
           message: stabResponse.ok ? 'Stability AI connected' : 'Invalid Stability key'
+        }
+
+      case 'gemini':
+      case 'gemini-imagen':
+        // Test Gemini API by listing models
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`
+        )
+        return {
+          valid: geminiResponse.ok,
+          message: geminiResponse.ok ? 'Google Gemini connected' : 'Invalid Gemini API key'
         }
 
       default:
