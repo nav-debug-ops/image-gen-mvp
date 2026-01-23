@@ -37,6 +37,12 @@ export const AVAILABLE_MODELS = {
   gemini: [
     { id: 'imagen-3.0-generate-002', name: 'Imagen 3', description: 'Latest Google model, high quality', supportsImg2Img: false },
     { id: 'imagen-3.0-fast-generate-001', name: 'Imagen 3 Fast', description: 'Faster generation', supportsImg2Img: false }
+  ],
+  banana: [
+    { id: 'sdxl', name: 'SDXL', description: 'Stable Diffusion XL on Banana', supportsImg2Img: true },
+    { id: 'sdxl-turbo', name: 'SDXL Turbo', description: 'Fast SDXL variant', supportsImg2Img: true },
+    { id: 'kandinsky', name: 'Kandinsky 2.2', description: 'High quality, artistic', supportsImg2Img: true },
+    { id: 'custom', name: 'Custom Model', description: 'Your deployed model', supportsImg2Img: true }
   ]
 }
 
@@ -572,6 +578,131 @@ async function generateGeminiNative(prompt, options = {}, onProgress) {
   }
 }
 
+// Banana.dev API - Serverless GPU for ML models
+const BANANA_MODEL_KEY = import.meta.env.VITE_BANANA_MODEL_KEY
+
+async function generateBanana(prompt, options = {}, onProgress) {
+  const { model = 'sdxl', referenceImages } = options
+  const refPayload = buildReferencePayload(referenceImages)
+  const hasReferences = refPayload && refPayload.length > 0
+
+  onProgress?.({ status: 'starting', message: 'Connecting to Banana.dev...' })
+
+  // Banana API requires both API key and model key
+  const modelKey = BANANA_MODEL_KEY || options.modelKey
+
+  if (!modelKey) {
+    throw new Error('Banana model key required. Set VITE_BANANA_MODEL_KEY in .env')
+  }
+
+  // Build input based on model type
+  let modelInputs = {
+    prompt: prompt,
+    num_inference_steps: 30,
+    guidance_scale: 7.5,
+    width: 1024,
+    height: 1024
+  }
+
+  // Add reference image for img2img
+  if (hasReferences) {
+    modelInputs.init_image = refPayload[0].base64
+    modelInputs.strength = refPayload[0].strength
+  }
+
+  // Adjust inputs based on model
+  if (model === 'sdxl-turbo') {
+    modelInputs.num_inference_steps = 4
+    modelInputs.guidance_scale = 0
+  } else if (model === 'kandinsky') {
+    modelInputs.num_inference_steps = 50
+    modelInputs.prior_guidance_scale = 4
+  }
+
+  const requestBody = {
+    apiKey: API_KEY,
+    modelKey: modelKey,
+    modelInputs: modelInputs
+  }
+
+  const response = await fetch('https://api.banana.dev/start/v4', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.message || `Banana API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+
+  // Banana returns a callID for async processing
+  if (data.callID) {
+    onProgress?.({ status: 'processing', progress: 20, message: 'Generation queued...' })
+
+    // Poll for completion
+    let result = null
+    let pollCount = 0
+    const maxPolls = 60
+
+    while (pollCount < maxPolls) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      pollCount++
+
+      const checkResponse = await fetch('https://api.banana.dev/check/v4', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: API_KEY,
+          callID: data.callID
+        })
+      })
+
+      const checkData = await checkResponse.json()
+
+      if (checkData.message === 'success' && checkData.modelOutputs) {
+        result = checkData
+        break
+      }
+
+      const progress = Math.min(20 + pollCount * 3, 90)
+      onProgress?.({ status: 'processing', progress, message: 'Generating image...' })
+    }
+
+    if (!result) {
+      throw new Error('Generation timed out')
+    }
+
+    data.modelOutputs = result.modelOutputs
+  }
+
+  onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
+
+  // Extract image from response
+  const outputs = data.modelOutputs || []
+  let imageData = outputs[0]?.image || outputs[0]?.images?.[0] || outputs[0]
+
+  if (!imageData) {
+    throw new Error('No image returned from Banana API')
+  }
+
+  // Handle URL vs base64
+  const isUrl = typeof imageData === 'string' && imageData.startsWith('http')
+  const imageUrl = isUrl ? imageData : `data:image/png;base64,${imageData}`
+
+  return {
+    url: imageUrl,
+    provider: 'banana',
+    model,
+    callId: data.callID,
+    usedReferences: hasReferences ? 1 : 0
+  }
+}
+
 /**
  * Main image generation function
  * @param {string} prompt - The image generation prompt
@@ -597,6 +728,8 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
       case 'gemini-imagen':
         // Use Imagen API directly
         return await generateGemini(prompt, options, onProgress)
+      case 'banana':
+        return await generateBanana(prompt, options, onProgress)
       case 'demo':
       default:
         return await generateDemo(prompt, options, onProgress)
@@ -698,6 +831,15 @@ export async function validateCredentials() {
         return {
           valid: geminiResponse.ok,
           message: geminiResponse.ok ? 'Google Gemini connected' : 'Invalid Gemini API key'
+        }
+
+      case 'banana':
+        // Banana doesn't have a simple validation endpoint
+        // Check if both keys are present
+        const hasBananaKeys = API_KEY && BANANA_MODEL_KEY
+        return {
+          valid: hasBananaKeys,
+          message: hasBananaKeys ? 'Banana.dev configured' : 'Missing Banana API key or model key'
         }
 
       default:
