@@ -84,7 +84,7 @@ function buildReferencePayload(referenceImages) {
 
 // Demo mode - generates placeholder images
 async function generateDemo(prompt, options = {}, onProgress) {
-  const { referenceImages } = options
+  const { referenceImages, width = 1024, height = 1024 } = options
   const hasReferences = referenceImages && referenceImages.length > 0
 
   onProgress?.({ status: 'starting', message: hasReferences ? 'Processing reference images...' : 'Initializing demo mode...' })
@@ -99,12 +99,12 @@ async function generateDemo(prompt, options = {}, onProgress) {
     onProgress?.({ status: 'processing', progress: ((i + 1) / steps) * 100, message })
   }
 
-  // Use picsum.photos for random placeholder images
+  // Use picsum.photos for random placeholder images with correct aspect ratio
   const seed = Math.random().toString(36).substring(7)
   onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
 
   return {
-    url: `https://picsum.photos/seed/${seed}/1024/1024`,
+    url: `https://picsum.photos/seed/${seed}/${width}/${height}`,
     provider: 'demo',
     model: 'placeholder',
     usedReferences: hasReferences ? referenceImages.length : 0
@@ -164,8 +164,8 @@ async function generateReplicate(prompt, options = {}, onProgress) {
         prompt,
         image: `data:image/png;base64,${refPayload[0].base64}`,
         strength: refPayload[0].strength,
-        width: 1024,
-        height: 1024,
+        width: options.width || 1024,
+        height: options.height || 1024,
         num_outputs: 1
       }
     }
@@ -175,8 +175,8 @@ async function generateReplicate(prompt, options = {}, onProgress) {
       version: model,
       input: {
         prompt,
-        width: 1024,
-        height: 1024,
+        width: options.width || 1024,
+        height: options.height || 1024,
         num_outputs: 1
       }
     }
@@ -255,7 +255,15 @@ async function generateReplicate(prompt, options = {}, onProgress) {
 
 // OpenAI DALL-E API
 async function generateOpenAI(prompt, options = {}, onProgress) {
-  const { model = 'dall-e-3', quality = 'standard', size = '1024x1024', referenceImages } = options
+  const { model = 'dall-e-3', quality = 'standard', referenceImages, aspectRatio = '1:1' } = options
+
+  // Map aspect ratio to DALL-E sizes
+  const sizeMap = {
+    '1:1': '1024x1024',
+    '4:3': '1024x1024', // DALL-E 3 doesn't support 4:3, use square
+    '3:2': '1792x1024'  // Use landscape for 3:2
+  }
+  const size = sizeMap[aspectRatio] || '1024x1024'
   const refPayload = buildReferencePayload(referenceImages)
   const hasReferences = refPayload && refPayload.length > 0
 
@@ -331,7 +339,7 @@ async function generateOpenAI(prompt, options = {}, onProgress) {
 
 // Stability AI API
 async function generateStability(prompt, options = {}, onProgress) {
-  const { model = 'stable-diffusion-xl-1024-v1-0', steps = 30, referenceImages } = options
+  const { model = 'stable-diffusion-xl-1024-v1-0', steps = 30, referenceImages, width = 1024, height = 1024 } = options
   const refPayload = buildReferencePayload(referenceImages)
   const hasReferences = refPayload && refPayload.length > 0
 
@@ -379,8 +387,8 @@ async function generateStability(prompt, options = {}, onProgress) {
         body: JSON.stringify({
           text_prompts: [{ text: prompt, weight: 1 }],
           cfg_scale: 7,
-          height: 1024,
-          width: 1024,
+          height: Math.min(height, 1024), // Stability has max size limits
+          width: Math.min(width, 1024),
           steps,
           samples: 1
         })

@@ -8,10 +8,10 @@
   --bg-primary: #0a0a0b;
   --bg-secondary: #141416;
   --bg-tertiary: #1c1c1f;
-  --border: #2a2a2d;
+  --border: #3a3a3d;
   --text-primary: #ffffff;
-  --text-secondary: #a0a0a5;
-  --text-muted: #6b6b70;
+  --text-secondary: #c0c0c5;
+  --text-muted: #8b8b90;
   --accent: #ff9900;
   --accent-hover: #ffad33;
   --success: #22c55e;
@@ -144,6 +144,63 @@ body {
 
 .prompt-textarea::placeholder {
   color: var(--text-muted);
+}
+
+/* Product Identity Section */
+.product-identity {
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.05) 0%, transparent 100%);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
+.product-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-field label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.product-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
+}
+
+.product-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.product-input::placeholder {
+  color: var(--text-muted);
+}
+
+.product-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asin-input {
+  font-family: 'Monaco', 'Consolas', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .generate-btn {
@@ -640,6 +697,157 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+}
+
+/* Main Image Templates */
+.main-templates-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, transparent 100%);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: -4px -4px 8px -4px;
+}
+
+.main-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.main-template-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.main-template-btn:hover {
+  border-color: var(--success);
+  color: var(--text-primary);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.main-template-btn.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.main-template-btn .template-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.main-template-btn .template-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.main-template-btn.active .template-desc {
+  color: var(--text-secondary);
+}
+
+/* Aspect Ratio Selector */
+.aspect-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.aspect-ratio-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aspect-ratio-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.aspect-ratio-btn.active {
+  background: rgba(255, 153, 0, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.aspect-ratio-btn.recommended.active {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.ratio-preview {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.ratio-1-1 {
+  width: 32px;
+  height: 32px;
+}
+
+.ratio-4-3 {
+  width: 32px;
+  height: 24px;
+}
+
+.ratio-3-2 {
+  width: 36px;
+  height: 24px;
+}
+
+.aspect-ratio-btn.active .ratio-preview {
+  background: currentColor;
+  opacity: 0.3;
+  border-color: currentColor;
+}
+
+.ratio-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ratio-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ratio-badge {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  background: var(--success);
+  color: white;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.aspect-ratio-tip {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-align: center;
 }
 
 .image-type-btn span {

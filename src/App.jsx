@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import PromptInput from './components/PromptInput'
+import PromptInput, { MAIN_IMAGE_TEMPLATES, ASPECT_RATIOS } from './components/PromptInput'
 import ImageDisplay from './components/ImageDisplay'
 import History from './components/History'
 import Gallery from './components/Gallery'
@@ -14,15 +14,21 @@ import { startSession, endSession, updateSessionStats, getSessionStats } from '.
 import { initGoogleCalendar, signIn, signOut, isSignedIn, createFocusTimeEvent, updateSessionEvent } from './services/calendar'
 
 // Build optimized prompt based on Amazon listing image type
-function buildAmazonPrompt(basePrompt, imageType, productCategory) {
+function buildAmazonPrompt(basePrompt, imageType, productCategory, productName, mainTemplate) {
   const categoryContext = productCategory ? `${productCategory} product: ` : ''
+  const productContext = productName ? `"${productName}" - ` : ''
+
+  // Get template modifier for main images
+  const templateModifier = imageType === 'main' && mainTemplate
+    ? MAIN_IMAGE_TEMPLATES.find(t => t.id === mainTemplate)?.promptModifier || ''
+    : ''
 
   const typePrompts = {
-    main: `Professional Amazon product photography, ${categoryContext}${basePrompt}, pure white background RGB(255,255,255), studio lighting, product centered and filling 85% of frame, high resolution, sharp focus, no text, no logos, no watermarks, commercial product shot`,
-    lifestyle: `Lifestyle product photography for Amazon listing, ${categoryContext}${basePrompt}, natural setting, product in use, warm lighting, aspirational scene, high quality, professional photography, showing product benefits in real life context`,
-    infographic: `Amazon product infographic image, ${categoryContext}${basePrompt}, clean layout, feature callouts, benefit highlights, professional design, easy to read, white or light background, product showcase with key features labeled`,
-    detail: `Macro product photography for Amazon, ${categoryContext}${basePrompt}, extreme close-up detail shot, sharp focus on texture and materials, studio lighting, professional quality, showing craftsmanship and quality`,
-    comparison: `Amazon comparison infographic, ${categoryContext}${basePrompt}, side by side comparison layout, clear visual difference, professional design, highlighting advantages, clean background`
+    main: `Professional Amazon product photography, ${categoryContext}${productContext}${basePrompt}, ${templateModifier}, pure white background RGB(255,255,255), studio lighting, product centered and filling 85% of frame, high resolution, sharp focus, no text, no logos, no watermarks, commercial product shot`,
+    lifestyle: `Lifestyle product photography for Amazon listing, ${categoryContext}${productContext}${basePrompt}, natural setting, product in use, warm lighting, aspirational scene, high quality, professional photography, showing product benefits in real life context`,
+    infographic: `Amazon product infographic image, ${categoryContext}${productContext}${basePrompt}, clean layout, feature callouts, benefit highlights, professional design, easy to read, white or light background, product showcase with key features labeled`,
+    detail: `Macro product photography for Amazon, ${categoryContext}${productContext}${basePrompt}, extreme close-up detail shot, sharp focus on texture and materials, studio lighting, professional quality, showing craftsmanship and quality`,
+    comparison: `Amazon comparison infographic, ${categoryContext}${productContext}${basePrompt}, side by side comparison layout, clear visual difference, professional design, highlighting advantages, clean background`
   }
 
   return typePrompts[imageType] || basePrompt
@@ -33,6 +39,10 @@ function App() {
   const [prompt, setPrompt] = useState('')
   const [imageType, setImageType] = useState('main')
   const [productCategory, setProductCategory] = useState('')
+  const [productName, setProductName] = useState('')
+  const [productAsin, setProductAsin] = useState('')
+  const [mainTemplate, setMainTemplate] = useState('hero')
+  const [aspectRatio, setAspectRatio] = useState('1:1')
   const [currentImage, setCurrentImage] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(null)
@@ -128,11 +138,17 @@ function App() {
     setLoadingProgress({ status: 'starting', progress: 0, message: 'Preparing...' })
 
     try {
-      const fullPrompt = buildAmazonPrompt(prompt, imageType, productCategory)
+      const fullPrompt = buildAmazonPrompt(prompt, imageType, productCategory, productName, mainTemplate)
 
-      // Pass reference images to API
+      // Get dimensions for the selected aspect ratio
+      const ratioConfig = ASPECT_RATIOS.find(r => r.id === aspectRatio) || ASPECT_RATIOS[0]
+
+      // Pass reference images and aspect ratio to API
       const result = await generateImage(fullPrompt, {
-        referenceImages: referenceImages.length > 0 ? referenceImages : undefined
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+        aspectRatio: aspectRatio,
+        width: ratioConfig.dimensions.width,
+        height: ratioConfig.dimensions.height
       }, (progress) => {
         setLoadingProgress(progress)
       })
@@ -143,6 +159,10 @@ function App() {
         fullPrompt,
         imageType,
         productCategory,
+        productName,
+        productAsin,
+        mainTemplate: imageType === 'main' ? mainTemplate : null,
+        aspectRatio,
         imageUrl: result.url,
         provider: result.provider,
         model: result.model,
@@ -171,7 +191,7 @@ function App() {
       setIsLoading(false)
       setLoadingProgress(null)
     }
-  }, [prompt, imageType, productCategory, activeSession, isCalendarConnected, dbReady, referenceImages])
+  }, [prompt, imageType, productCategory, productName, productAsin, mainTemplate, aspectRatio, activeSession, isCalendarConnected, dbReady, referenceImages])
 
   // Session management
   const handleStartSession = useCallback(async (projectName) => {
@@ -275,6 +295,10 @@ function App() {
     setPrompt(entry.prompt)
     if (entry.imageType) setImageType(entry.imageType)
     if (entry.productCategory) setProductCategory(entry.productCategory)
+    if (entry.productName) setProductName(entry.productName)
+    if (entry.productAsin) setProductAsin(entry.productAsin)
+    if (entry.mainTemplate) setMainTemplate(entry.mainTemplate)
+    if (entry.aspectRatio) setAspectRatio(entry.aspectRatio)
   }, [])
 
   const handleClearHistory = useCallback(async () => {
@@ -394,6 +418,14 @@ function App() {
               setImageType={setImageType}
               productCategory={productCategory}
               setProductCategory={setProductCategory}
+              productName={productName}
+              setProductName={setProductName}
+              productAsin={productAsin}
+              setProductAsin={setProductAsin}
+              mainTemplate={mainTemplate}
+              setMainTemplate={setMainTemplate}
+              aspectRatio={aspectRatio}
+              setAspectRatio={setAspectRatio}
             />
             <ReferenceImageUpload
               referenceImages={referenceImages}
@@ -443,6 +475,10 @@ function App() {
               setPrompt(entry.prompt)
               if (entry.imageType) setImageType(entry.imageType)
               if (entry.productCategory) setProductCategory(entry.productCategory)
+              if (entry.productName) setProductName(entry.productName)
+              if (entry.productAsin) setProductAsin(entry.productAsin)
+              if (entry.mainTemplate) setMainTemplate(entry.mainTemplate)
+              if (entry.aspectRatio) setAspectRatio(entry.aspectRatio)
               setActiveTab('generate')
             }}
           />
