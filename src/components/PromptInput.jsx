@@ -1,4 +1,50 @@
-import { Sparkles, Loader2, Package, Camera, LayoutGrid, Users, Zap } from 'lucide-react'
+import { Sparkles, Loader2, Package, Camera, LayoutGrid, Users, Zap, Box, RotateCcw, Layers, Maximize, Hand, Grid3X3 } from 'lucide-react'
+
+// Main Image Templates for Amazon product photography
+const MAIN_IMAGE_TEMPLATES = [
+  {
+    id: 'hero',
+    label: 'Hero Shot',
+    icon: Maximize,
+    description: 'Front-facing, dramatic lighting',
+    promptModifier: 'hero shot, front-facing view, dramatic studio lighting, product as the star, powerful presence, centered composition'
+  },
+  {
+    id: 'angle45',
+    label: '45° Angle',
+    icon: RotateCcw,
+    description: 'Classic 3/4 view showing depth',
+    promptModifier: '45-degree angle view, three-quarter perspective, showing product depth and dimension, professional product photography angle'
+  },
+  {
+    id: 'front',
+    label: 'Front View',
+    icon: Box,
+    description: 'Straight-on front facing',
+    promptModifier: 'straight-on front view, symmetrical composition, direct facing camera, clean frontal perspective'
+  },
+  {
+    id: 'side',
+    label: 'Side Profile',
+    icon: Layers,
+    description: 'Side view showing thickness',
+    promptModifier: 'side profile view, showing product thickness and depth, 90-degree side angle, profile perspective'
+  },
+  {
+    id: 'topdown',
+    label: 'Top-Down',
+    icon: Grid3X3,
+    description: 'Bird\'s eye view from above',
+    promptModifier: 'top-down view, bird\'s eye perspective, flat lay style, overhead shot, looking straight down at product'
+  },
+  {
+    id: 'withscale',
+    label: 'With Scale',
+    icon: Hand,
+    description: 'Shows size reference',
+    promptModifier: 'product with scale reference, showing actual size, hand holding product or next to common object for size comparison'
+  }
+]
 
 const IMAGE_TYPES = [
   { id: 'main', label: 'Main Image', icon: Package, description: 'White background, product only' },
@@ -17,6 +63,29 @@ const PRODUCT_CATEGORIES = [
   'Clothing',
   'Food & Grocery',
   'Pet Supplies'
+]
+
+// Amazon-compliant aspect ratios
+const ASPECT_RATIOS = [
+  {
+    id: '1:1',
+    label: '1:1 Square',
+    description: 'Standard for main & additional images',
+    dimensions: { width: 2000, height: 2000 },
+    recommended: true
+  },
+  {
+    id: '4:3',
+    label: '4:3 Portrait',
+    description: 'Common for product photography',
+    dimensions: { width: 2000, height: 1500 }
+  },
+  {
+    id: '3:2',
+    label: '3:2 Rectangle',
+    description: 'Desktop search results (may show bars)',
+    dimensions: { width: 2000, height: 1333 }
+  }
 ]
 
 const STYLE_MODIFIERS = [
@@ -38,7 +107,15 @@ function PromptInput({
   imageType,
   setImageType,
   productCategory,
-  setProductCategory
+  setProductCategory,
+  productName,
+  setProductName,
+  productAsin,
+  setProductAsin,
+  mainTemplate,
+  setMainTemplate,
+  aspectRatio,
+  setAspectRatio
 }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -72,6 +149,37 @@ function PromptInput({
 
   return (
     <div className="prompt-section">
+      <div className="section-group product-identity">
+        <h2>Product Identity</h2>
+        <div className="product-inputs">
+          <div className="input-field">
+            <label htmlFor="product-name">Product Name</label>
+            <input
+              id="product-name"
+              type="text"
+              className="product-input"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              placeholder="e.g., Stainless Steel Water Bottle 32oz"
+              disabled={isLoading}
+            />
+          </div>
+          <div className="input-field">
+            <label htmlFor="product-asin">ASIN (Optional)</label>
+            <input
+              id="product-asin"
+              type="text"
+              className="product-input asin-input"
+              value={productAsin}
+              onChange={(e) => setProductAsin(e.target.value.toUpperCase())}
+              placeholder="e.g., B08XYZ1234"
+              maxLength={10}
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+      </div>
+
       <div className="section-group">
         <h2>Image Type</h2>
         <div className="image-type-grid">
@@ -96,6 +204,30 @@ function PromptInput({
         )}
       </div>
 
+      {imageType === 'main' && (
+        <div className="section-group main-templates-section">
+          <h2>Main Image Template</h2>
+          <div className="main-template-grid">
+            {MAIN_IMAGE_TEMPLATES.map(template => {
+              const Icon = template.icon
+              return (
+                <button
+                  key={template.id}
+                  className={`main-template-btn ${mainTemplate === template.id ? 'active' : ''}`}
+                  onClick={() => setMainTemplate(template.id)}
+                  disabled={isLoading}
+                  title={template.description}
+                >
+                  <Icon size={20} />
+                  <span className="template-label">{template.label}</span>
+                  <span className="template-desc">{template.description}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="section-group">
         <h2>Product Category</h2>
         <select
@@ -109,6 +241,30 @@ function PromptInput({
             <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
+      </div>
+
+      <div className="section-group">
+        <h2>Aspect Ratio</h2>
+        <div className="aspect-ratio-grid">
+          {ASPECT_RATIOS.map(ratio => (
+            <button
+              key={ratio.id}
+              className={`aspect-ratio-btn ${aspectRatio === ratio.id ? 'active' : ''} ${ratio.recommended ? 'recommended' : ''}`}
+              onClick={() => setAspectRatio(ratio.id)}
+              disabled={isLoading}
+              title={ratio.description}
+            >
+              <div className={`ratio-preview ratio-${ratio.id.replace(':', '-')}`}></div>
+              <div className="ratio-info">
+                <span className="ratio-label">{ratio.label}</span>
+                {ratio.recommended && <span className="ratio-badge">Recommended</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+        <p className="aspect-ratio-tip">
+          Min 1,000px longest side • Recommended 2,000px+ for zoom capability
+        </p>
       </div>
 
       <div className="section-group">
@@ -167,3 +323,4 @@ function PromptInput({
 }
 
 export default PromptInput
+export { MAIN_IMAGE_TEMPLATES, ASPECT_RATIOS }
