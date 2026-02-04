@@ -198,6 +198,214 @@ const STANDARD_MODULES = [
   }
 ]
 
+// Premium A+ Content Module Definitions (1464px wide - full width immersive)
+const PREMIUM_MODULES = [
+  {
+    id: 'premium-header',
+    name: 'Premium Header Image',
+    description: 'Full-width premium hero image',
+    dimensions: '1464 x 600 px',
+    width: 1464,
+    height: 600,
+    hasText: false,
+    category: 'header',
+    preview: '🌟',
+    isPremium: true
+  },
+  {
+    id: 'premium-full-bg-text',
+    name: 'Full Background with Text',
+    description: 'Immersive background image with text overlay',
+    dimensions: '1464 x 625 px',
+    width: 1464,
+    height: 625,
+    hasText: true,
+    textPosition: 'overlay',
+    category: 'header',
+    preview: '🎨',
+    isPremium: true
+  },
+  {
+    id: 'premium-light-overlay',
+    name: 'Premium Light Text Overlay',
+    description: 'Premium banner with light text overlay',
+    dimensions: '1464 x 350 px',
+    width: 1464,
+    height: 350,
+    hasText: true,
+    textPosition: 'overlay-light',
+    category: 'banner',
+    preview: '☀️',
+    isPremium: true
+  },
+  {
+    id: 'premium-dark-overlay',
+    name: 'Premium Dark Text Overlay',
+    description: 'Premium banner with dark text overlay',
+    dimensions: '1464 x 350 px',
+    width: 1464,
+    height: 350,
+    hasText: true,
+    textPosition: 'overlay-dark',
+    category: 'banner',
+    preview: '🌙',
+    isPremium: true
+  },
+  {
+    id: 'premium-single-image',
+    name: 'Premium Single Image',
+    description: 'Large full-width single image',
+    dimensions: '1464 x 600 px',
+    width: 1464,
+    height: 600,
+    hasText: false,
+    category: 'feature',
+    preview: '🖼️',
+    isPremium: true
+  },
+  {
+    id: 'premium-two-image-text',
+    name: 'Premium Two Image & Text',
+    description: '2 images with text descriptions',
+    dimensions: '362 x 453 px each',
+    width: 362,
+    height: 453,
+    imageCount: 2,
+    hasText: true,
+    textPosition: 'below',
+    category: 'gallery',
+    preview: '📊',
+    isPremium: true
+  },
+  {
+    id: 'premium-three-image-text',
+    name: 'Premium Three Image & Text',
+    description: '3 images with text descriptions',
+    dimensions: '362 x 453 px each',
+    width: 362,
+    height: 453,
+    imageCount: 3,
+    hasText: true,
+    textPosition: 'below',
+    category: 'gallery',
+    preview: '🎯',
+    isPremium: true
+  },
+  {
+    id: 'premium-four-image-text',
+    name: 'Premium Four Image & Text',
+    description: '4 images with text below each',
+    dimensions: '362 x 453 px each',
+    width: 362,
+    height: 453,
+    imageCount: 4,
+    hasText: true,
+    textPosition: 'below',
+    category: 'gallery',
+    preview: '📋',
+    isPremium: true
+  },
+  {
+    id: 'premium-four-image-highlight',
+    name: 'Premium Four Image Highlight',
+    description: '4 square highlight images',
+    dimensions: '362 x 362 px each',
+    width: 362,
+    height: 362,
+    imageCount: 4,
+    hasText: false,
+    category: 'gallery',
+    preview: '✨',
+    isPremium: true
+  },
+  {
+    id: 'premium-comparison-chart',
+    name: 'Premium Comparison Chart',
+    description: 'Compare up to 6 products side by side',
+    dimensions: '150 x 300 px per product',
+    width: 150,
+    height: 300,
+    imageCount: 6,
+    hasText: true,
+    textType: 'comparison',
+    category: 'comparison',
+    preview: '⚖️',
+    isPremium: true
+  },
+  {
+    id: 'premium-hotspot',
+    name: 'Premium Hotspot Module',
+    description: 'Interactive image with clickable hotspots',
+    dimensions: '1464 x 600 px',
+    width: 1464,
+    height: 600,
+    hasText: true,
+    textType: 'hotspots',
+    category: 'interactive',
+    preview: '🎯',
+    isPremium: true,
+    isInteractive: true
+  },
+  {
+    id: 'premium-carousel',
+    name: 'Premium Image Carousel',
+    description: 'Scrollable image gallery',
+    dimensions: '362 x 453 px per image',
+    width: 362,
+    height: 453,
+    imageCount: 5,
+    hasText: true,
+    category: 'interactive',
+    preview: '🎠',
+    isPremium: true,
+    isInteractive: true
+  },
+  {
+    id: 'premium-video',
+    name: 'Premium Video Module',
+    description: 'HD video content (1280x720 min)',
+    dimensions: '1280 x 720 px (HD)',
+    width: 1280,
+    height: 720,
+    hasText: true,
+    textPosition: 'below',
+    category: 'interactive',
+    preview: '🎬',
+    isPremium: true,
+    isInteractive: true,
+    isVideo: true
+  },
+  {
+    id: 'premium-nav-carousel',
+    name: 'Premium Navigation Carousel',
+    description: 'Interactive navigation with thumbnails',
+    dimensions: 'Variable',
+    width: 362,
+    height: 362,
+    imageCount: 6,
+    hasText: true,
+    category: 'interactive',
+    preview: '🧭',
+    isPremium: true,
+    isInteractive: true
+  },
+  {
+    id: 'premium-qa',
+    name: 'Premium Q&A Module',
+    description: 'Interactive FAQ section',
+    dimensions: 'Text only',
+    width: 0,
+    height: 0,
+    hasText: true,
+    textOnly: true,
+    textType: 'qa',
+    category: 'interactive',
+    preview: '❓',
+    isPremium: true,
+    isInteractive: true
+  }
+]
+
 const MODULE_CATEGORIES = [
   { id: 'all', name: 'All Modules' },
   { id: 'header', name: 'Headers' },
@@ -205,7 +413,8 @@ const MODULE_CATEGORIES = [
   { id: 'feature', name: 'Features' },
   { id: 'gallery', name: 'Galleries' },
   { id: 'text', name: 'Text' },
-  { id: 'comparison', name: 'Comparison' }
+  { id: 'comparison', name: 'Comparison' },
+  { id: 'interactive', name: 'Interactive', premiumOnly: true }
 ]
 
 const GUIDELINES = [
@@ -366,7 +575,144 @@ Image 2 - The Solution: Show ${campaignData.productName} in action
 Image 3 - The Result: ${campaignData.emotionalTriggers[0]} achieved
 Flow: Problem → Solution → Benefit narrative
 Style: Consistent, premium, relatable to ${campaignData.targetAudience}
-Dimensions: 300x300 pixels each`
+Dimensions: 300x300 pixels each`,
+
+    // Premium A+ Content Prompts (1464px wide - immersive full-width)
+    'premium-header': `Create a stunning PREMIUM hero image for ${campaignData.productName} by ${campaignData.brandName}.
+Format: Premium A+ Content (1464px wide - full immersive width)
+Target audience: ${campaignData.targetAudience}
+Style: Ultra-premium, cinematic, aspirational
+Key message: Position the product as a luxury lifestyle choice
+Include: Product as hero, dramatic lighting, high-end aesthetic
+Mood: ${campaignData.emotionalTriggers.join(', ')}
+Dimensions: 1464x600 pixels (Premium full-width)`,
+
+    'premium-full-bg-text': `Create an immersive full-background image for ${campaignData.productName}.
+Format: Premium A+ Content - Full Background with Text
+Style: Cinematic, lifestyle-focused, premium atmosphere
+Background: Rich, detailed scene that tells a story
+Text overlay area: Leave space for compelling headline
+Brand essence: ${campaignData.toneOfVoice}
+Key benefit: ${campaignData.keyBenefits[0]}
+Dimensions: 1464x625 pixels`,
+
+    'premium-light-overlay': `Design a premium banner with light text overlay for ${campaignData.productName}.
+Format: Premium A+ Content (1464px wide)
+Highlight: ${campaignData.keyBenefits[0]}
+Background: Bright, premium lifestyle setting
+Text area: Generous space for light-colored headline overlay
+Target: ${campaignData.targetAudience}
+Dimensions: 1464x350 pixels`,
+
+    'premium-dark-overlay': `Design a premium banner with dark text overlay for ${campaignData.productName}.
+Format: Premium A+ Content (1464px wide)
+Highlight: ${campaignData.keyBenefits[1] || campaignData.keyBenefits[0]}
+Background: Rich, dramatic setting conveying luxury
+Text area: Contrasting area for dark text overlay
+Emotional appeal: ${campaignData.emotionalTriggers[0]}
+Dimensions: 1464x350 pixels`,
+
+    'premium-single-image': `Create a large premium single image for ${campaignData.productName}.
+Format: Premium A+ Content - Full Width Single Image
+Style: Studio quality, dramatic lighting, ultra-high resolution
+Focus: Product detail and craftsmanship
+Showcase: ${campaignData.competitiveAdvantages[0]}
+Background: Clean, premium gradient or contextual
+Dimensions: 1464x600 pixels`,
+
+    'premium-two-image-text': `Create 2 premium feature images for ${campaignData.productName}.
+Image 1: ${campaignData.keyBenefits[0]} - visualize the benefit
+Image 2: ${campaignData.keyBenefits[1] || 'Product in premium context'}
+Style: Consistent premium aesthetic, lifestyle-oriented
+Space below each for feature descriptions
+Target: ${campaignData.targetAudience}
+Dimensions: 362x453 pixels each`,
+
+    'premium-three-image-text': `Create 3 premium storytelling images for ${campaignData.productName}.
+Image 1: The Challenge - ${campaignData.painPoints[0]}
+Image 2: The Solution - ${campaignData.productName} in action
+Image 3: The Transformation - ${campaignData.emotionalTriggers[0]}
+Flow: Problem → Solution → Success narrative
+Style: Premium, cinematic, emotionally engaging
+Dimensions: 362x453 pixels each`,
+
+    'premium-four-image-text': `Create 4 premium feature images for ${campaignData.productName}.
+${campaignData.keyBenefits.slice(0, 4).map((benefit, i) => `Image ${i + 1}: "${benefit}"`).join('\n')}
+Style: Premium, consistent lighting and treatment
+Each image should have space below for text
+Target audience: ${campaignData.targetAudience}
+Dimensions: 362x453 pixels each`,
+
+    'premium-four-image-highlight': `Create 4 premium square highlight images for ${campaignData.productName}.
+Image 1: Product hero shot - premium angle
+Image 2: Key feature close-up - ${campaignData.keyBenefits[0]}
+Image 3: Lifestyle context - product in use
+Image 4: Detail/texture shot - quality craftsmanship
+Style: Ultra-premium, gallery-worthy
+Dimensions: 362x362 pixels each`,
+
+    'premium-comparison-chart': `Create premium comparison chart images for ${campaignData.productName}.
+Our product advantages:
+${campaignData.competitiveAdvantages.map(a => `✓ ${a}`).join('\n')}
+Style: Premium product photography, white background
+Show: Our product as the clear premium choice
+Include: Up to 6 product comparison slots
+Visual hierarchy: Our product prominently featured
+Dimensions: 150x300 pixels per product`,
+
+    'premium-hotspot': `Create an interactive hotspot image for ${campaignData.productName}.
+Format: Premium A+ Content - Interactive Hotspot Module
+Main image: Full product shot with clear feature areas
+Hotspot areas to highlight:
+${campaignData.keyBenefits.map((b, i) => `${i + 1}. ${b}`).join('\n')}
+Style: Clean, detailed product photography
+Purpose: Users click areas to learn about features
+Dimensions: 1464x600 pixels`,
+
+    'premium-carousel': `Create a premium scrollable image carousel for ${campaignData.productName}.
+5 carousel slides:
+Slide 1: Hero product shot
+Slide 2: Feature highlight - ${campaignData.keyBenefits[0]}
+Slide 3: Lifestyle usage context
+Slide 4: Detail close-up
+Slide 5: Brand story/packaging
+Style: Premium, consistent, scroll-worthy
+Dimensions: 362x453 pixels per image`,
+
+    'premium-video': `Create a video thumbnail/cover for ${campaignData.productName}.
+Format: Premium A+ Content - Video Module
+Video content suggestions:
+- Product demonstration
+- Feature showcase
+- Brand story
+- Customer transformation
+Thumbnail: Compelling frame that encourages play
+Style: Cinematic, professional
+Minimum: 1280x720 pixels (HD)`,
+
+    'premium-nav-carousel': `Create navigation carousel thumbnails for ${campaignData.productName}.
+6 navigation items showcasing:
+1. Product overview
+2. Key features
+3. Benefits
+4. How to use
+5. Specifications
+6. Brand story
+Style: Consistent, clickable thumbnails
+Each should clearly represent its section
+Dimensions: 362x362 pixels per thumbnail`,
+
+    'premium-qa': `Write Premium Q&A content for ${campaignData.productName}.
+Format: Interactive FAQ Module
+Brand: ${campaignData.brandName}
+Tone: ${campaignData.toneOfVoice}
+
+Suggested Q&A pairs addressing:
+${campaignData.painPoints.map(p => `Q: How does this solve "${p}"?`).join('\n')}
+${campaignData.keyBenefits.map(b => `Q: Tell me about "${b}"`).join('\n')}
+
+Style: Helpful, authoritative, brand-consistent
+Note: No pricing, no superlatives, no competitor mentions`
   }
 
   return prompts[moduleType] || `Create a professional Amazon A+ Content image for ${campaignData.productName}.
@@ -402,16 +748,37 @@ function APlusContent() {
   const canAddModule = selectedModules.length < 7
   const hasMinModules = selectedModules.length >= 1
 
+  // Get current modules based on content type
+  const currentModules = contentType === 'premium' ? PREMIUM_MODULES : STANDARD_MODULES
+
+  // Get available categories based on content type
+  const availableCategories = contentType === 'premium'
+    ? MODULE_CATEGORIES
+    : MODULE_CATEGORIES.filter(c => !c.premiumOnly)
+
   // Filter modules by category
   const filteredModules = categoryFilter === 'all'
-    ? STANDARD_MODULES
-    : STANDARD_MODULES.filter(m => m.category === categoryFilter)
+    ? currentModules
+    : currentModules.filter(m => m.category === categoryFilter)
+
+  // Clear modules when switching content type
+  const handleContentTypeChange = (newType) => {
+    if (newType !== contentType) {
+      setContentType(newType)
+      setSelectedModules([])
+      setModuleData({})
+      setCategoryFilter('all')
+      setExpandedModule(null)
+    }
+  }
 
   // Add module to content
   const addModule = (moduleType) => {
     if (!canAddModule) return
 
-    const moduleDefinition = STANDARD_MODULES.find(m => m.id === moduleType)
+    const moduleDefinition = currentModules.find(m => m.id === moduleType)
+    if (!moduleDefinition) return
+
     const newModule = {
       instanceId: `${moduleType}-${Date.now()}`,
       type: moduleType,
@@ -428,7 +795,9 @@ function APlusContent() {
         headline: '',
         body: '',
         highlights: [],
-        specs: []
+        specs: [],
+        hotspots: [],
+        qaItems: []
       }
     }))
     setExpandedModule(newModule.instanceId)
@@ -897,17 +1266,17 @@ function APlusContent() {
             <div className="content-type-switcher">
               <button
                 className={`type-btn ${contentType === 'standard' ? 'active' : ''}`}
-                onClick={() => setContentType('standard')}
+                onClick={() => handleContentTypeChange('standard')}
               >
                 Standard
+                <span className="type-width">970px</span>
               </button>
               <button
                 className={`type-btn ${contentType === 'premium' ? 'active' : ''}`}
-                onClick={() => setContentType('premium')}
-                disabled
+                onClick={() => handleContentTypeChange('premium')}
               >
                 Premium
-                <span className="soon-tag">Soon</span>
+                <span className="type-width">1464px</span>
               </button>
             </div>
           </div>
@@ -984,13 +1353,14 @@ function APlusContent() {
         {/* Module Library Row */}
         <div className="toolbar-row toolbar-modules">
           <div className="category-tabs">
-            {MODULE_CATEGORIES.map(cat => (
+            {availableCategories.map(cat => (
               <button
                 key={cat.id}
-                className={`category-tab ${categoryFilter === cat.id ? 'active' : ''}`}
+                className={`category-tab ${categoryFilter === cat.id ? 'active' : ''} ${cat.premiumOnly ? 'premium-only' : ''}`}
                 onClick={() => setCategoryFilter(cat.id)}
               >
                 {cat.name}
+                {cat.premiumOnly && <span className="premium-badge">✨</span>}
               </button>
             ))}
           </div>
