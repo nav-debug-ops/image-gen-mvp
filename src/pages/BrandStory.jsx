@@ -109,6 +109,7 @@ const BRAND_STORY_GUIDELINES = [
   { icon: '✓', text: 'Include your brand logo in the Logo module' },
   { icon: '✓', text: 'Showcase best-selling products in ASIN module' },
   { icon: '✓', text: 'Keep text concise — customers scan, not read' },
+  { icon: '✓', text: 'Use 3-5 cards for maximum impact (up to 19 allowed)' },
   { icon: '✗', text: 'No pricing or promotional claims' },
   { icon: '✗', text: 'No time-sensitive information (sales, limited offers)' },
   { icon: '✗', text: 'No external URLs or contact information' },
@@ -229,7 +230,7 @@ function BrandStory() {
 
   // Validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
-  const maxModules = 5
+  const maxModules = 19
   const canAddModule = selectedModules.length < maxModules
   const hasMinModules = selectedModules.length >= 1
 
