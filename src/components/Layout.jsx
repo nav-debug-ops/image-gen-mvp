@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutGrid,
   BookOpen,
+  Store,
   Coins,
   ChevronRight,
   Menu,
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Secondary Images', href: '/tools/secondary-images', icon: GalleryHorizontal },
   { name: 'A+ Content', href: '/tools/aplus-content', icon: LayoutGrid },
   { name: 'Brand Story', href: '/tools/brand-story', icon: BookOpen },
+  { name: 'Storefront', href: '/tools/storefront', icon: Store },
   { name: 'Creative Campaigns', href: '/tools/creative-campaigns', icon: Lightbulb },
   { name: 'Listing Copywriter', href: '/tools/listing-copywriter', icon: FileText },
 ]

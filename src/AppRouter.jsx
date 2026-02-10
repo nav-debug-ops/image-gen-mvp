@@ -7,6 +7,7 @@ import CreativeCampaigns from './pages/CreativeCampaigns'
 import ListingCopywriter from './pages/ListingCopywriter'
 import APlusContent from './pages/APlusContent'
 import BrandStory from './pages/BrandStory'
+import StorefrontDesigner from './pages/StorefrontDesigner'
 import App from './App' // Original app as legacy
 
 function AppRouter() {
@@ -21,6 +22,7 @@ function AppRouter() {
         <Route path="tools/listing-copywriter" element={<ListingCopywriter />} />
         <Route path="tools/aplus-content" element={<APlusContent />} />
         <Route path="tools/brand-story" element={<BrandStory />} />
+        <Route path="tools/storefront" element={<StorefrontDesigner />} />
         <Route path="legacy" element={<App />} />
       </Route>
     </Routes>
