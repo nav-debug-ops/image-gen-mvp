@@ -25,6 +25,7 @@ import {
   Edit3
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
+import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 
 // Secondary Image Types
 const SECONDARY_IMAGE_TYPES = [
@@ -132,6 +133,7 @@ function SecondaryImageGenerator() {
   const [hasCampaignData, setHasCampaignData] = useState(true)
 
   // Configuration state
+  const [productCategory, setProductCategory] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [quantity, setQuantity] = useState(1)
@@ -347,6 +349,23 @@ function SecondaryImageGenerator() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Product Category */}
+          <div className="config-section">
+            <h3>Product Category</h3>
+            <div className="config-group">
+              <select
+                className="category-dropdown"
+                value={productCategory}
+                onChange={(e) => setProductCategory(e.target.value)}
+              >
+                <option value="">-- Select Category --</option>
+                {PRODUCT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Image Type Selection */}

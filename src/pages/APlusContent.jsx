@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import {
   Upload,
   Search,
@@ -728,6 +729,7 @@ function APlusContent() {
 
   // ASIN input
   const [asinValue, setAsinValue] = useState('')
+  const [productCategory, setProductCategory] = useState('')
 
   // Module management
   const [selectedModules, setSelectedModules] = useState([])
@@ -1281,6 +1283,16 @@ function APlusContent() {
             </div>
           </div>
           <div className="toolbar-center">
+            <select
+              className="category-dropdown"
+              value={productCategory}
+              onChange={(e) => setProductCategory(e.target.value)}
+            >
+              <option value="">Product Category</option>
+              {PRODUCT_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <div className="asin-input-compact">
               <Search size={16} />
               <input

@@ -14,6 +14,7 @@ import {
   Package
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
+import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 
 // Template categories and items
 const TEMPLATE_CATEGORIES = ['All', 'Basic', 'Packaging', 'Elements', 'Tags', 'Lifestyle', 'Advanced']
@@ -103,6 +104,7 @@ function MainImageGenerator() {
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [selectedTemplates, setSelectedTemplates] = useState([])
   const [categoryFilter, setCategoryFilter] = useState('All')
+  const [productCategory, setProductCategory] = useState('')
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -369,6 +371,21 @@ function MainImageGenerator() {
           {/* Configuration Panel */}
           <div className="config-section">
             <h3><Sliders size={18} /> Configuration</h3>
+
+            {/* Product Category */}
+            <div className="config-group">
+              <label>Product Category</label>
+              <select
+                className="category-dropdown"
+                value={productCategory}
+                onChange={(e) => setProductCategory(e.target.value)}
+              >
+                <option value="">-- Select Category --</option>
+                {PRODUCT_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
 
             {/* Quantity Control */}
             <div className="config-group batch-controls">

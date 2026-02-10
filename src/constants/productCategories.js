@@ -1,0 +1,22 @@
+export const PRODUCT_CATEGORIES = [
+  'Electronics',
+  'Home & Kitchen',
+  'Beauty & Personal Care',
+  'Sports & Outdoors',
+  'Toys & Games',
+  'Clothing & Apparel',
+  'Food & Grocery',
+  'Pet Supplies',
+  'Health & Household',
+  'Baby Products',
+  'Automotive',
+  'Tools & Home Improvement',
+  'Office Products',
+  'Garden & Outdoor',
+  'Arts, Crafts & Sewing',
+  'Industrial & Scientific',
+  'Musical Instruments',
+  'Books & Media',
+  'Jewelry & Watches',
+  'Shoes & Handbags'
+]

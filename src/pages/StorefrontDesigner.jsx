@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import {
   Upload,
   Search,
@@ -367,6 +368,7 @@ function StorefrontDesigner() {
   const [draggedIndex, setDraggedIndex] = useState(null)
 
   // UI state
+  const [productCategory, setProductCategory] = useState('')
   const [previewMode, setPreviewMode] = useState(false)
   const [previewDevice, setPreviewDevice] = useState('desktop') // 'desktop' | 'mobile'
   const [showGuidelines, setShowGuidelines] = useState(false)
@@ -884,6 +886,16 @@ function StorefrontDesigner() {
             <span className="brand-story-badge">Amazon Store</span>
           </div>
           <div className="toolbar-center">
+            <select
+              className="category-dropdown"
+              value={productCategory}
+              onChange={(e) => setProductCategory(e.target.value)}
+            >
+              <option value="">Product Category</option>
+              {PRODUCT_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <span className="module-counter-badge">
               {currentWidgets.length}/{maxSections} sections
             </span>

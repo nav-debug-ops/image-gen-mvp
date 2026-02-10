@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import {
   Upload,
   Search,
@@ -227,6 +228,7 @@ function BrandStory() {
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [asinValue, setAsinValue] = useState('')
+  const [productCategory, setProductCategory] = useState('')
 
   // Validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
@@ -886,6 +888,16 @@ function BrandStory() {
             <span className="brand-story-badge">Carousel Format</span>
           </div>
           <div className="toolbar-center">
+            <select
+              className="category-dropdown"
+              value={productCategory}
+              onChange={(e) => setProductCategory(e.target.value)}
+            >
+              <option value="">Product Category</option>
+              {PRODUCT_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <div className="asin-input-compact">
               <Search size={16} />
               <input
