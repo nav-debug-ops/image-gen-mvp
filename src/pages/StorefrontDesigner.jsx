@@ -30,6 +30,7 @@ import {
   MousePointer,
   Layout,
   Monitor,
+  Smartphone,
   PlusCircle,
   Copy,
   Settings
@@ -367,6 +368,7 @@ function StorefrontDesigner() {
 
   // UI state
   const [previewMode, setPreviewMode] = useState(false)
+  const [previewDevice, setPreviewDevice] = useState('desktop') // 'desktop' | 'mobile'
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -894,6 +896,24 @@ function StorefrontDesigner() {
               {previewMode ? <EyeOff size={16} /> : <Eye size={16} />}
               {previewMode ? 'Edit' : 'Preview'}
             </button>
+            {previewMode && (
+              <div className="device-toggle">
+                <button
+                  className={`device-btn ${previewDevice === 'desktop' ? 'active' : ''}`}
+                  onClick={() => setPreviewDevice('desktop')}
+                  title="Desktop view"
+                >
+                  <Monitor size={16} />
+                </button>
+                <button
+                  className={`device-btn ${previewDevice === 'mobile' ? 'active' : ''}`}
+                  onClick={() => setPreviewDevice('mobile')}
+                  title="Mobile view"
+                >
+                  <Smartphone size={16} />
+                </button>
+              </div>
+            )}
             <button className="btn btn-sm btn-secondary" disabled={currentWidgets.length === 0}>
               <Save size={16} /> Save
             </button>
@@ -1025,10 +1045,10 @@ function StorefrontDesigner() {
             <span className="hint">Max 20 sections per page • Use the page tabs to add subpages</span>
           </div>
         ) : previewMode ? (
-          <div className="preview-container-full sf-preview-container">
+          <div className={`preview-container-full sf-preview-container sf-device-${previewDevice}`}>
             <div className="sf-preview-frame">
               <div className="sf-preview-header-bar">
-                <Monitor size={16} />
+                {previewDevice === 'mobile' ? <Smartphone size={16} /> : <Monitor size={16} />}
                 <span>{currentPage.name}</span>
                 {pages.length > 1 && (
                   <div className="sf-preview-nav">

@@ -4965,6 +4965,126 @@
   color: #000;
 }
 
+/* ─── Device Toggle ─── */
+.device-toggle {
+  display: flex;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 2px;
+}
+
+.device-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.device-btn:hover {
+  color: #fff;
+  background: var(--bg-secondary);
+}
+
+.device-btn.active {
+  background: var(--accent);
+  color: #000;
+}
+
+/* ─── Mobile Preview Frame ─── */
+.sf-device-mobile {
+  display: flex;
+  justify-content: center;
+  padding: 30px 20px;
+  background: var(--bg-secondary);
+}
+
+.sf-device-mobile .sf-preview-frame {
+  width: 390px;
+  max-width: 390px;
+  border-radius: 28px;
+  border: 3px solid #555;
+  box-shadow:
+    0 0 0 2px #333,
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.sf-device-mobile .sf-preview-frame::before {
+  content: '';
+  display: block;
+  width: 120px;
+  height: 5px;
+  background: #444;
+  border-radius: 3px;
+  margin: 10px auto 6px;
+}
+
+.sf-device-mobile .sf-preview-header-bar {
+  border-radius: 0;
+  font-size: 0.75rem;
+  padding: 8px 12px;
+}
+
+.sf-device-mobile .sf-preview-nav {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sf-device-mobile .sf-preview-nav-link {
+  font-size: 0.65rem;
+  padding: 3px 8px;
+}
+
+.sf-device-mobile .sf-preview-overlay h4 {
+  font-size: 0.8rem;
+}
+
+.sf-device-mobile .sf-preview-overlay p {
+  font-size: 0.7rem;
+}
+
+.sf-device-mobile .sf-preview-text h3 {
+  font-size: 0.85rem;
+}
+
+.sf-device-mobile .sf-preview-text p {
+  font-size: 0.75rem;
+}
+
+.sf-device-mobile .sf-preview-grid {
+  padding: 24px;
+}
+
+.sf-device-mobile .sf-preview-grid span {
+  font-size: 0.75rem;
+}
+
+.sf-device-mobile .sf-preview-shoppable-badge,
+.sf-device-mobile .sf-preview-video-badge,
+.sf-device-mobile .sf-preview-gallery-badge {
+  font-size: 0.6rem;
+  padding: 3px 7px;
+}
+
+/* ─── Desktop Preview Frame ─── */
+.sf-device-desktop {
+  padding: 20px;
+}
+
+.sf-device-desktop .sf-preview-frame {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sf-page-tabs {
@@ -4981,5 +5101,10 @@
 
   .shoppable-tag-row input:last-child {
     grid-column: 2;
+  }
+
+  .sf-device-mobile .sf-preview-frame {
+    width: 100%;
+    max-width: 340px;
   }
 }
