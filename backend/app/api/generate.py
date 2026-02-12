@@ -8,10 +8,22 @@ from app.models.user import User
 from app.services.auth import get_current_user
 from app.services.generation_service import generate_image
 from app.services.providers import get_all_providers
-from app.services.image_generator import ImageGenerator
 
 router = APIRouter()
-generator = ImageGenerator()  # Keep for enhance-prompt
+
+STYLE_KEYWORDS = {
+    "photorealistic": "photorealistic, 8k, professional photography",
+    "anime": "anime style, vibrant colors, detailed illustration",
+    "watercolor": "watercolor painting, soft colors, artistic",
+    "digital_art": "digital art, vibrant, modern",
+    "fantasy": "fantasy art, magical, ethereal",
+}
+
+
+def enhance_prompt_text(prompt: str, style: Optional[str] = None) -> str:
+    if style and style in STYLE_KEYWORDS:
+        return f"{prompt}, {STYLE_KEYWORDS[style]}"
+    return f"{prompt}, highly detailed, professional quality, beautiful lighting"
 
 
 class GenerateRequest(BaseModel):
@@ -86,7 +98,7 @@ async def enhance_prompt(
     current_user: User = Depends(get_current_user),
 ):
     """Enhance a simple prompt to get better results."""
-    enhanced = generator.enhance_prompt(request.prompt, request.style)
+    enhanced = enhance_prompt_text(request.prompt, request.style)
     return {"original": request.prompt, "enhanced": enhanced}
 
 

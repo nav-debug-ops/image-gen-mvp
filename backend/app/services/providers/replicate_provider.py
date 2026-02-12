@@ -1,5 +1,4 @@
 import asyncio
-import replicate
 from typing import Optional
 
 from app.config import get_settings
@@ -20,8 +19,13 @@ class ReplicateProvider(ImageProvider):
 
     def __init__(self):
         self.token = settings.replicate_api_token
-        if self.token:
+        self.client = None
+
+    def _get_client(self):
+        if self.client is None and self.token:
+            import replicate
             self.client = replicate.Client(api_token=self.token)
+        return self.client
 
     def is_configured(self) -> bool:
         return bool(self.token)
@@ -60,9 +64,13 @@ class ReplicateProvider(ImageProvider):
                 "num_outputs": 1,
             }
 
+        client = self._get_client()
+        if not client:
+            raise RuntimeError("Replicate client not configured")
+
         # Run in thread pool since replicate client is synchronous
         output = await asyncio.to_thread(
-            self.client.run,
+            client.run,
             model_id,
             input=input_params,
         )

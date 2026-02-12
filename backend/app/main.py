@@ -11,12 +11,14 @@ from app.api import auth, generate, images, prompts, usage
 
 settings = get_settings()
 
+# Ensure storage directory exists before StaticFiles mount
+os.makedirs(settings.storage_path, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await create_tables()
-    os.makedirs(settings.storage_path, exist_ok=True)
     init_providers()
     print(f"[startup] Database tables created")
     print(f"[startup] Storage path: {settings.storage_path}")
