@@ -48,3 +48,33 @@ export function logout() {
   clearAuthToken()
   window.location.href = '/login'
 }
+
+export async function forgotPassword(email) {
+  const res = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Request failed')
+  }
+
+  return res.json()
+}
+
+export async function resetPassword(token, password) {
+  const res = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Password reset failed')
+  }
+
+  return res.json()
+}

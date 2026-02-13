@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Storage
     storage_path: str = "./generated"
 
+    # SMTP (Gmail)
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    sender_email: str = ""
+    reset_token_expire_minutes: int = 15
+
     # Rate Limits
     daily_generation_limit: int = 50
     monthly_generation_limit: int = 1000

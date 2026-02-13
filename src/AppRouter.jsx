@@ -10,6 +10,7 @@ import APlusContent from './pages/APlusContent'
 import BrandStory from './pages/BrandStory'
 import StorefrontDesigner from './pages/StorefrontDesigner'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import App from './App' // Original app as legacy
 
 function ProtectedRoute({ children }) {
@@ -35,6 +36,7 @@ function AppRouter() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/"
           element={
