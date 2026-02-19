@@ -3,15 +3,12 @@ import PromptInput, { MAIN_IMAGE_TEMPLATES, ASPECT_RATIOS } from './components/P
 import ImageDisplay from './components/ImageDisplay'
 import History from './components/History'
 import Gallery from './components/Gallery'
-import SessionPanel from './components/SessionPanel'
 import SettingsPanel from './components/SettingsPanel'
 import ReferenceImageUpload from './components/ReferenceImageUpload'
 import StylePresets from './components/StylePresets'
 import PromptPreview from './components/PromptPreview'
 import { generateImage, getProviderInfo } from './api/imageGen'
-import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear, getAllPresets, savePreset, deletePreset, getActiveSession } from './services/database'
-import { startSession, endSession, updateSessionStats, getSessionStats } from './services/sessionTracker'
-import { initGoogleCalendar, signIn, signOut, isSignedIn, createFocusTimeEvent, updateSessionEvent } from './services/calendar'
+import { initDatabase, saveImage, getAllImages, getFavoriteImages, put, remove, getAll, clear, getAllPresets, savePreset, deletePreset } from './services/database'
 
 // Build optimized prompt based on Amazon listing image type
 function buildAmazonPrompt(basePrompt, imageType, productCategory, productName, mainTemplate) {
@@ -52,19 +49,10 @@ function App() {
   const [history, setHistory] = useState([])
   const [favorites, setFavorites] = useState([])
   const [allImages, setAllImages] = useState([])
-  const [allSessions, setAllSessions] = useState([])
 
   // Reference images state
   const [referenceImages, setReferenceImages] = useState([])
   const [stylePresets, setStylePresets] = useState([])
-
-  // Session state
-  const [activeSession, setActiveSession] = useState(null)
-  const [sessionStats, setSessionStats] = useState(null)
-
-  // Calendar state
-  const [isCalendarConnected, setIsCalendarConnected] = useState(false)
-  const [calendarInitialized, setCalendarInitialized] = useState(false)
 
   // UI state
   const [activeTab, setActiveTab] = useState('generate')
@@ -82,25 +70,12 @@ function App() {
         // Load existing data
         const images = await getAllImages()
         const favs = await getFavoriteImages()
-        const sessions = await getAll('sessions')
-        const stats = await getSessionStats()
-        const active = await getActiveSession()
         const presets = await getAllPresets()
 
         setAllImages(images)
         setHistory(images.slice(0, 50))
         setFavorites(favs)
-        setAllSessions(sessions)
-        setSessionStats(stats)
-        setActiveSession(active)
         setStylePresets(presets || [])
-
-        // Initialize Google Calendar
-        const calendarReady = await initGoogleCalendar()
-        setCalendarInitialized(calendarReady)
-        if (calendarReady && isSignedIn()) {
-          setIsCalendarConnected(true)
-        }
       } catch (err) {
         console.error('Initialization error:', err)
       }
@@ -111,27 +86,6 @@ function App() {
   // Handle image generation
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return
-
-    // Auto-start session if none active
-    let session = activeSession
-    if (!session) {
-      session = await startSession(null, productCategory || 'Amazon Listings')
-      setActiveSession(session)
-
-      // Create calendar event if connected
-      if (isCalendarConnected) {
-        try {
-          const event = await createFocusTimeEvent(session, {
-            title: `Image Generation: ${productCategory || 'Amazon Listings'}`,
-            duration: 60
-          })
-          session.calendarEventId = event.id
-          await put('sessions', session)
-        } catch (err) {
-          console.warn('Failed to create calendar event:', err)
-        }
-      }
-    }
 
     setIsLoading(true)
     setError(null)
@@ -166,7 +120,6 @@ function App() {
         imageUrl: result.url,
         provider: result.provider,
         model: result.model,
-        sessionId: session.id,
         isFavorite: false,
         timestamp: new Date().toISOString(),
         usedReferences: result.usedReferences || 0,
@@ -178,10 +131,6 @@ function App() {
         await saveImage(newEntry)
       }
 
-      // Update session stats
-      const updatedSession = await updateSessionStats(session.id, imageType)
-      setActiveSession(updatedSession)
-
       setCurrentImage(newEntry)
       setHistory(prev => [newEntry, ...prev].slice(0, 50))
       setAllImages(prev => [newEntry, ...prev])
@@ -191,71 +140,7 @@ function App() {
       setIsLoading(false)
       setLoadingProgress(null)
     }
-  }, [prompt, imageType, productCategory, productName, productAsin, mainTemplate, aspectRatio, activeSession, isCalendarConnected, dbReady, referenceImages])
-
-  // Session management
-  const handleStartSession = useCallback(async (projectName) => {
-    const session = await startSession(null, projectName || 'Amazon Listings')
-    setActiveSession(session)
-
-    if (isCalendarConnected) {
-      try {
-        const event = await createFocusTimeEvent(session, {
-          title: `Image Generation: ${projectName || 'Amazon Listings'}`,
-          duration: 60
-        })
-        session.calendarEventId = event.id
-        await put('sessions', session)
-      } catch (err) {
-        console.warn('Failed to create calendar event:', err)
-      }
-    }
-
-    return session
-  }, [isCalendarConnected])
-
-  const handleEndSession = useCallback(async () => {
-    if (!activeSession) return
-
-    const completedSession = await endSession(activeSession.id)
-
-    // Update calendar event with actual duration
-    if (isCalendarConnected && completedSession.calendarEventId) {
-      try {
-        await updateSessionEvent(completedSession.calendarEventId, completedSession)
-      } catch (err) {
-        console.warn('Failed to update calendar event:', err)
-      }
-    }
-
-    setActiveSession(null)
-    setAllSessions(prev => prev.map(s => s.id === completedSession.id ? completedSession : s))
-
-    // Refresh stats
-    const stats = await getSessionStats()
-    setSessionStats(stats)
-  }, [activeSession, isCalendarConnected])
-
-  // Calendar connection
-  const handleConnectCalendar = useCallback(async () => {
-    if (!calendarInitialized) {
-      alert('Calendar integration not configured. Add Google API credentials to .env')
-      return
-    }
-
-    try {
-      await signIn()
-      setIsCalendarConnected(true)
-    } catch (err) {
-      console.error('Calendar sign-in failed:', err)
-      alert('Failed to connect to Google Calendar')
-    }
-  }, [calendarInitialized])
-
-  const handleDisconnectCalendar = useCallback(() => {
-    signOut()
-    setIsCalendarConnected(false)
-  }, [])
+  }, [prompt, imageType, productCategory, productName, productAsin, mainTemplate, aspectRatio, dbReady, referenceImages])
 
   // Favorites management
   const handleSaveToFavorites = useCallback(async () => {
@@ -311,18 +196,13 @@ function App() {
     if (!confirm('Are you sure you want to delete ALL data? This cannot be undone.')) return
 
     if (dbReady) {
-      await clear('sessions')
       await clear('images')
-      await clear('calendarEvents')
     }
 
     setHistory([])
     setFavorites([])
     setAllImages([])
-    setAllSessions([])
     setCurrentImage(null)
-    setActiveSession(null)
-    setSessionStats(null)
   }, [dbReady])
 
   // Style preset management
@@ -401,14 +281,6 @@ function App() {
       {activeTab === 'generate' ? (
         <main className="main">
           <div className="sidebar">
-            <SessionPanel
-              activeSession={activeSession}
-              onStartSession={handleStartSession}
-              onEndSession={handleEndSession}
-              sessionStats={sessionStats}
-              isCalendarConnected={isCalendarConnected}
-              onConnectCalendar={handleConnectCalendar}
-            />
             <PromptInput
               prompt={prompt}
               setPrompt={setPrompt}
@@ -486,13 +358,8 @@ function App() {
       ) : (
         <main className="main settings-main">
           <SettingsPanel
-            sessions={allSessions}
             images={allImages}
-            sessionStats={sessionStats}
             onClearData={handleClearAllData}
-            isCalendarConnected={isCalendarConnected}
-            onConnectCalendar={handleConnectCalendar}
-            onDisconnectCalendar={handleDisconnectCalendar}
           />
         </main>
       )}
@@ -500,12 +367,6 @@ function App() {
       <footer className="footer">
         <span className="shortcut">Ctrl+Enter: Generate</span>
         <span className="shortcut">Ctrl+S: Save to Gallery</span>
-        {activeSession && (
-          <span className="session-indicator">
-            <span className="session-dot"></span>
-            Session Active
-          </span>
-        )}
       </footer>
     </div>
   )

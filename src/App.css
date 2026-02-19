@@ -947,199 +947,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* Session Panel */
-.session-panel {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-tertiary);
-}
-
-.session-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.session-header h2 {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.calendar-connect-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-muted);
-  font-size: 0.6875rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.calendar-connect-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.active-session {
-  text-align: center;
-}
-
-.session-timer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.timer-icon {
-  color: var(--success);
-}
-
-.timer-icon.pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.timer-value {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.session-project {
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.session-live-stats {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.live-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.start-session {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.project-input {
-  width: 100%;
-  padding: 8px 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: 0.8125rem;
-}
-
-.project-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.project-input::placeholder {
-  color: var(--text-muted);
-}
-
-.session-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.session-btn.start {
-  background: var(--success);
-  color: white;
-}
-
-.session-btn.start:hover {
-  background: #1db954;
-}
-
-.session-btn.stop {
-  background: var(--error);
-  color: white;
-}
-
-.session-btn.stop:hover {
-  background: #dc2626;
-}
-
-.session-stats {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.session-stats h3 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 8px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-}
-
-.stat-item .stat-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.stat-item .stat-label {
-  font-size: 0.625rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-
 /* Settings Panel */
 .settings-main {
   padding: 24px;
@@ -1223,8 +1030,7 @@ body {
   border-radius: var(--radius);
 }
 
-.validate-btn,
-.connect-calendar-btn {
+.validate-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1239,8 +1045,7 @@ body {
   transition: background 0.15s ease;
 }
 
-.validate-btn:hover,
-.connect-calendar-btn:hover {
+.validate-btn:hover {
   background: var(--accent-hover);
 }
 
@@ -1269,27 +1074,6 @@ body {
   color: var(--error);
 }
 
-.calendar-connected {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: rgba(34, 197, 94, 0.1);
-  border-radius: var(--radius);
-  color: var(--success);
-  font-size: 0.8125rem;
-}
-
-.disconnect-btn {
-  margin-left: auto;
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-}
 
 .disconnect-btn:hover {
   border-color: var(--error);
@@ -1391,26 +1175,6 @@ body {
   margin-top: 8px;
   font-size: 0.75rem;
   color: var(--text-muted);
-}
-
-/* Session indicator in footer */
-.session-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(34, 197, 94, 0.1);
-  border-radius: 20px;
-  font-size: 0.75rem;
-  color: var(--success);
-}
-
-.session-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--success);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
 }
 
 /* Progress bar for loading */

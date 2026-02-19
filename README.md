@@ -1,6 +1,6 @@
 # Amazon Listing Image Generator
 
-A professional image generation tool for Amazon sellers. Generate product photos optimized for Amazon listings with automatic session tracking, calendar integration, and data export.
+A professional image generation tool for Amazon sellers. Generate product photos optimized for Amazon listings with AI-powered generation and data export.
 
 ## Features
 
@@ -10,22 +10,15 @@ A professional image generation tool for Amazon sellers. Generate product photos
 - **8 Product Categories** - Electronics, Home & Kitchen, Beauty, Sports, Toys, Clothing, Food, Pets
 - **Multiple AI Providers** - Replicate (Flux), OpenAI (DALL-E 3), Stability AI
 
-### Session Tracking
-- **Time Tracking** - Track how long you spend generating images
-- **Project Organization** - Group sessions by product/project name
-- **Session Statistics** - View total time, images generated, session history
-- **Auto-Start** - Sessions automatically start when you generate
-
-### Calendar Integration (Clockwise Compatible)
-- **Google Calendar Sync** - Create focus time blocks when you start sessions
-- **Automatic Updates** - Calendar events update with actual duration when you end
-- **Clockwise Compatible** - Works with Clockwise for smart scheduling
-
 ### Data & Export
 - **IndexedDB Storage** - All data persisted locally in the browser
-- **CSV Export** - Export sessions and images to spreadsheet
+- **CSV Export** - Export images to spreadsheet
 - **PDF Reports** - Generate printable reports with statistics
 - **History & Favorites** - Browse and manage all generated images
+
+### Authentication
+- **User Registration & Login** - Secure JWT-based authentication
+- **Password Reset** - Email-based forgot password flow via Gmail SMTP
 
 ## Quick Start
 
@@ -55,34 +48,7 @@ By default, the app runs in demo mode using placeholder images. This is perfect 
 
 ### Image Generation API
 
-Edit your `.env` file:
-
-```env
-# Replicate (Recommended - Flux model)
-VITE_API_PROVIDER=replicate
-VITE_API_KEY=your_replicate_token
-
-# OpenAI (DALL-E 3)
-VITE_API_PROVIDER=openai
-VITE_API_KEY=your_openai_api_key
-
-# Stability AI (SDXL)
-VITE_API_PROVIDER=stability
-VITE_API_KEY=your_stability_api_key
-```
-
-### Google Calendar Integration
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a project and enable Google Calendar API
-3. Create OAuth 2.0 credentials (Web application)
-4. Add `http://localhost:3000` to authorized JavaScript origins
-5. Add to your `.env`:
-
-```env
-VITE_GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-VITE_GOOGLE_API_KEY=your_api_key
-```
+API keys are configured on the backend. See `backend/.env.example` for details.
 
 ## Keyboard Shortcuts
 
@@ -104,16 +70,25 @@ image-gen-mvp/
 │   │   ├── ImageDisplay.jsx    # Image viewer + progress
 │   │   ├── History.jsx         # Generation history
 │   │   ├── Gallery.jsx         # Saved favorites
-│   │   ├── SessionPanel.jsx    # Time tracking controls
 │   │   └── SettingsPanel.jsx   # API config + exports
 │   ├── api/
-│   │   └── imageGen.js         # Multi-provider image API
+│   │   ├── imageGen.js         # Multi-provider image API
+│   │   └── auth.js             # Authentication API
+│   ├── pages/
+│   │   ├── Login.jsx           # Login/Register/Forgot password
+│   │   └── ResetPassword.jsx   # Password reset page
 │   ├── services/
-│   │   ├── database.js         # IndexedDB storage
-│   │   ├── sessionTracker.js   # Session/time tracking
-│   │   └── calendar.js         # Google Calendar integration
+│   │   └── database.js         # IndexedDB storage
 │   └── utils/
 │       └── export.js           # CSV/PDF export utilities
+├── backend/
+│   ├── app/
+│   │   ├── main.py             # FastAPI application
+│   │   ├── config.py           # Settings & environment
+│   │   ├── models/             # SQLAlchemy models
+│   │   ├── api/                # API routes
+│   │   └── services/           # Business logic
+│   └── requirements.txt
 ├── .env.example                # Environment template
 ├── package.json
 └── vite.config.js
@@ -123,9 +98,10 @@ image-gen-mvp/
 
 - React 18
 - Vite
-- IndexedDB (persistent storage)
+- FastAPI (Python backend)
+- IndexedDB (client-side storage)
+- SQLite + SQLAlchemy (backend storage)
 - Lucide React (icons)
-- Google Calendar API
 
 ## API Pricing (Approximate)
 

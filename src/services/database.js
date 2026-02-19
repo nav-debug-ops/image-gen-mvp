@@ -1,10 +1,10 @@
 /**
  * IndexedDB Database Service
- * Provides persistent storage for sessions, images, projects, and style presets
+ * Provides persistent storage for images, projects, and style presets
  */
 
 const DB_NAME = 'amazon-listing-generator'
-const DB_VERSION = 2 // Upgraded for style presets
+const DB_VERSION = 3 // Upgraded: removed sessions/calendar stores
 
 let db = null
 
@@ -21,19 +21,18 @@ export async function initDatabase() {
     request.onupgradeneeded = (event) => {
       const database = event.target.result
 
-      // Sessions store - tracks work sessions
-      if (!database.objectStoreNames.contains('sessions')) {
-        const sessionsStore = database.createObjectStore('sessions', { keyPath: 'id' })
-        sessionsStore.createIndex('startTime', 'startTime', { unique: false })
-        sessionsStore.createIndex('projectId', 'projectId', { unique: false })
-        sessionsStore.createIndex('status', 'status', { unique: false })
+      // Remove legacy stores if they exist
+      if (database.objectStoreNames.contains('sessions')) {
+        database.deleteObjectStore('sessions')
+      }
+      if (database.objectStoreNames.contains('calendarEvents')) {
+        database.deleteObjectStore('calendarEvents')
       }
 
       // Images store - generated images
       if (!database.objectStoreNames.contains('images')) {
         const imagesStore = database.createObjectStore('images', { keyPath: 'id' })
         imagesStore.createIndex('timestamp', 'timestamp', { unique: false })
-        imagesStore.createIndex('sessionId', 'sessionId', { unique: false })
         imagesStore.createIndex('imageType', 'imageType', { unique: false })
         imagesStore.createIndex('isFavorite', 'isFavorite', { unique: false })
       }
@@ -45,14 +44,7 @@ export async function initDatabase() {
         projectsStore.createIndex('createdAt', 'createdAt', { unique: false })
       }
 
-      // Calendar events store - synced calendar entries
-      if (!database.objectStoreNames.contains('calendarEvents')) {
-        const eventsStore = database.createObjectStore('calendarEvents', { keyPath: 'id' })
-        eventsStore.createIndex('sessionId', 'sessionId', { unique: false })
-        eventsStore.createIndex('googleEventId', 'googleEventId', { unique: false })
-      }
-
-      // Style presets store - saved reference image combinations (v2)
+      // Style presets store - saved reference image combinations
       if (!database.objectStoreNames.contains('stylePresets')) {
         const presetsStore = database.createObjectStore('stylePresets', { keyPath: 'id' })
         presetsStore.createIndex('name', 'name', { unique: false })
@@ -133,20 +125,6 @@ export async function clear(storeName) {
   })
 }
 
-// Session-specific helpers
-export async function getAllSessions() {
-  return getAll('sessions')
-}
-
-export async function getActiveSession() {
-  const sessions = await getByIndex('sessions', 'status', 'active')
-  return sessions[0] || null
-}
-
-export async function saveSession(session) {
-  return put('sessions', session)
-}
-
 // Image-specific helpers
 export async function getAllImages() {
   return getAll('images')
@@ -158,10 +136,6 @@ export async function getFavoriteImages() {
 
 export async function saveImage(image) {
   return put('images', image)
-}
-
-export async function getSessionImages(sessionId) {
-  return getByIndex('images', 'sessionId', sessionId)
 }
 
 // Project helpers
