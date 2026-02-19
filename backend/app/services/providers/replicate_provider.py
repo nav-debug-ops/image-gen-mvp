@@ -64,7 +64,20 @@ class ReplicateProvider(ImageProvider):
                 "num_outputs": 1,
             }
 
-        client = self._get_client()
+        # Allow per-request token override
+        auth_token = kwargs.get("auth_token")
+        client = None
+        if auth_token:
+            try:
+                import replicate
+
+                client = replicate.Client(api_token=auth_token)
+            except Exception:
+                client = None
+
+        if client is None:
+            client = self._get_client()
+
         if not client:
             raise RuntimeError("Replicate client not configured")
 

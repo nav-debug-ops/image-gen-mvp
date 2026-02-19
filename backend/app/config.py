@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     replicate_api_token: str = ""
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    # Optional Nano Banana token (can be used as a server-side API token
+    # or as a fallback when clients do not provide a per-request token)
+    nano_banana_token: str = ""
 
     # Default provider
     default_provider: str = "replicate"

@@ -71,6 +71,8 @@ VITE_API_PROVIDER=stability
 VITE_API_KEY=your_stability_api_key
 ```
 
+If you want to use Nano Banana tokens for server-side calls or to forward per-request tokens from the frontend, set the backend env var `NANO_BANANA_TOKEN` or send the header `x-nano-banana-token` with requests to the backend generate endpoint. The backend will use a per-request header token when present, otherwise it falls back to the configured `NANO_BANANA_TOKEN`.
+
 ### Google Calendar Integration
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)

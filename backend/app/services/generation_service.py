@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 import time
 import uuid
 import os
@@ -35,13 +38,14 @@ async def download_and_save(image_url: str) -> tuple[str, str]:
 async def generate_image(
     user_id: int,
     prompt: str,
-    provider_name: str | None,
-    model: str | None,
+    provider_name: Optional[str],
+    model: Optional[str],
     aspect_ratio: str,
     width: int,
     height: int,
     failover: bool,
-    db: AsyncSession,
+    auth_token: Optional[str] = None,
+    db: AsyncSession = None,
 ) -> Generation:
     """Orchestrate image generation with rate limiting, provider selection, and failover."""
 
@@ -97,6 +101,7 @@ async def generate_image(
                 aspect_ratio=aspect_ratio,
                 width=width,
                 height=height,
+                auth_token=auth_token,
             )
             duration = int((time.time() - start) * 1000)
 

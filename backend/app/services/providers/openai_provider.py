@@ -47,11 +47,13 @@ class OpenAIProvider(ImageProvider):
         size = SIZE_MAP.get(aspect_ratio, "1024x1024")
         quality = kwargs.get("quality", "standard")
 
+        token = kwargs.get("auth_token") or self.api_key
+
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 "https://api.openai.com/v1/images/generations",
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
+                    "Authorization": f"Bearer {token}" if token else "",
                     "Content-Type": "application/json",
                 },
                 json={

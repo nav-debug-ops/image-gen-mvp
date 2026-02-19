@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +38,7 @@ class AuthResponse(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
-    display_name: str | None
+    display_name: Optional[str]
     created_at: str
 
 

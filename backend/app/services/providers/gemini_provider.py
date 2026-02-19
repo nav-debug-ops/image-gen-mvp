@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import httpx
 import base64
 import uuid
@@ -21,7 +23,7 @@ class GeminiProvider(ImageProvider):
 
     def get_available_models(self) -> list:
         return [
-            {"id": "gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash", "description": "Native image generation"},
+            {"id": "gemini-2.0-flash-exp-image-generation", "name": "Gemini 2.0 Flash", "description": "Native image generation"},
             {"id": "imagen-3.0-generate-002", "name": "Imagen 3", "description": "High quality Google model"},
             {"id": "imagen-3.0-fast-generate-001", "name": "Imagen 3 Fast", "description": "Faster generation"},
         ]
@@ -35,7 +37,7 @@ class GeminiProvider(ImageProvider):
         height: int = 1024,
         **kwargs,
     ) -> GenerationResult:
-        model_id = model or "gemini-2.0-flash-exp"
+        model_id = model or "gemini-2.0-flash-exp-image-generation"
 
         if model_id.startswith("imagen"):
             return await self._generate_imagen(prompt, model_id, aspect_ratio)
@@ -47,10 +49,9 @@ class GeminiProvider(ImageProvider):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={self.api_key}"
 
         request_body = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": [{"text": f"Generate {prompt}"}]}],
             "generationConfig": {
-                "responseModalities": ["image", "text"],
-                "responseMimeType": "image/png",
+                "response_modalities": ["Text", "Image"],
             },
         }
 

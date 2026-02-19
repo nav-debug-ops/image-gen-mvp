@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +55,7 @@ async def create_generation(
     request: GenerateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    nano_banana_token: Optional[str] = Header(None, alias="x-nano-banana-token"),
 ):
     """Generate an image from a text prompt."""
     try:
@@ -72,6 +73,7 @@ async def create_generation(
             width=request.width,
             height=request.height,
             failover=request.failover,
+            auth_token=nano_banana_token,
             db=db,
         )
 
