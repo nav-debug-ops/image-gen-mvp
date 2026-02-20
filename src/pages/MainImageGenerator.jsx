@@ -181,15 +181,19 @@ function MainImageGenerator() {
     })
   }
 
-  // Filter templates by category
-  const filteredTemplates = categoryFilter === 'All'
-    ? TEMPLATES
-    : TEMPLATES.filter(t => t.category === categoryFilter)
-
   // Research-recommended templates for the selected product category
   const recommendedTemplateIds = getRecommendedTemplates(productCategory)
   const categoryInsight = getCategoryInsight(productCategory)
   const ctrDifferentiator = getCtrDifferentiator(productCategory)
+
+  // Filter templates — 'Recommended' shows only research-picked templates for the active category
+  const filteredTemplates = (() => {
+    if (categoryFilter === 'Recommended') {
+      return TEMPLATES.filter(t => recommendedTemplateIds.includes(t.id))
+    }
+    if (categoryFilter === 'All') return TEMPLATES
+    return TEMPLATES.filter(t => t.category === categoryFilter)
+  })()
 
   // Toggle image selection for batch operations
   const toggleImageSelection = (imageId) => {
@@ -404,6 +408,23 @@ function MainImageGenerator() {
                 )}
               </div>
             )}
+
+            {/* Product Description — below ASIN/upload input */}
+            <div className="product-desc-group">
+              <label>
+                Product Description
+                <span className="label-optional"> (optional)</span>
+              </label>
+              <input
+                type="text"
+                className="config-input"
+                placeholder="e.g. wireless earbuds, black, with charging case"
+                value={productDesc}
+                onChange={(e) => setProductDesc(e.target.value)}
+                maxLength={120}
+              />
+              <p className="config-hint">Included in the AI prompt for more accurate results</p>
+            </div>
           </div>
 
           {/* Configuration Panel */}
@@ -440,7 +461,16 @@ function MainImageGenerator() {
               <select
                 className="category-dropdown"
                 value={productCategory}
-                onChange={(e) => setProductCategory(e.target.value)}
+                onChange={(e) => {
+                  const cat = e.target.value
+                  setProductCategory(cat)
+                  // Auto-switch template filter to Recommended when a category is picked
+                  if (cat) {
+                    setCategoryFilter('Recommended')
+                  } else {
+                    setCategoryFilter('All')
+                  }
+                }}
               >
                 <option value="">-- Select Category --</option>
                 {PRODUCT_CATEGORIES.map((cat) => (
@@ -459,23 +489,6 @@ function MainImageGenerator() {
                   </span>
                 </div>
               )}
-            </div>
-
-            {/* Product Description (optional) */}
-            <div className="config-group">
-              <label>
-                Product Description
-                <span className="label-optional"> (optional)</span>
-              </label>
-              <input
-                type="text"
-                className="config-input"
-                placeholder="e.g. wireless earbuds, black, with charging case"
-                value={productDesc}
-                onChange={(e) => setProductDesc(e.target.value)}
-                maxLength={120}
-              />
-              <p className="config-hint">Included in the AI prompt for more accurate results</p>
             </div>
 
             {/* Quantity Control */}
@@ -511,23 +524,18 @@ function MainImageGenerator() {
             {/* Aspect Ratio Selector */}
             <div className="config-group">
               <label>Aspect Ratio</label>
-              <div className="aspect-ratio-grid-amazon">
+              <select
+                className="config-select"
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+              >
                 {ASPECT_RATIOS.map((ratio) => (
-                  <button
-                    key={ratio.id}
-                    className={`aspect-ratio-btn-amazon ${aspectRatio === ratio.id ? 'selected' : ''} ${ratio.recommended ? 'recommended' : ''}`}
-                    onClick={() => setAspectRatio(ratio.id)}
-                    title={ratio.description}
-                  >
-                    <span className="ratio-icon">{ratio.icon}</span>
-                    <div className="ratio-details">
-                      <span className="ratio-label">{ratio.id} {ratio.name}</span>
-                      {ratio.recommended && <span className="ratio-badge">Recommended</span>}
-                    </div>
-                  </button>
+                  <option key={ratio.id} value={ratio.id}>
+                    {ratio.icon} {ratio.id} {ratio.name} — {ratio.description}{ratio.recommended ? ' ★' : ''}
+                  </option>
                 ))}
-              </div>
-              <p className="ratio-tip">Min 1,000px • Recommended 2,000px+ for zoom</p>
+              </select>
+              <p className="config-hint">Min 1,000px • Recommended 2,000px+ for zoom</p>
             </div>
 
             {/* AI Model Selector */}
@@ -573,6 +581,15 @@ function MainImageGenerator() {
               <span className="template-count">{selectedTemplates.length} selected</span>
             </h3>
             <div className="category-filters">
+              {/* Recommended tab — only shown when a product category is selected */}
+              {productCategory && recommendedTemplateIds.length > 0 && (
+                <button
+                  className={`category-btn category-btn-recommended ${categoryFilter === 'Recommended' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter('Recommended')}
+                >
+                  ⚡ Recommended
+                </button>
+              )}
               {TEMPLATE_CATEGORIES.map((cat) => (
                 <button
                   key={cat}
@@ -585,13 +602,18 @@ function MainImageGenerator() {
             </div>
           </div>
 
-          {/* Category research header */}
-          {productCategory && recommendedTemplateIds.length > 0 && (
+          {/* Research tip — shown on non-Recommended filters to guide users */}
+          {productCategory && recommendedTemplateIds.length > 0 && categoryFilter !== 'Recommended' && (
             <div className="templates-research-tip">
               <Zap size={13} />
               <span>
-                <strong>{productCategory}:</strong> Recommended templates highlighted
-                {imageStrategy === 'high-ctr' ? ' for High-CTR' : ' for Top-Performing'}
+                <strong>{productCategory}:</strong> ⚡ badges mark research-recommended templates.{' '}
+                <button
+                  className="tip-switch-btn"
+                  onClick={() => setCategoryFilter('Recommended')}
+                >
+                  Show only recommended
+                </button>
               </span>
             </div>
           )}

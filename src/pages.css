@@ -722,6 +722,19 @@
   margin-top: 4px;
 }
 
+.product-desc-group {
+  margin-top: 12px;
+}
+
+.product-desc-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
 .label-optional {
   font-size: 0.6875rem;
   color: var(--text-muted);
@@ -1241,6 +1254,19 @@
   color: white;
 }
 
+/* Recommended filter tab */
+.category-btn-recommended {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  color: #818cf8 !important;
+}
+
+.category-btn-recommended:hover,
+.category-btn-recommended.active {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: #6366f1 !important;
+  color: #a5b4fc !important;
+}
+
 /* Research tip above template grid */
 .templates-research-tip {
   display: flex;
@@ -1257,6 +1283,21 @@
 .templates-research-tip svg {
   color: #6366f1;
   flex-shrink: 0;
+}
+
+.tip-switch-btn {
+  background: none;
+  border: none;
+  color: #818cf8;
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tip-switch-btn:hover {
+  color: #a5b4fc;
 }
 
 .generate-action {
