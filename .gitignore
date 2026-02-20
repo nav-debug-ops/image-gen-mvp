@@ -31,3 +31,6 @@ __pycache__/
 *.pyc
 *.db
 backend/generated/
+
+# Generated context / scratch files with sensitive data
+project_context.txt

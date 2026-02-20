@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+import os
 import httpx
 import json
 
-api_key = "***REMOVED***"
+api_key = os.environ.get("GEMINI_API_KEY", "")
 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={api_key}"
 
 request_body = {

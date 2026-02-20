@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+import os
 import httpx
 import json
 
-api_key = "***REMOVED***"
+api_key = os.environ.get("GEMINI_API_KEY", "")
 url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict"
 
 request_body = {
