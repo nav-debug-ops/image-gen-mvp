@@ -10,11 +10,20 @@ import {
   Check,
   X,
   Loader2,
-  ChevronDown,
-  Package
+  Package,
+  TrendingUp,
+  MousePointerClick,
+  Lightbulb,
+  Zap,
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import {
+  buildImagePrompt,
+  getRecommendedTemplates,
+  getCategoryInsight,
+  getCtrDifferentiator,
+} from '../constants/imageCategoryPrompts'
 
 // Template categories and items
 const TEMPLATE_CATEGORIES = ['All', 'Basic', 'Packaging', 'Elements', 'Tags', 'Lifestyle', 'Advanced']
@@ -58,6 +67,21 @@ const TEMPLATES = [
   { id: 'exploded', name: 'Exploded View', category: 'Advanced', thumbnail: '💥' },
   { id: 'infographic', name: 'Infographic Style', category: 'Advanced', thumbnail: '📊' },
   { id: 'comparison', name: 'Comparison Layout', category: 'Advanced', thumbnail: '⚖️' },
+]
+
+const IMAGE_STRATEGIES = [
+  {
+    id: 'top-performing',
+    name: 'Top-Performing',
+    icon: TrendingUp,
+    description: 'Proven approach used by bestsellers — safe, high-converting, Amazon-compliant',
+  },
+  {
+    id: 'high-ctr',
+    name: 'High-CTR',
+    icon: MousePointerClick,
+    description: 'Visually distinctive to maximize click-through — bold, differentiated, thumb-stopping',
+  },
 ]
 
 const AI_MODELS = [
@@ -105,6 +129,8 @@ function MainImageGenerator() {
   const [selectedTemplates, setSelectedTemplates] = useState([])
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [productCategory, setProductCategory] = useState('')
+  const [imageStrategy, setImageStrategy] = useState('top-performing')
+  const [productDesc, setProductDesc] = useState('')
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
@@ -159,6 +185,11 @@ function MainImageGenerator() {
   const filteredTemplates = categoryFilter === 'All'
     ? TEMPLATES
     : TEMPLATES.filter(t => t.category === categoryFilter)
+
+  // Research-recommended templates for the selected product category
+  const recommendedTemplateIds = getRecommendedTemplates(productCategory)
+  const categoryInsight = getCategoryInsight(productCategory)
+  const ctrDifferentiator = getCtrDifferentiator(productCategory)
 
   // Toggle image selection for batch operations
   const toggleImageSelection = (imageId) => {
@@ -243,7 +274,12 @@ function MainImageGenerator() {
           template: template.name
         })
 
-        const prompt = `Amazon product listing image, ${template.name} style, professional photography, pure white background RGB(255,255,255), high quality commercial product shot, sharp focus, studio lighting, product fills 85% of frame`
+        const prompt = buildImagePrompt(
+          template.name,
+          productCategory,
+          imageStrategy,
+          productDesc
+        )
 
         const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
         const result = await generateImage(prompt, {
@@ -263,6 +299,8 @@ function MainImageGenerator() {
           model: result.model,
           provider: result.provider,
           aspectRatio,
+          strategy: imageStrategy,
+          category: productCategory,
           timestamp: new Date().toISOString()
         }
 
@@ -372,6 +410,30 @@ function MainImageGenerator() {
           <div className="config-section">
             <h3><Sliders size={18} /> Configuration</h3>
 
+            {/* Image Strategy Toggle */}
+            <div className="config-group">
+              <label>Image Strategy</label>
+              <div className="strategy-toggle">
+                {IMAGE_STRATEGIES.map((s) => {
+                  const Icon = s.icon
+                  return (
+                    <button
+                      key={s.id}
+                      className={`strategy-btn ${imageStrategy === s.id ? 'active' : ''}`}
+                      onClick={() => setImageStrategy(s.id)}
+                      title={s.description}
+                    >
+                      <Icon size={15} />
+                      <span>{s.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="strategy-hint">
+                {IMAGE_STRATEGIES.find(s => s.id === imageStrategy)?.description}
+              </p>
+            </div>
+
             {/* Product Category */}
             <div className="config-group">
               <label>Product Category</label>
@@ -385,6 +447,35 @@ function MainImageGenerator() {
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
+
+              {/* Research insight for selected category */}
+              {productCategory && categoryInsight && (
+                <div className={`category-insight ${imageStrategy === 'high-ctr' ? 'high-ctr' : ''}`}>
+                  <Lightbulb size={13} />
+                  <span>
+                    {imageStrategy === 'high-ctr' && ctrDifferentiator
+                      ? ctrDifferentiator
+                      : categoryInsight}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Product Description (optional) */}
+            <div className="config-group">
+              <label>
+                Product Description
+                <span className="label-optional"> (optional)</span>
+              </label>
+              <input
+                type="text"
+                className="config-input"
+                placeholder="e.g. wireless earbuds, black, with charging case"
+                value={productDesc}
+                onChange={(e) => setProductDesc(e.target.value)}
+                maxLength={120}
+              />
+              <p className="config-hint">Included in the AI prompt for more accurate results</p>
             </div>
 
             {/* Quantity Control */}
@@ -494,20 +585,39 @@ function MainImageGenerator() {
             </div>
           </div>
 
+          {/* Category research header */}
+          {productCategory && recommendedTemplateIds.length > 0 && (
+            <div className="templates-research-tip">
+              <Zap size={13} />
+              <span>
+                <strong>{productCategory}:</strong> Recommended templates highlighted
+                {imageStrategy === 'high-ctr' ? ' for High-CTR' : ' for Top-Performing'}
+              </span>
+            </div>
+          )}
+
           <div className="templates-grid">
-            {filteredTemplates.map((template) => (
-              <div
-                key={template.id}
-                className={`template-card ${selectedTemplates.includes(template.id) ? 'selected' : ''}`}
-                onClick={() => toggleTemplate(template.id)}
-              >
-                <div className="template-thumbnail">{template.thumbnail}</div>
-                <span className="template-name">{template.name}</span>
-                <div className="template-check">
-                  {selectedTemplates.includes(template.id) && <Check size={16} />}
+            {filteredTemplates.map((template) => {
+              const isRecommended = productCategory && recommendedTemplateIds.includes(template.id)
+              return (
+                <div
+                  key={template.id}
+                  className={`template-card ${selectedTemplates.includes(template.id) ? 'selected' : ''} ${isRecommended ? 'recommended' : ''}`}
+                  onClick={() => toggleTemplate(template.id)}
+                >
+                  {isRecommended && (
+                    <div className="template-recommended-badge">
+                      <Zap size={10} />
+                    </div>
+                  )}
+                  <div className="template-thumbnail">{template.thumbnail}</div>
+                  <span className="template-name">{template.name}</span>
+                  <div className="template-check">
+                    {selectedTemplates.includes(template.id) && <Check size={16} />}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Generate Button */}
@@ -604,7 +714,14 @@ function MainImageGenerator() {
                   <img src={img.url} alt={img.template} />
                   <div className="result-info">
                     <span className="result-template">{img.template}</span>
-                    <span className="result-model">{img.provider}</span>
+                    <div className="result-meta">
+                      <span className="result-model">{img.provider}</span>
+                      {img.strategy === 'high-ctr' && (
+                        <span className="result-strategy-badge">
+                          <MousePointerClick size={10} /> High-CTR
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="result-actions">
                     <button
