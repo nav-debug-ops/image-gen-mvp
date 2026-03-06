@@ -13,8 +13,12 @@ import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
 import App from './App' // Original app as legacy
 
+const DEV_BYPASS_AUTH = import.meta.env.DEV
+
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
+
+  if (DEV_BYPASS_AUTH) return children
 
   if (loading) {
     return (

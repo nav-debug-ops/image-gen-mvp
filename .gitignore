@@ -31,3 +31,8 @@ __pycache__/
 *.pyc
 *.db
 backend/generated/
+
+# Video recordings
+vids/*.mp4
+vids/*.mov
+vids/*.avi
