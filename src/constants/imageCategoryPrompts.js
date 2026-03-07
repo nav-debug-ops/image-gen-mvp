@@ -412,55 +412,174 @@ export const CATEGORY_PROMPTS = {
   },
 }
 
+// ─── Image type detection ────────────────────────────────────────────────────
+function detectImageType(templateName) {
+  const n = templateName.toLowerCase()
+  if (/packag|from.?box|open.?display|bundle/.test(n)) return 'packaging'
+  if (/\btag\b|ribbon|certif|callout|award|sale.?tag|quantity.?ind/.test(n)) return 'tag'
+  if (/in.?use|with.?hand|splash|premium.?light|complementary|before.?after|infographic|comparison|exploded/.test(n)) return 'creative'
+  return 'pure'
+}
+
+// ─── Template-specific angle and shadow hints ────────────────────────────────
+function getTemplateHint(templateName) {
+  const n = templateName.toLowerCase()
+  if (n.includes('shadow'))         return { angle: 'straight frontal view',                                                   shadow: 'a clean soft shadow directly beneath the product grounding it naturally' }
+  if (n.includes('platform'))       return { angle: 'slightly low three-quarter angle looking up slightly',                    shadow: 'a small precise shadow beneath the platform edge' }
+  if (n.includes('floating'))       return { angle: 'straight frontal view',                                                   shadow: 'no shadow — the product appears to float in pure clean space' }
+  if (/angle|multi.?angle/.test(n)) return { angle: 'three-quarter front angle revealing both face and side profile',          shadow: 'a soft grounded shadow beneath the product' }
+  if (n.includes('size'))           return { angle: 'straight frontal view with a neutral scale reference beside the product', shadow: 'very subtle shadow beneath each element' }
+  if (n.includes('accessor'))       return { angle: 'slightly elevated three-quarter view showing product and accessories',    shadow: 'soft shadow beneath the central product' }
+  if (n.includes('ingredient'))     return { angle: 'three-quarter angle with key ingredient elements arranged around',        shadow: 'subtle shadow beneath the hero product' }
+  return null
+}
+
+// ─── Packaging position hint ─────────────────────────────────────────────────
+function getPackagingDesc(templateName) {
+  const n = templateName.toLowerCase()
+  if (n.includes('left'))                    return 'positioned to the left of the product'
+  if (n.includes('right'))                   return 'positioned to the right of the product'
+  if (n.includes('front'))                   return 'facing the camera directly, front panel fully readable'
+  if (n.includes('emerging') || n.includes('from box')) return 'open with the product emerging from it dramatically'
+  if (n.includes('open'))                    return 'open in a display arrangement showing both product and interior'
+  if (n.includes('bundle'))                  return 'and all included items arranged together showing the complete package value'
+  return 'positioned beside the product, front panel clearly visible'
+}
+
+// ─── Tag style hint ──────────────────────────────────────────────────────────
+function getTagDesc(templateName) {
+  const n = templateName.toLowerCase()
+  if (n.includes('ribbon'))  return 'premium elegant ribbon tag in clean white with simple black typography'
+  if (n.includes('corner'))  return 'small refined tag positioned cleanly at a corner of the product'
+  if (n.includes('certif') || n.includes('quality')) return 'professional quality certification badge in clean minimal style'
+  if (n.includes('award'))   return 'clean award-style badge alongside the product'
+  if (n.includes('quantity') || n.includes('sale')) return 'bold modern tag in the brand accent color with clean sans-serif typography'
+  if (n.includes('callout')) return 'thin-line feature callout tag pointing toward the product\'s key feature'
+  return 'clean white hang tag with simple dark typography attached by a short ribbon'
+}
+
+// ─── Creative element hint ───────────────────────────────────────────────────
+function getCreativeElement(templateName, isHighCtr) {
+  const n = templateName.toLowerCase()
+  if (n.includes('splash'))       return 'a dynamic water or liquid splash surrounding the product, suggesting freshness, energy or water-resistance without adding clutter'
+  if (/hand|in.?use/.test(n))     return 'a natural human hand holding or actively using the product — no full person, just the hand and product interaction'
+  if (n.includes('complementary'))return 'one complementary lifestyle object reinforcing the primary use case, kept minimal and clearly secondary to the product'
+  if (/premium.?light|lighting/.test(n)) return isHighCtr
+    ? 'a dramatic directional studio key light creating strong contrast, deep shadows and a cinematic premium presence'
+    : 'a warm soft studio key light with gentle shadows creating depth and an inviting premium feel'
+  if (n.includes('before'))       return 'a clean split-frame before-and-after layout showing the product\'s primary benefit result clearly'
+  if (n.includes('infographic'))  return 'one or two ultra-minimal text callouts pointing to the product\'s single most important feature'
+  if (n.includes('comparison'))   return 'a simple side-by-side visual showing one clear advantage over a generic alternative'
+  if (n.includes('exploded'))     return 'an exploded-view arrangement showing the product\'s main components cleanly separated, demonstrating quality and completeness'
+  return isHighCtr
+    ? 'a dramatic high-contrast lighting effect that makes the product commanding and impossible to ignore at thumbnail size'
+    : 'a warm premium lighting approach with gentle depth that elevates perceived quality and invitingness'
+}
+
 /**
- * Builds a research-backed prompt for Amazon main image generation.
+ * Builds a framework-aligned professional Amazon main image prompt.
+ * Follows the commercial product photographer + performance marketer framework.
+ * Produces natural-language paragraph prompts (~150 words) per template.
  *
- * @param {string} templateName - Name of the selected template (e.g. "Plain White Background")
- * @param {string} category     - Product category (must match PRODUCT_CATEGORIES keys)
- * @param {string} strategy     - 'top-performing' or 'high-ctr'
- * @param {string} productDesc  - Optional brief product description to include
+ * @param {string} templateName - Selected template name (e.g. "Plain White Background")
+ * @param {string} category     - Product category (must match CATEGORY_PROMPTS keys)
+ * @param {string} strategy     - 'top-performing' | 'high-ctr'
+ * @param {string} productDesc  - Optional product description
  * @returns {string} Full prompt string for AI image generation
  */
 export function buildImagePrompt(templateName, category, strategy = 'top-performing', productDesc = '') {
-  const catData = CATEGORY_PROMPTS[category]
+  const imageType  = detectImageType(templateName)
+  const catData    = CATEGORY_PROMPTS[category]
+  const isHighCtr  = strategy === 'high-ctr'
+  const catStrat   = catData ? (isHighCtr ? catData.highCtr : catData.topPerforming) : null
+  const product    = productDesc || 'the product'
 
-  const REALISM_HEADER = [
-    'photorealistic commercial product photograph',
-    'shot on Canon 5D DSLR with 100mm macro lens',
-    'professional studio lighting setup',
-    'ultra-sharp focus',
-    'real physical product — NOT illustration NOT cartoon NOT digital art NOT 3D render NOT drawing NOT painting NOT sketch',
-  ].join(', ')
+  const hint    = getTemplateHint(templateName)
+  const angle   = hint?.angle   || catStrat?.angle   || (isHighCtr
+    ? 'classic three-quarter front angle that reveals depth and premium design details'
+    : 'clean straight frontal angle for maximum product clarity and honesty')
+  const shadow  = hint?.shadow  || (isHighCtr
+    ? 'a slightly stronger studio shadow on one side creating dramatic depth'
+    : 'a small soft shadow directly beneath the product for grounded realism')
+  const lighting = catStrat?.lighting || (isHighCtr
+    ? 'slightly higher contrast studio lighting that creates depth and draws the eye at thumbnail size'
+    : 'bright even diffused studio lighting revealing accurate color and surface texture with no harsh shadows')
+  const ctrNote = isHighCtr
+    ? 'The angle and lighting are chosen to create visual drama and stand out in a crowded search page.'
+    : 'The angle and even lighting ensure immediate product recognition and buyer trust at thumbnail size.'
+  const extras = catStrat?.extras || ''
 
-  const REALISM_FOOTER = [
-    'photorealistic hyperdetailed',
-    'product photography',
-    'no text overlays',
-    'no watermarks',
-    'Amazon main image compliant',
-  ].join(', ')
-
-  // Fallback to generic if category not found
-  if (!catData) {
-    const productPart = productDesc ? `${productDesc},` : 'product,'
-    return `${REALISM_HEADER}, Amazon product listing main image, ${productPart} ${templateName} composition, pure white background #FFFFFF, even studio lighting, product fills 85% of frame, ${REALISM_FOOTER}`
+  // ── IMAGE 1: Pure product ────────────────────────────────────────────────
+  if (imageType === 'pure') {
+    return [
+      `Amazon main image. Goal: maximize click-through rate while staying fully compliant with Amazon policies.`,
+      `${product} is shown at a ${angle}, filling most of the square frame.`,
+      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
+      `The product stays fully inside the frame with a generous white margin on all four sides — it must not be cropped or touch any edge.`,
+      `No text, tags, packaging or overlays of any kind.`,
+      `${lighting}. ${shadow}.`,
+      `${ctrNote}`,
+      `The entire product is in crisp focus from front to back, resolution must support Amazon zoom.`,
+      extras ? `${extras}.` : '',
+      `Only the product itself and any truly included accessories may appear. No unrelated props or watermarks.`,
+      `The final image must look like high-level commercial Amazon product photography with accurate colors and zero distractions.`,
+      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art, NOT sketch.`,
+    ].filter(Boolean).join(' ')
   }
 
-  const strat = strategy === 'high-ctr' ? catData.highCtr : catData.topPerforming
-  const productPart = productDesc ? `${productDesc},` : 'physical product,'
+  // ── IMAGE 2: Product with packaging ─────────────────────────────────────
+  if (imageType === 'packaging') {
+    const packDesc = getPackagingDesc(templateName)
+    return [
+      `Amazon main image. Goal: maximize click-through rate, prove product value and gift-readiness, fully Amazon-compliant.`,
+      `${product} is shown at a ${angle}, filling most of the square frame.`,
+      `The packaging is ${packDesc}.`,
+      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
+      `Both the product and its packaging remain fully inside the frame with a generous white margin on all sides — nothing may be cropped or touch any edge.`,
+      `${lighting}. ${shadow}.`,
+      `${ctrNote}`,
+      `The entire scene is in crisp focus, resolution supports Amazon zoom.`,
+      `The packaging displays the primary keyword as clearly printed physical text — never a digital overlay — visible and readable without blocking any key product feature.`,
+      `Only the product and its real included packaging may appear. No unrelated props, accessories or text overlays.`,
+      `The final image must look like high-level commercial Amazon product photography with accurate colors and no distractions.`,
+      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
+    ].filter(Boolean).join(' ')
+  }
 
+  // ── IMAGE 3: Product with tag ────────────────────────────────────────────
+  if (imageType === 'tag') {
+    const tagDesc = getTagDesc(templateName)
+    return [
+      `Amazon main image. Goal: maximize click-through rate using the keyword tag as a visual hook, fully Amazon-compliant.`,
+      `${product} is shown at a ${angle}, filling most of the square frame.`,
+      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
+      `The product and tag remain fully inside the frame with a generous white margin on all sides — nothing is cropped or touches any edge.`,
+      `${lighting}. ${shadow}.`,
+      `${ctrNote}`,
+      `The entire product is in crisp focus, resolution supports Amazon zoom.`,
+      `A ${tagDesc} is attached to or positioned beside the product, displaying only the primary keyword in a clear readable font. The tag is a real physical object — never a digital overlay — and must not cover any key product feature.`,
+      `Only the product and this single tag may appear. No additional props, accessories or text overlays.`,
+      `The final image must look like high-level commercial Amazon product photography with accurate colors and no distractions.`,
+      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
+    ].filter(Boolean).join(' ')
+  }
+
+  // ── IMAGE 4: Creative high-CTR variant ──────────────────────────────────
+  const creativeEl = getCreativeElement(templateName, isHighCtr)
   return [
-    REALISM_HEADER,
-    `Amazon product listing main image`,
-    productPart,
-    `${templateName} composition`,
-    strat.background,
-    strat.angle,
-    strat.lighting,
-    strat.scale,
-    strat.extras,
-    REALISM_FOOTER,
-  ].filter(Boolean).join(', ')
+    `Amazon main image designed for maximum click-through rate — higher creative impact, fully Amazon-compliant.`,
+    `${product} dominates the frame at a ${angle}, filling most of the square space.`,
+    `Background is pure white, RGB 255 255 255, no texture or gradient.`,
+    `The product stays fully inside the frame with a generous white margin on all sides — nothing is cropped or touches any edge.`,
+    `${lighting}. ${shadow}.`,
+    `${ctrNote}`,
+    `The entire product is in crisp focus, resolution supports Amazon zoom.`,
+    `One strong creative element dramatizes the main product benefit: ${creativeEl}.`,
+    `A physical tag attached to the product displays the primary keyword in clean readable typography — never a digital overlay.`,
+    `Only the product, this single creative element, and the keyword tag may appear. No unrelated props or accessories.`,
+    `The final image must look like high-level commercial Amazon product photography that stops the scroll, with accurate colors and no distractions.`,
+    `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
+  ].filter(Boolean).join(' ')
 }
 
 /**
