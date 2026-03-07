@@ -5693,3 +5693,191 @@
   padding: 0;
 }
 .asin-change-btn:hover { color: var(--text-primary); }
+
+/* ── Lightbox Modal ── */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+  animation: lightbox-in 0.15s ease;
+}
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.lightbox-modal {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 16px;
+  max-width: 860px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  animation: lightbox-up 0.18s ease;
+}
+@keyframes lightbox-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.lightbox-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.18); }
+
+.lightbox-image-wrap {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0d1a;
+  min-height: 300px;
+  max-height: 55vh;
+  padding: 16px;
+}
+.lightbox-image-wrap img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.lightbox-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid #2a2a4a;
+  border-bottom: 1px solid #2a2a4a;
+}
+.lightbox-template {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+.lightbox-meta {
+  font-size: 0.75rem;
+  color: #606080;
+}
+
+.lightbox-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lightbox-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.lightbox-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.lightbox-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.lightbox-btn-save {
+  background: #2a2a4a;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+}
+.lightbox-btn-saved {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+.lightbox-btn-download {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+.lightbox-btn-edit {
+  background: #2a2a4a;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+  position: relative;
+}
+.lightbox-edit-arrow { font-size: 0.7rem; margin-left: 2px; }
+
+.lightbox-edit-wrap {
+  position: relative;
+}
+.lightbox-editor-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: #1e1e3a;
+  border: 1px solid #3a3a5a;
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 20;
+}
+.editor-menu-hint {
+  font-size: 0.72rem;
+  color: #606080;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid #2a2a4a;
+  margin: 0;
+}
+.editor-menu-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #2a2a4a;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.editor-menu-item:last-child { border-bottom: none; }
+.editor-menu-item:hover { background: rgba(102,126,234,0.1); }
+.editor-menu-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+.editor-menu-desc {
+  font-size: 0.72rem;
+  color: #606080;
+  margin-top: 2px;
+}
+
+/* Saved state for action-btn on result card */
+.action-btn.saved { color: #4ade80; }

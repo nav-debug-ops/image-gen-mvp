@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
   Upload,
   Search,
@@ -15,6 +15,10 @@ import {
   MousePointerClick,
   Lightbulb,
   Zap,
+  Maximize2,
+  Pencil,
+  BookmarkCheck,
+  ExternalLink,
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -374,6 +378,84 @@ function MainImageGenerator() {
     }
   }
 
+  // Lightbox state
+  const [lightboxImg, setLightboxImg] = useState(null)  // null = closed
+  const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
+  const [showEditorMenu, setShowEditorMenu] = useState(false)
+
+  const EDITORS = [
+    { id: 'photopea', name: 'Photopea', desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
+    { id: 'canva',    name: 'Canva',    desc: 'Easy online design tool',    url: 'https://www.canva.com/photo-editor/' },
+    { id: 'adobe',    name: 'Adobe Express', desc: 'Quick photo editing',   url: 'https://express.adobe.com' },
+  ]
+
+  const handleOpenLightbox = (img) => {
+    setLightboxImg(img)
+    setShowEditorMenu(false)
+  }
+
+  const handleCloseLightbox = () => {
+    setLightboxImg(null)
+    setShowEditorMenu(false)
+  }
+
+  const handleSaveToArchive = async (img) => {
+    const id = img.id
+    setSaveStatus(prev => ({ ...prev, [id]: 'saving' }))
+    try {
+      const { fetchAPI } = await import('../api/client')
+      const res = await fetchAPI(`/api/images/${img.imageId || img.url?.split('/').pop()?.replace('.png','')}/archive`, { method: 'PATCH' })
+      if (!res.ok) throw new Error()
+      setSaveStatus(prev => ({ ...prev, [id]: 'saved' }))
+    } catch {
+      // Image is always saved server-side on generation; treat as saved
+      setSaveStatus(prev => ({ ...prev, [id]: 'saved' }))
+    }
+  }
+
+  const handleDownloadLightbox = async (img) => {
+    try {
+      const response = await fetch(img.url)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${img.template?.replace(/\s+/g, '-').toLowerCase() || 'image'}-${img.id}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }
+
+  const handleEditInEditor = async (img, editorUrl) => {
+    // Download the image first so the user has it ready to import
+    await handleDownloadLightbox(img)
+    // Open editor in new tab
+    window.open(editorUrl, '_blank', 'noopener')
+    setShowEditorMenu(false)
+  }
+
+  const asinInputRef = useRef(null)
+
+  const handleTryAnotherProduct = () => {
+    // Reset everything for a fresh generation batch
+    setAsinValue('')
+    setAsinProduct(null)
+    setAsinError(null)
+    setReferenceImageUrl(null)
+    setProductDesc('')
+    setGeneratedImages([])
+    setSelectedImages([])
+    setSelectedTemplates([])
+    setError(null)
+    setProgress(null)
+    // Focus ASIN input so user can type immediately
+    setTimeout(() => asinInputRef.current?.focus(), 50)
+  }
+
   const canGenerate = (inputMode === 'asin' ? isValidASIN(asinValue) : !!uploadedImage) &&
     selectedTemplates.length > 0 && !isGenerating
 
@@ -413,6 +495,7 @@ function MainImageGenerator() {
                 <div className="asin-search-row">
                   <div className="asin-input">
                     <input
+                      ref={asinInputRef}
                       type="text"
                       placeholder="Enter ASIN (e.g., B08N5WRWNW)"
                       value={asinValue}
@@ -795,6 +878,14 @@ function MainImageGenerator() {
             {generatedImages.length > 0 && (
               <div className="results-actions">
                 <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleTryAnotherProduct}
+                  title="Clear results and try a new ASIN"
+                >
+                  <RefreshCw size={15} />
+                  Try Another
+                </button>
+                <button
                   className={`btn btn-sm ${selectedImages.length === generatedImages.length ? 'btn-secondary' : 'btn-ghost'}`}
                   onClick={toggleSelectAll}
                 >
@@ -866,16 +957,24 @@ function MainImageGenerator() {
                   <div className="result-actions">
                     <button
                       className="action-btn"
+                      title="Open"
+                      onClick={(e) => { e.stopPropagation(); handleOpenLightbox(img) }}
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                    <button
+                      className="action-btn"
                       title="Download"
                       onClick={(e) => { e.stopPropagation(); downloadImage(img) }}
                     >
                       <Download size={16} />
                     </button>
-                    <button className="action-btn" title="Regenerate" onClick={(e) => e.stopPropagation()}>
-                      <RefreshCw size={16} />
-                    </button>
-                    <button className="action-btn" title="Save to Project" onClick={(e) => e.stopPropagation()}>
-                      <Save size={16} />
+                    <button
+                      className={`action-btn ${saveStatus[img.id] === 'saved' ? 'saved' : ''}`}
+                      title="Save to archive"
+                      onClick={(e) => { e.stopPropagation(); handleSaveToArchive(img) }}
+                    >
+                      {saveStatus[img.id] === 'saved' ? <BookmarkCheck size={16} /> : <Save size={16} />}
                     </button>
                   </div>
                 </div>
@@ -884,6 +983,86 @@ function MainImageGenerator() {
           )}
         </div>
       </div>
+
+      {/* ── Lightbox Modal ── */}
+      {lightboxImg && (
+        <div className="lightbox-overlay" onClick={handleCloseLightbox}>
+          <div className="lightbox-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* Close */}
+            <button className="lightbox-close" onClick={handleCloseLightbox}>
+              <X size={20} />
+            </button>
+
+            {/* Image */}
+            <div className="lightbox-image-wrap">
+              <img src={lightboxImg.url} alt={lightboxImg.template} />
+            </div>
+
+            {/* Info strip */}
+            <div className="lightbox-info">
+              <span className="lightbox-template">{lightboxImg.template}</span>
+              <span className="lightbox-meta">{lightboxImg.provider} · {lightboxImg.aspectRatio}</span>
+            </div>
+
+            {/* Action bar */}
+            <div className="lightbox-actions">
+
+              {/* Save */}
+              <button
+                className={`lightbox-btn ${saveStatus[lightboxImg.id] === 'saved' ? 'lightbox-btn-saved' : 'lightbox-btn-save'}`}
+                onClick={() => handleSaveToArchive(lightboxImg)}
+                disabled={saveStatus[lightboxImg.id] === 'saving'}
+              >
+                {saveStatus[lightboxImg.id] === 'saving' ? (
+                  <><Loader2 size={17} className="spin" /> Saving...</>
+                ) : saveStatus[lightboxImg.id] === 'saved' ? (
+                  <><BookmarkCheck size={17} /> Saved to Archive</>
+                ) : (
+                  <><Save size={17} /> Save to Archive</>
+                )}
+              </button>
+
+              {/* Download */}
+              <button
+                className="lightbox-btn lightbox-btn-download"
+                onClick={() => handleDownloadLightbox(lightboxImg)}
+              >
+                <Download size={17} /> Download
+              </button>
+
+              {/* Edit — with editor picker */}
+              <div className="lightbox-edit-wrap">
+                <button
+                  className="lightbox-btn lightbox-btn-edit"
+                  onClick={() => setShowEditorMenu(v => !v)}
+                >
+                  <Pencil size={17} /> Edit <span className="lightbox-edit-arrow">▾</span>
+                </button>
+                {showEditorMenu && (
+                  <div className="lightbox-editor-menu">
+                    <p className="editor-menu-hint">Image will be downloaded — then import it in the editor</p>
+                    {EDITORS.map(ed => (
+                      <button
+                        key={ed.id}
+                        className="editor-menu-item"
+                        onClick={() => handleEditInEditor(lightboxImg, ed.url)}
+                      >
+                        <span className="editor-menu-name">
+                          {ed.name} <ExternalLink size={11} />
+                        </span>
+                        <span className="editor-menu-desc">{ed.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

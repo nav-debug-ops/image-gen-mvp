@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -24,4 +24,5 @@ class Generation(Base):
     error_message = Column(Text, nullable=True)
     failover_from = Column(String(50), nullable=True)
     metadata_json = Column(Text, nullable=True)
+    is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())

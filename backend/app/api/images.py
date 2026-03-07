@@ -91,6 +91,28 @@ async def get_image(
     }
 
 
+@router.patch("/{image_id}/archive")
+async def archive_image(
+    image_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle archive status of a generated image."""
+    result = await db.execute(
+        select(Generation).where(
+            Generation.image_id == image_id,
+            Generation.user_id == current_user.id,
+        )
+    )
+    gen = result.scalar_one_or_none()
+    if not gen:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    gen.is_archived = not gen.is_archived
+    await db.commit()
+    return {"success": True, "is_archived": gen.is_archived}
+
+
 @router.delete("/{image_id}")
 async def delete_image(
     image_id: str,
