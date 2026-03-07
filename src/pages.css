@@ -5715,9 +5715,9 @@
   background: #1a1a2e;
   border: 1px solid #2a2a4a;
   border-radius: 16px;
-  max-width: 860px;
-  width: 100%;
-  max-height: 90vh;
+  max-width: 90vw;
+  width: 860px;
+  max-height: 95vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5748,21 +5748,23 @@
 .lightbox-close:hover { background: rgba(255,255,255,0.18); }
 
 .lightbox-image-wrap {
-  flex: 1;
+  flex: 1 1 auto;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #0d0d1a;
-  min-height: 300px;
-  max-height: 55vh;
+  min-height: 0;
   padding: 16px;
 }
 .lightbox-image-wrap img {
   max-width: 100%;
   max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 8px;
+  display: block;
 }
 
 .lightbox-info {
@@ -5885,3 +5887,109 @@
 
 /* Saved state for action-btn on result card */
 .action-btn.saved { color: #4ade80; }
+
+/* ── Archive page ─────────────────────────────────────────────────────────── */
+.archive-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+.archive-loading,
+.archive-empty,
+.archive-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 300px;
+  color: #8888aa;
+  text-align: center;
+}
+.archive-empty p, .archive-error p { font-size: 1.1rem; color: #ccc; margin: 0; }
+.archive-empty span { font-size: 0.85rem; }
+
+.archive-meta {
+  font-size: 0.82rem;
+  color: #8888aa;
+  margin-bottom: 16px;
+}
+
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.archive-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.archive-card:hover { transform: translateY(-2px); border-color: #4a4a8a; }
+
+.archive-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+
+.archive-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  transition: background 0.2s;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px;
+}
+.archive-card:hover .archive-card-overlay { background: rgba(0,0,0,0.45); }
+
+.archive-card-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.archive-card:hover .archive-card-actions { opacity: 1; }
+
+.archive-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  backdrop-filter: blur(4px);
+}
+.archive-action-btn:hover { background: rgba(255,255,255,0.25); }
+.archive-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.archive-action-delete:hover { background: rgba(192,57,43,0.7); }
+
+.archive-card-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-top: 1px solid #2a2a4a;
+}
+.archive-card-provider { font-size: 0.72rem; color: #8888aa; text-transform: capitalize; }
+.archive-card-date { font-size: 0.72rem; color: #6666888; }
+
+.archive-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  font-size: 0.85rem;
+  color: #8888aa;
+}

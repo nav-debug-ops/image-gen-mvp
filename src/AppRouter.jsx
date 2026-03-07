@@ -11,6 +11,7 @@ import BrandStory from './pages/BrandStory'
 import StorefrontDesigner from './pages/StorefrontDesigner'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
+import Archive from './pages/Archive'
 import App from './App' // Original app as legacy
 
 const DEV_BYPASS_AUTH = import.meta.env.DEV
@@ -58,6 +59,7 @@ function AppRouter() {
           <Route path="tools/aplus-content" element={<APlusContent />} />
           <Route path="tools/brand-story" element={<BrandStory />} />
           <Route path="tools/storefront" element={<StorefrontDesigner />} />
+          <Route path="archive" element={<Archive />} />
           <Route path="legacy" element={<App />} />
         </Route>
       </Routes>

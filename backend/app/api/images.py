@@ -17,24 +17,27 @@ settings = get_settings()
 async def list_images(
     limit: int = 20,
     offset: int = 0,
+    archived: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List user's generated images with pagination."""
-    # Count total
+    """List user's generated images with pagination. Pass archived=true for archive view."""
     from sqlalchemy import func
+
+    base_filter = [
+        Generation.user_id == current_user.id,
+        Generation.status == "completed",
+        Generation.is_archived == archived,
+    ]
+
     count_result = await db.execute(
-        select(func.count(Generation.id)).where(
-            Generation.user_id == current_user.id,
-            Generation.status == "completed",
-        )
+        select(func.count(Generation.id)).where(*base_filter)
     )
     total = count_result.scalar() or 0
 
-    # Fetch page
     result = await db.execute(
         select(Generation)
-        .where(Generation.user_id == current_user.id, Generation.status == "completed")
+        .where(*base_filter)
         .order_by(desc(Generation.created_at))
         .offset(offset)
         .limit(limit)
@@ -51,6 +54,7 @@ async def list_images(
             "model": g.model,
             "aspect_ratio": g.aspect_ratio,
             "cost_estimate": g.cost_estimate,
+            "is_archived": g.is_archived,
             "created_at": str(g.created_at),
         }
         for g in generations
