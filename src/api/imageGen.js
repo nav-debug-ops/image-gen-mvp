@@ -53,6 +53,7 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
     height: options.height || 1024,
     style: options.style || undefined,
     failover: true,
+    reference_image_url: options.referenceImageUrl || undefined,
   }
 
   onProgress?.({ status: 'processing', progress: 20, message: 'Generating image...' })

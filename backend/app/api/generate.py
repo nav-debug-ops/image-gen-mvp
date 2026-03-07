@@ -35,6 +35,7 @@ class GenerateRequest(BaseModel):
     height: Optional[int] = 1024
     style: Optional[str] = None
     failover: Optional[bool] = True
+    reference_image_url: Optional[str] = None
 
 
 class GenerateResponse(BaseModel):
@@ -73,6 +74,7 @@ async def create_generation(
             height=request.height,
             failover=request.failover,
             db=db,
+            reference_image_url=request.reference_image_url,
         )
 
         return GenerateResponse(

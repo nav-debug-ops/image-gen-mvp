@@ -122,6 +122,9 @@ function MainImageGenerator() {
   const [uploadedImage, setUploadedImage] = useState(null)
   const [dragActive, setDragActive] = useState(false)
 
+  // Confirmed product image for img2img
+  const [referenceImageUrl, setReferenceImageUrl] = useState(null)
+
   // Configuration state
   const [quantity, setQuantity] = useState(3)
   const [selectedModel, setSelectedModel] = useState('combined')
@@ -165,6 +168,8 @@ function MainImageGenerator() {
 
   const handleConfirmProduct = () => {
     if (!asinProduct) return
+    // Use the actual product image for img2img generation
+    if (asinProduct.image_url) setReferenceImageUrl(asinProduct.image_url)
     // Auto-fill product description from title
     const desc = asinProduct.brand
       ? `${asinProduct.brand} ${asinProduct.title}`.slice(0, 120)
@@ -184,6 +189,7 @@ function MainImageGenerator() {
     setAsinProduct(null)
     setAsinError(null)
     setAsinValue('')
+    setReferenceImageUrl(null)
   }
 
   // Handle file upload
@@ -334,7 +340,8 @@ function MainImageGenerator() {
           provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
           width: selectedRatio?.width || 2000,
           height: selectedRatio?.height || 2000,
-          aspectRatio: aspectRatio
+          aspectRatio: aspectRatio,
+          referenceImageUrl: referenceImageUrl || undefined,
         }, (p) => {
           setProgress(prev => ({ ...prev, ...p }))
         })
@@ -465,12 +472,21 @@ function MainImageGenerator() {
                       </div>
                     </div>
                     <div className="asin-product-actions">
-                      <button className="btn btn-primary btn-sm" onClick={handleConfirmProduct}>
-                        <Check size={14} /> Yes, use this product
-                      </button>
-                      <button className="btn btn-ghost btn-sm" onClick={handleRejectProduct}>
-                        <X size={14} /> Wrong product
-                      </button>
+                      {referenceImageUrl ? (
+                        <div className="asin-confirmed-badge">
+                          <Check size={13} /> Product locked in — AI will edit this exact image
+                          <button className="asin-change-btn" onClick={handleRejectProduct}>Change</button>
+                        </div>
+                      ) : (
+                        <>
+                          <button className="btn btn-primary btn-sm" onClick={handleConfirmProduct}>
+                            <Check size={14} /> Yes, use this product
+                          </button>
+                          <button className="btn btn-ghost btn-sm" onClick={handleRejectProduct}>
+                            <X size={14} /> Wrong product
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

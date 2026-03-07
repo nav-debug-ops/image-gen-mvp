@@ -42,6 +42,7 @@ async def generate_image(
     height: int,
     failover: bool,
     db: AsyncSession,
+    reference_image_url: str | None = None,
 ) -> Generation:
     """Orchestrate image generation with rate limiting, provider selection, and failover."""
 
@@ -97,6 +98,7 @@ async def generate_image(
                 aspect_ratio=aspect_ratio,
                 width=width,
                 height=height,
+                reference_image_url=reference_image_url,
             )
             duration = int((time.time() - start) * 1000)
 
