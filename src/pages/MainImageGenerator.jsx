@@ -382,6 +382,7 @@ function MainImageGenerator() {
   const [lightboxImg, setLightboxImg] = useState(null)  // null = closed
   const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
   const [showEditorMenu, setShowEditorMenu] = useState(false)
+  const [regeneratingIds, setRegeneratingIds] = useState(new Set())
 
   const EDITORS = [
     { id: 'photopea', name: 'Photopea', desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
@@ -436,6 +437,39 @@ function MainImageGenerator() {
     // Open editor in new tab
     window.open(editorUrl, '_blank', 'noopener')
     setShowEditorMenu(false)
+  }
+
+  const handleRegenerateImage = async (img) => {
+    setRegeneratingIds(prev => new Set(prev).add(img.id))
+    try {
+      const prompt = buildImagePrompt(img.template, img.category, img.strategy, productDesc)
+      const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
+      const result = await generateImage(prompt, {
+        provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
+        width: selectedRatio.width,
+        height: selectedRatio.height,
+        aspectRatio: img.aspectRatio,
+        referenceImageUrl: referenceImageUrl || undefined,
+      })
+      const newImg = {
+        ...img,
+        id: Date.now(),
+        url: result.url,
+        provider: result.provider,
+        model: result.model,
+        timestamp: new Date().toISOString(),
+      }
+      setGeneratedImages(prev => prev.map(i => i.id === img.id ? newImg : i))
+      setLightboxImg(prev => prev?.id === img.id ? newImg : prev)
+    } catch (err) {
+      console.error('Regeneration failed:', err)
+    } finally {
+      setRegeneratingIds(prev => {
+        const next = new Set(prev)
+        next.delete(img.id)
+        return next
+      })
+    }
   }
 
   const asinInputRef = useRef(null)
@@ -964,6 +998,14 @@ function MainImageGenerator() {
                     </button>
                     <button
                       className="action-btn"
+                      title="Regenerate"
+                      disabled={regeneratingIds.has(img.id)}
+                      onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img) }}
+                    >
+                      {regeneratingIds.has(img.id) ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
+                    </button>
+                    <button
+                      className="action-btn"
                       title="Download"
                       onClick={(e) => { e.stopPropagation(); downloadImage(img) }}
                     >
@@ -1029,6 +1071,17 @@ function MainImageGenerator() {
                 onClick={() => handleDownloadLightbox(lightboxImg)}
               >
                 <Download size={17} /> Download
+              </button>
+
+              {/* Regenerate */}
+              <button
+                className="lightbox-btn lightbox-btn-regen"
+                onClick={() => handleRegenerateImage(lightboxImg)}
+                disabled={regeneratingIds.has(lightboxImg.id)}
+              >
+                {regeneratingIds.has(lightboxImg.id)
+                  ? <><Loader2 size={17} className="spin" /> Regenerating...</>
+                  : <><RefreshCw size={17} /> Regenerate</>}
               </button>
 
               {/* Edit — with editor picker */}

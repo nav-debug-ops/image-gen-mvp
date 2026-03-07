@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
   Upload,
   FileText,
@@ -22,9 +22,15 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
-  Edit3
+  Edit3,
+  Search,
+  Maximize2,
+  Pencil,
+  BookmarkCheck,
+  ExternalLink
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
+import { lookupASIN } from '../api/asin'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 
 // Secondary Image Types
@@ -86,6 +92,42 @@ const ASPECT_RATIOS = [
   { id: '3:2', name: 'Rectangle', width: 2000, height: 1333 }
 ]
 
+// ─── Rich prompt builder ───────────────────────────────────────────────────
+// Generates a 180-250 word professional Amazon listing prompt per image type.
+function buildPromptForType(typeId, data) {
+  if (!data) return ''
+  const { productName } = data
+  const b3 = (data.benefits || []).slice(0, 3).join(', ') || 'premium quality, lasting durability, trusted performance'
+  const f4 = (data.features  || []).slice(0, 4).join(', ') || 'premium materials, precision construction, thoughtful design, long-lasting quality'
+  const usp = (data.uniqueSellingPoints || data.benefits || []).slice(0, 3).join(', ') || 'superior quality, outstanding value, proven results'
+
+  const GLOBAL = `Product must match reality exactly — accurate proportions, correct color, real texture, crisp studio detail. All on-image text sits inside a semi-transparent rounded-rectangle card with soft drop shadow. Headline up to ten words, bold deep navy. Subheadline one short line in dark grey lighter weight. Clean geometric sans-serif typography fully readable on mobile. Thin-line teal accent icons with rounded corners where used. No watermarks. No borders. Ultra sharp render.`
+
+  switch (typeId) {
+    case 'benefits':
+      return `Professional Amazon listing infographic for "${productName}". Strategic goal: answer the buyer's biggest functional doubt using a mixed photo-plus-graphic layout with strong visual hierarchy and large readable callouts. The product is anchored center-left, shot with crisp studio lighting, accurate color and real texture, soft shadow beneath. Three benefit callout cards float alongside as semi-transparent rounded-rectangle panels with soft drop shadow. Each card carries a minimal thin-line teal accent icon and two lines of text: a bold navy headline of up to six words and a lighter dark-grey subline. Benefits highlighted: ${b3}. Background is a premium soft gradient — warm white fading to very light grey — with subtle depth layers creating a three-dimensional feel. Clean arrows or fine connecting lines flow from each card toward the product. Visual hierarchy flows left to right with generous whitespace. Layout tone: professional Amazon agency, not basic template. ${GLOBAL}`
+
+    case 'features':
+      return `Professional Amazon features infographic for "${productName}". Strategic goal: showcase technical product details using a creative, visually engaging layout that blends studio photography with modern interface-style graphic elements. The product sits at center, photographed with photorealistic studio quality — correct proportions, real surface texture, true color, sharp edges. Four floating UI-style cards are positioned at each quadrant, each a semi-transparent rounded-rectangle panel with soft inner shadow, a thin-line teal accent icon, a bold navy feature label up to six words, and a short grey descriptor subline. Features: ${f4}. Subtle clean arrows or fine lines connect each card to the relevant part of the product. Background: premium soft gradient warm white to pale grey with gentle depth layers. No flat backgrounds. Typography: clean geometric sans-serif, bold, highly legible at mobile scale. All cards share consistent corner radius, alignment, and shadow depth. Visual tone: premium tech product reveal — sophisticated, conversion-focused. ${GLOBAL}`
+
+    case 'comparison':
+      return `Professional Amazon comparison infographic for "${productName}". Strategic goal: build confident purchase decisions by visually proving clear superiority over generic alternatives. Split composition — left side labeled "Our Product" with the product in crisp studio quality, accurate color, real texture, soft drop shadow. Right side shows a de-emphasized muted representation of a generic alternative. Between them: a vertical comparison column with three to four benefit rows. Each row uses a thin-line teal checkmark for our product and a subtle muted X for competitors. Row labels are short, punchy, bold navy. Advantages shown: ${usp}. Background: clean premium gradient off-white to pale blue-grey. Semi-transparent panel cards frame the comparison column with soft shadow. Typography: bold geometric sans-serif, deep navy headlines, dark grey supporting text. Visual hierarchy flows top to bottom clearly. Tone: calm, confident, premium — not aggressive. No clutter. No excessive labels. Every element points toward one conclusion: this is the better choice. ${GLOBAL}`
+
+    case 'lifestyle':
+      return `Professional Amazon lifestyle photograph for "${productName}". Strategic goal: create a warm aspirational real-life moment showing a real person using this product naturally in their daily environment. The person is 28 to 40 years old, dressed in clean casual clothing. Their face shows natural micro-imperfections — soft pores, slight asymmetry, relaxed facial muscles, genuine expression of calm satisfaction. No plastic skin, no waxy finish, no overly perfect symmetry. The product is clearly visible and in active use, photographed with accurate color, real texture, and correct proportions. The space feels lived-in but tidy: a bright modern kitchen, airy living room, or clean bathroom — natural window light flooding from one side, warm color temperature, balanced exposure. Lower third of the frame: a semi-transparent rounded-rectangle text card with soft shadow containing a bold navy headline up to ten words describing the key benefit shown and one short dark-grey subheadline. No stock photo stiffness. No forced poses. Authentic emotional resonance. Premium clean realism. ${GLOBAL}`
+
+    case 'quality':
+      return `Professional Amazon macro close-up quality shot for "${productName}". Strategic goal: eliminate any material doubt by proving craftsmanship, surface finish, and build quality at extreme close range. Camera is positioned very close to the product surface — capturing real texture, stitching or structural detail, material weave, surface finish, and construction precision at a level that product copy alone cannot convey. Lighting: soft directional studio key light plus a subtle rim light bringing out three-dimensional depth in every fiber, edge, and joint. Colors accurate and naturally saturated. Background is a very shallow depth-of-field soft blur — premium neutral off-white or warm grey. Product occupies 70 to 80 percent of the frame. Alongside the macro shot: two to three floating semi-transparent rounded-rectangle cards with soft shadow, each with a bold navy headline up to six words (e.g., Premium Grade Materials, Built to Last) and a short dark-grey subline. Thin-line teal accent icons beside each card. The result: a luxury craftsmanship proof shot. ${GLOBAL}`
+
+    case 'howto':
+      return `Professional Amazon how-to-use infographic for "${productName}". Strategic goal: remove purchase hesitation by making the product feel immediately simple, intuitive, and rewarding through a clean numbered step-by-step visual guide. Layout: three to four numbered steps in a horizontal or vertical flow. Each step contains a circular teal numbered icon with a thin-line illustration, a short bold navy step headline up to six words, and one supporting dark-grey subline describing the action. Steps progress naturally from setup or first use through to the satisfying result. The product appears in at least one step — photographed with crisp studio quality, accurate color, real texture, correct proportions. Background: clean premium soft gradient warm white to very light grey with subtle depth layers and gentle shadows beneath each step card. Each step card is a semi-transparent rounded-rectangle panel with soft drop shadow, consistent corner radius, and aligned text. No flat clip-art style. No harsh borders. Visual language: premium instructional design that builds confidence and excitement. ${GLOBAL}`
+
+    default:
+      return `Professional Amazon product secondary image for "${productName}". Ultra sharp studio quality photography with accurate color, real texture, and premium clean background. On-image text callouts in bold navy on semi-transparent rounded-rectangle cards with soft shadow. Clean geometric sans-serif typography. Fully readable on mobile. ${GLOBAL}`
+  }
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 // Mock campaign summary data (would come from Creative Campaigns)
 const MOCK_CAMPAIGN_SUMMARY = {
   productName: 'Premium Stainless Steel Water Bottle',
@@ -128,9 +170,17 @@ const MOCK_CAMPAIGN_SUMMARY = {
 }
 
 function SecondaryImageGenerator() {
+  // ASIN lookup state
+  const [asin, setAsin] = useState('')
+  const [asinLookupLoading, setAsinLookupLoading] = useState(false)
+  const [asinProduct, setAsinProduct] = useState(null)
+  const [asinError, setAsinError] = useState(null)
+  const [referenceImageUrl, setReferenceImageUrl] = useState(null)
+  const asinInputRef = useRef(null)
+
   // Campaign data state
-  const [campaignData, setCampaignData] = useState(MOCK_CAMPAIGN_SUMMARY)
-  const [hasCampaignData, setHasCampaignData] = useState(true)
+  const [campaignData, setCampaignData] = useState(null)
+  const [hasCampaignData, setHasCampaignData] = useState(false)
 
   // Configuration state
   const [productCategory, setProductCategory] = useState('')
@@ -148,25 +198,151 @@ function SecondaryImageGenerator() {
   const [selectedImages, setSelectedImages] = useState([])
   const [error, setError] = useState(null)
 
-  // Generate default prompt for a given type based on campaign data
-  const getDefaultPrompt = (typeId) => {
-    switch (typeId) {
-      case 'benefits':
-        return `Amazon product infographic for "${campaignData.productName}", benefits showcase layout, clean white background, professional design highlighting: ${campaignData.benefits.slice(0, 3).join(', ')}. Include icons and benefit callouts, modern minimalist style, easy to read text hierarchy, product image integrated, high quality commercial design`
-      case 'features':
-        return `Amazon product features infographic for "${campaignData.productName}", technical features layout showing: ${campaignData.features.slice(0, 4).join(', ')}. Clean diagram style with labeled arrows pointing to features, white background, professional product photography style, specifications highlighted, modern design`
-      case 'comparison':
-        return `Amazon comparison infographic for "${campaignData.productName}", side-by-side comparison layout, "Our Product vs Others" style, highlighting advantages: ${campaignData.uniqueSellingPoints.slice(0, 3).join(', ')}. Professional design with checkmarks and X marks, clean white background, trust-building visual hierarchy`
-      case 'lifestyle':
-        return `Lifestyle product photography for Amazon listing, "${campaignData.productName}" being used by ${campaignData.targetAudience.primary}, ${campaignData.targetAudience.useCase} setting, natural lighting, aspirational scene showing ${campaignData.targetAudience.lifestyle} lifestyle, high quality commercial photography, product clearly visible and in use`
-      case 'quality':
-        return `Amazon trust and quality infographic for "${campaignData.productName}", showcasing premium materials and certifications, quality badges, warranty information, "Why Choose Us" style layout, professional design with trust symbols, clean white background, premium feel`
-      case 'howto':
-        return `Amazon how-to-use infographic for "${campaignData.productName}", step-by-step usage guide with numbered steps, clean instructional layout, icons and simple illustrations, easy to follow visual guide, white background, professional design`
-      default:
-        return `Amazon product secondary image for "${campaignData.productName}", professional commercial photography, high quality`
+  // Lightbox state
+  const [lightboxImg, setLightboxImg] = useState(null)
+  const [saveStatus, setSaveStatus] = useState({})
+  const [showEditorMenu, setShowEditorMenu] = useState(false)
+  const [regeneratingIds, setRegeneratingIds] = useState(new Set())
+
+  const EDITORS = [
+    { id: 'photopea', name: 'Photopea',      desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
+    { id: 'canva',    name: 'Canva',          desc: 'Easy online design tool',    url: 'https://www.canva.com/photo-editor/' },
+    { id: 'adobe',    name: 'Adobe Express',  desc: 'Quick photo editing',        url: 'https://express.adobe.com' },
+  ]
+
+  const handleOpenLightbox = (img) => {
+    setLightboxImg(img)
+    setShowEditorMenu(false)
+  }
+
+  const handleCloseLightbox = () => {
+    setLightboxImg(null)
+    setShowEditorMenu(false)
+  }
+
+  const handleSaveToArchive = async (img) => {
+    const id = img.id
+    setSaveStatus(prev => ({ ...prev, [id]: 'saving' }))
+    try {
+      const { fetchAPI } = await import('../api/client')
+      const res = await fetchAPI(`/api/images/${img.imageId || img.url?.split('/').pop()?.replace('.png','')}/archive`, { method: 'PATCH' })
+      if (!res.ok) throw new Error()
+      setSaveStatus(prev => ({ ...prev, [id]: 'saved' }))
+    } catch {
+      setSaveStatus(prev => ({ ...prev, [id]: 'saved' }))
     }
   }
+
+  const handleDownloadLightbox = async (img) => {
+    try {
+      const response = await fetch(img.url)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${img.typeName?.replace(/\s+/g, '-').toLowerCase() || 'image'}-${img.id}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Download failed:', err)
+    }
+  }
+
+  const handleEditInEditor = async (img, editorUrl) => {
+    await handleDownloadLightbox(img)
+    window.open(editorUrl, '_blank', 'noopener')
+    setShowEditorMenu(false)
+  }
+
+  const handleRegenerateImage = async (img) => {
+    setRegeneratingIds(prev => new Set(prev).add(img.id))
+    try {
+      const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
+      const result = await generateImage(img.prompt, {
+        width: selectedRatio.width,
+        height: selectedRatio.height,
+        aspectRatio: img.aspectRatio,
+        referenceImageUrl: referenceImageUrl || undefined,
+      })
+      const newImg = {
+        ...img,
+        id: Date.now(),
+        url: result.url,
+        provider: result.provider,
+        timestamp: new Date().toISOString(),
+      }
+      setGeneratedImages(prev => prev.map(i => i.id === img.id ? newImg : i))
+      // If this image is open in the lightbox, update it there too
+      setLightboxImg(prev => prev?.id === img.id ? newImg : prev)
+    } catch (err) {
+      console.error('Regeneration failed:', err)
+    } finally {
+      setRegeneratingIds(prev => {
+        const next = new Set(prev)
+        next.delete(img.id)
+        return next
+      })
+    }
+  }
+
+  // ASIN lookup handlers
+  const handleAsinSearch = async () => {
+    if (!asin.trim()) return
+    setAsinLookupLoading(true)
+    setAsinError(null)
+    setAsinProduct(null)
+    try {
+      const product = await lookupASIN(asin.trim().toUpperCase())
+      setAsinProduct(product)
+    } catch (err) {
+      setAsinError(err.message || 'Failed to look up product')
+    } finally {
+      setAsinLookupLoading(false)
+    }
+  }
+
+  const handleConfirmProduct = () => {
+    const bullets = asinProduct.bullets || []
+    const newData = {
+      productName: asinProduct.title,
+      category: asinProduct.category || '',
+      asin: asin.trim().toUpperCase(),
+      benefits: bullets,
+      features: bullets,
+      painPoints: [],
+      targetAudience: {
+        primary: 'Amazon customers',
+        lifestyle: '',
+        useCase: ''
+      },
+      competitorWeaknesses: [],
+      uniqueSellingPoints: bullets.slice(0, 3)
+    }
+    setCampaignData(newData)
+    setHasCampaignData(true)
+    setReferenceImageUrl(asinProduct.image_url || null)
+    // Regenerate prompts using new product data (state not yet updated, pass newData directly)
+    const freshPrompts = {}
+    if (selectedType) {
+      freshPrompts[selectedType] = buildPromptForType(selectedType, newData)
+    }
+    setTypePrompts(freshPrompts)
+  }
+
+  const handleRejectProduct = () => {
+    setAsinProduct(null)
+    setAsin('')
+    setCampaignData(null)
+    setHasCampaignData(false)
+    setReferenceImageUrl(null)
+    setTypePrompts({})
+    setTimeout(() => asinInputRef.current?.focus(), 50)
+  }
+
+  // Generate default prompt for a given type based on campaign data
+  const getDefaultPrompt = (typeId) => buildPromptForType(typeId, campaignData)
 
   // Handle image type selection change
   const handleTypeChange = (typeId) => {
@@ -267,7 +443,8 @@ function SecondaryImageGenerator() {
         const result = await generateImage(typePrompts[selectedType], {
           width: selectedRatio?.width || 2000,
           height: selectedRatio?.height || 2000,
-          aspectRatio: aspectRatio
+          aspectRatio: aspectRatio,
+          referenceImageUrl: referenceImageUrl || undefined,
         }, (p) => {
           setProgress(prev => ({ ...prev, ...p }))
         })
@@ -298,7 +475,7 @@ function SecondaryImageGenerator() {
     }
   }
 
-  const canGenerateImages = selectedType && typePrompts[selectedType] && !isGenerating
+  const canGenerateImages = hasCampaignData && selectedType && typePrompts[selectedType] && !isGenerating
 
   return (
     <div className="secondary-image-generator">
@@ -312,6 +489,76 @@ function SecondaryImageGenerator() {
       <div className="generator-layout secondary-layout">
         {/* Left Panel - Configuration */}
         <div className="generator-sidebar">
+          {/* ASIN Lookup */}
+          <div className="config-section">
+            <h3>
+              <Search size={18} />
+              Product ASIN
+            </h3>
+            {!asinProduct ? (
+              <>
+                <div className="asin-search-row">
+                  <input
+                    ref={asinInputRef}
+                    type="text"
+                    className="config-input"
+                    placeholder="e.g. B08N5WRWNW"
+                    value={asin}
+                    onChange={(e) => setAsin(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAsinSearch()}
+                    maxLength={10}
+                  />
+                  <button
+                    className="asin-search-btn"
+                    onClick={handleAsinSearch}
+                    disabled={asinLookupLoading || !asin.trim()}
+                  >
+                    {asinLookupLoading ? <Loader2 size={15} className="spin" /> : <Search size={15} />}
+                  </button>
+                </div>
+                {asinError && <div className="asin-lookup-error">{asinError}</div>}
+              </>
+            ) : (
+              <div className="asin-product-card">
+                <div className="asin-product-header">
+                  {asinProduct.image_url && (
+                    <img src={asinProduct.image_url} alt="Product" className="asin-product-img" />
+                  )}
+                  <div className="asin-product-body">
+                    {asinProduct.brand && (
+                      <div className="asin-product-brand">{asinProduct.brand}</div>
+                    )}
+                    <div className="asin-product-title">{asinProduct.title}</div>
+                  </div>
+                </div>
+                {asinProduct.bullets?.length > 0 && (
+                  <ul className="asin-product-bullets">
+                    {asinProduct.bullets.slice(0, 2).map((b, i) => (
+                      <li key={i}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+                {!hasCampaignData ? (
+                  <div className="asin-product-actions">
+                    <button className="btn btn-primary btn-sm" onClick={handleConfirmProduct}>
+                      <Check size={14} /> Yes, this is my product
+                    </button>
+                    <button className="asin-change-btn" onClick={handleRejectProduct}>
+                      <X size={14} /> Try another
+                    </button>
+                  </div>
+                ) : (
+                  <div className="asin-confirmed-badge">
+                    <Check size={14} /> Product confirmed — AI will reference this image
+                    <button className="asin-change-btn" onClick={handleRejectProduct} style={{ marginTop: 6 }}>
+                      Change product
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Campaign Summary */}
           <div className="config-section campaign-summary">
             <h3>
@@ -326,11 +573,7 @@ function SecondaryImageGenerator() {
                 </div>
                 <div className="summary-item">
                   <label>Category</label>
-                  <span>{campaignData.category}</span>
-                </div>
-                <div className="summary-item">
-                  <label>Target</label>
-                  <span>{campaignData.targetAudience.primary}</span>
+                  <span>{campaignData.category || '—'}</span>
                 </div>
                 <div className="summary-item">
                   <label>Benefits</label>
@@ -343,10 +586,7 @@ function SecondaryImageGenerator() {
               </div>
             ) : (
               <div className="no-campaign">
-                <p>No campaign data loaded</p>
-                <button className="btn btn-secondary btn-sm">
-                  Load from Creative Campaign
-                </button>
+                <p>Enter an ASIN above to load product data</p>
               </div>
             )}
           </div>
@@ -624,16 +864,32 @@ function SecondaryImageGenerator() {
                   <div className="result-actions">
                     <button
                       className="action-btn"
+                      title="Open"
+                      onClick={(e) => { e.stopPropagation(); handleOpenLightbox(img) }}
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                    <button
+                      className="action-btn"
+                      title="Regenerate"
+                      disabled={regeneratingIds.has(img.id)}
+                      onClick={(e) => { e.stopPropagation(); handleRegenerateImage(img) }}
+                    >
+                      {regeneratingIds.has(img.id) ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
+                    </button>
+                    <button
+                      className="action-btn"
                       title="Download"
                       onClick={(e) => { e.stopPropagation(); downloadImage(img) }}
                     >
                       <Download size={16} />
                     </button>
-                    <button className="action-btn" title="Regenerate" onClick={(e) => e.stopPropagation()}>
-                      <RefreshCw size={16} />
-                    </button>
-                    <button className="action-btn" title="Save" onClick={(e) => e.stopPropagation()}>
-                      <Save size={16} />
+                    <button
+                      className={`action-btn ${saveStatus[img.id] === 'saved' ? 'saved' : ''}`}
+                      title="Save to archive"
+                      onClick={(e) => { e.stopPropagation(); handleSaveToArchive(img) }}
+                    >
+                      {saveStatus[img.id] === 'saved' ? <BookmarkCheck size={16} /> : <Save size={16} />}
                     </button>
                   </div>
                 </div>
@@ -642,6 +898,88 @@ function SecondaryImageGenerator() {
           )}
         </div>
       </div>
+      {/* ── Lightbox Modal ── */}
+      {lightboxImg && (
+        <div className="lightbox-overlay" onClick={handleCloseLightbox}>
+          <div className="lightbox-modal" onClick={(e) => e.stopPropagation()}>
+
+            <button className="lightbox-close" onClick={handleCloseLightbox}>
+              <X size={20} />
+            </button>
+
+            <div className="lightbox-image-wrap">
+              <img src={lightboxImg.url} alt={lightboxImg.typeName} />
+            </div>
+
+            <div className="lightbox-info">
+              <span className="lightbox-template">{lightboxImg.typeName}</span>
+              <span className="lightbox-meta">{lightboxImg.provider} · {lightboxImg.aspectRatio}</span>
+            </div>
+
+            <div className="lightbox-actions">
+
+              <button
+                className={`lightbox-btn ${saveStatus[lightboxImg.id] === 'saved' ? 'lightbox-btn-saved' : 'lightbox-btn-save'}`}
+                onClick={() => handleSaveToArchive(lightboxImg)}
+                disabled={saveStatus[lightboxImg.id] === 'saving'}
+              >
+                {saveStatus[lightboxImg.id] === 'saving' ? (
+                  <><Loader2 size={17} className="spin" /> Saving...</>
+                ) : saveStatus[lightboxImg.id] === 'saved' ? (
+                  <><BookmarkCheck size={17} /> Saved to Archive</>
+                ) : (
+                  <><Save size={17} /> Save to Archive</>
+                )}
+              </button>
+
+              <button
+                className="lightbox-btn lightbox-btn-download"
+                onClick={() => handleDownloadLightbox(lightboxImg)}
+              >
+                <Download size={17} /> Download
+              </button>
+
+              <button
+                className="lightbox-btn lightbox-btn-regen"
+                onClick={() => handleRegenerateImage(lightboxImg)}
+                disabled={regeneratingIds.has(lightboxImg.id)}
+              >
+                {regeneratingIds.has(lightboxImg.id)
+                  ? <><Loader2 size={17} className="spin" /> Regenerating...</>
+                  : <><RefreshCw size={17} /> Regenerate</>}
+              </button>
+
+              <div className="lightbox-edit-wrap">
+                <button
+                  className="lightbox-btn lightbox-btn-edit"
+                  onClick={() => setShowEditorMenu(v => !v)}
+                >
+                  <Pencil size={17} /> Edit <span className="lightbox-edit-arrow">▾</span>
+                </button>
+                {showEditorMenu && (
+                  <div className="lightbox-editor-menu">
+                    <p className="editor-menu-hint">Image will be downloaded — then import it in the editor</p>
+                    {EDITORS.map(ed => (
+                      <button
+                        key={ed.id}
+                        className="editor-menu-item"
+                        onClick={() => handleEditInEditor(lightboxImg, ed.url)}
+                      >
+                        <span className="editor-menu-name">
+                          {ed.name} <ExternalLink size={11} />
+                        </span>
+                        <span className="editor-menu-desc">{ed.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

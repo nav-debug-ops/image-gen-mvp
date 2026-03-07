@@ -5821,6 +5821,10 @@
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
 }
+.lightbox-btn-regen {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
 .lightbox-btn-edit {
   background: #2a2a4a;
   color: #e0e0e0;
