@@ -17,6 +17,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
+import { lookupASIN } from '../api/asin'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import {
   buildImagePrompt,
@@ -139,8 +140,51 @@ function MainImageGenerator() {
   const [selectedImages, setSelectedImages] = useState([])
   const [error, setError] = useState(null)
 
+  // ASIN lookup state
+  const [asinLookupLoading, setAsinLookupLoading] = useState(false)
+  const [asinProduct, setAsinProduct] = useState(null)  // confirmed product data
+  const [asinError, setAsinError] = useState(null)
+
   // ASIN validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
+
+  const handleAsinSearch = async () => {
+    if (!isValidASIN(asinValue)) return
+    setAsinLookupLoading(true)
+    setAsinProduct(null)
+    setAsinError(null)
+    try {
+      const product = await lookupASIN(asinValue, marketplace)
+      setAsinProduct(product)
+    } catch (err) {
+      setAsinError(err.message)
+    } finally {
+      setAsinLookupLoading(false)
+    }
+  }
+
+  const handleConfirmProduct = () => {
+    if (!asinProduct) return
+    // Auto-fill product description from title
+    const desc = asinProduct.brand
+      ? `${asinProduct.brand} ${asinProduct.title}`.slice(0, 120)
+      : asinProduct.title.slice(0, 120)
+    setProductDesc(desc)
+    // Auto-select category if we can match it
+    if (asinProduct.category) {
+      const matched = PRODUCT_CATEGORIES.find(c =>
+        c.toLowerCase().includes(asinProduct.category.toLowerCase()) ||
+        asinProduct.category.toLowerCase().includes(c.toLowerCase())
+      )
+      if (matched) setProductCategory(matched)
+    }
+  }
+
+  const handleRejectProduct = () => {
+    setAsinProduct(null)
+    setAsinError(null)
+    setAsinValue('')
+  }
 
   // Handle file upload
   const handleDrop = useCallback((e) => {
@@ -358,19 +402,77 @@ function MainImageGenerator() {
             </div>
 
             {inputMode === 'asin' ? (
-              <div className="asin-input">
-                <input
-                  type="text"
-                  placeholder="Enter ASIN (e.g., B08N5WRWNW)"
-                  value={asinValue}
-                  onChange={(e) => setAsinValue(e.target.value.toUpperCase())}
-                  maxLength={10}
-                  className={asinValue && !isValidASIN(asinValue) ? 'invalid' : ''}
-                />
-                {asinValue && (
-                  <span className={`asin-status ${isValidASIN(asinValue) ? 'valid' : 'invalid'}`}>
-                    {isValidASIN(asinValue) ? <Check size={16} /> : <X size={16} />}
-                  </span>
+              <div className="asin-input-wrapper">
+                <div className="asin-search-row">
+                  <div className="asin-input">
+                    <input
+                      type="text"
+                      placeholder="Enter ASIN (e.g., B08N5WRWNW)"
+                      value={asinValue}
+                      onChange={(e) => {
+                        setAsinValue(e.target.value.toUpperCase())
+                        setAsinProduct(null)
+                        setAsinError(null)
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAsinSearch()}
+                      maxLength={10}
+                      className={asinValue && !isValidASIN(asinValue) ? 'invalid' : ''}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-secondary asin-search-btn"
+                    onClick={handleAsinSearch}
+                    disabled={!isValidASIN(asinValue) || asinLookupLoading}
+                  >
+                    {asinLookupLoading ? <Loader2 size={16} className="spin" /> : <Search size={16} />}
+                    {asinLookupLoading ? 'Searching...' : 'Search'}
+                  </button>
+                </div>
+
+                {/* ASIN lookup error */}
+                {asinError && (
+                  <div className="asin-lookup-error">
+                    <X size={14} /> {asinError}
+                  </div>
+                )}
+
+                {/* Product confirmation card */}
+                {asinProduct && (
+                  <div className="asin-product-card">
+                    <div className="asin-product-header">
+                      <span className="asin-product-label">Is this your product?</span>
+                    </div>
+                    <div className="asin-product-body">
+                      {asinProduct.image_url && (
+                        <img
+                          src={asinProduct.image_url}
+                          alt={asinProduct.title}
+                          className="asin-product-img"
+                        />
+                      )}
+                      <div className="asin-product-info">
+                        {asinProduct.brand && (
+                          <span className="asin-product-brand">{asinProduct.brand}</span>
+                        )}
+                        <p className="asin-product-title">{asinProduct.title}</p>
+                        {asinProduct.bullets?.length > 0 && (
+                          <ul className="asin-product-bullets">
+                            {asinProduct.bullets.slice(0, 2).map((b, i) => (
+                              <li key={i}>{b}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                    <div className="asin-product-actions">
+                      <button className="btn btn-primary btn-sm" onClick={handleConfirmProduct}>
+                        <Check size={14} /> Yes, use this product
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={handleRejectProduct}>
+                        <X size={14} /> Wrong product
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (
@@ -418,12 +520,12 @@ function MainImageGenerator() {
               <input
                 type="text"
                 className="config-input"
-                placeholder="e.g. wireless earbuds, black, with charging case"
+                placeholder="e.g. stainless steel water bottle, matte black, 32oz"
                 value={productDesc}
                 onChange={(e) => setProductDesc(e.target.value)}
                 maxLength={120}
               />
-              <p className="config-hint">Included in the AI prompt for more accurate results</p>
+              <p className="config-hint">This is what the AI uses to know your product — be specific about material, color, and size</p>
             </div>
           </div>
 

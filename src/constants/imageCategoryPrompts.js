@@ -424,29 +424,42 @@ export const CATEGORY_PROMPTS = {
 export function buildImagePrompt(templateName, category, strategy = 'top-performing', productDesc = '') {
   const catData = CATEGORY_PROMPTS[category]
 
+  const REALISM_HEADER = [
+    'photorealistic commercial product photograph',
+    'shot on Canon 5D DSLR with 100mm macro lens',
+    'professional studio lighting setup',
+    'ultra-sharp focus',
+    'real physical product — NOT illustration NOT cartoon NOT digital art NOT 3D render NOT drawing NOT painting NOT sketch',
+  ].join(', ')
+
+  const REALISM_FOOTER = [
+    'photorealistic hyperdetailed',
+    'product photography',
+    'no text overlays',
+    'no watermarks',
+    'Amazon main image compliant',
+  ].join(', ')
+
   // Fallback to generic if category not found
   if (!catData) {
-    const productPart = productDesc ? `${productDesc}, ` : ''
-    return `Amazon product listing main image, ${productPart}${templateName} composition, pure white background #FFFFFF, professional commercial product photography, even studio lighting, sharp focus, product fills 85% of frame, Amazon-compliant main image`
+    const productPart = productDesc ? `${productDesc},` : 'product,'
+    return `${REALISM_HEADER}, Amazon product listing main image, ${productPart} ${templateName} composition, pure white background #FFFFFF, even studio lighting, product fills 85% of frame, ${REALISM_FOOTER}`
   }
 
   const strat = strategy === 'high-ctr' ? catData.highCtr : catData.topPerforming
-  const productPart = productDesc ? `${productDesc}, ` : 'product, '
+  const productPart = productDesc ? `${productDesc},` : 'physical product,'
 
   return [
+    REALISM_HEADER,
     `Amazon product listing main image`,
-    productPart.trim(),
+    productPart,
     `${templateName} composition`,
     strat.background,
     strat.angle,
     strat.lighting,
     strat.scale,
-    `professional commercial product photography`,
-    `sharp focus`,
-    `no text overlays`,
-    `no watermarks`,
-    `Amazon-compliant main image`,
     strat.extras,
+    REALISM_FOOTER,
   ].filter(Boolean).join(', ')
 }
 

@@ -7,7 +7,7 @@ import os
 from app.config import get_settings
 from app.database import create_tables
 from app.services.providers import init_providers
-from app.api import auth, generate, images, prompts, usage
+from app.api import auth, generate, images, prompts, usage, asin
 
 settings = get_settings()
 
@@ -51,6 +51,7 @@ app.include_router(generate.router, prefix="/api/generate", tags=["Generation"])
 app.include_router(images.router, prefix="/api/images", tags=["Images"])
 app.include_router(prompts.router, prefix="/api/prompts", tags=["Prompts"])
 app.include_router(usage.router, prefix="/api/usage", tags=["Usage"])
+app.include_router(asin.router, prefix="/api/asin", tags=["ASIN"])
 
 
 @app.get("/")
