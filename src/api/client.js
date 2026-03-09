@@ -19,6 +19,19 @@ export function isAuthenticated() {
   return !!getAuthToken()
 }
 
+/**
+ * Safely parse JSON from a Response — returns null if body is empty or not valid JSON.
+ */
+export async function safeJson(response) {
+  try {
+    const text = await response.text()
+    if (!text || !text.trim()) return null
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
 export async function fetchAPI(path, options = {}) {
   const token = getAuthToken()
   const headers = {

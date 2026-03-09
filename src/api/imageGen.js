@@ -5,7 +5,7 @@
  * No API keys are exposed in the frontend.
  */
 
-import { fetchAPI } from './client'
+import { fetchAPI, safeJson } from './client'
 
 // Reference image type definitions (kept for UI components)
 export const REFERENCE_TYPES = {
@@ -65,18 +65,19 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
     })
 
     if (response.status === 429) {
-      const err = await response.json()
-      throw new Error(err.detail?.message || 'Rate limit exceeded. Try again later.')
+      const err = await safeJson(response)
+      throw new Error(err?.detail?.message || 'Rate limit exceeded. Try again later.')
     }
 
     if (!response.ok) {
-      const err = await response.json()
-      throw new Error(err.detail || 'Image generation failed')
+      const err = await safeJson(response)
+      throw new Error(err?.detail || `Generation failed (${response.status})`)
     }
 
     onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
 
-    const data = await response.json()
+    const data = await safeJson(response)
+    if (!data) throw new Error('Empty response from server')
     return {
       url: data.image_url,
       provider: data.provider,

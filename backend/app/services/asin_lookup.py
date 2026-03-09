@@ -24,6 +24,9 @@ HEADERS = {
     "Cache-Control": "max-age=0",
 }
 
+# Parsers to try in order
+_PARSERS = ["lxml", "html.parser"]
+
 MARKETPLACE_DOMAINS = {
     "US": "amazon.com",
     "UK": "amazon.co.uk",
@@ -43,36 +46,74 @@ async def lookup_asin(asin: str, marketplace: str = "US") -> dict:
     """
     Fetch product data from Amazon for a given ASIN.
     Returns a dict with title, brand, image_url, bullets, category.
-    Raises ValueError if product not found or Amazon blocks the request.
+    Raises ValueError for any known failure so callers get a 404 with a message.
     """
     domain = MARKETPLACE_DOMAINS.get(marketplace.upper(), "amazon.com")
     url = f"https://www.{domain}/dp/{asin}?th=1&psc=1"
 
-    async with httpx.AsyncClient(
-        timeout=15.0,
-        follow_redirects=True,
-        headers=HEADERS,
-    ) as client:
-        response = await client.get(url)
+    try:
+        async with httpx.AsyncClient(
+            timeout=20.0,
+            follow_redirects=True,
+            headers=HEADERS,
+        ) as client:
+            response = await client.get(url)
+    except httpx.TimeoutException:
+        raise ValueError("Request to Amazon timed out. Please try again.")
+    except httpx.ConnectError:
+        raise ValueError("Could not connect to Amazon. Check your internet connection and try again.")
+    except httpx.RemoteProtocolError as e:
+        raise ValueError(f"Amazon returned an unexpected response. Try again. ({e})")
+    except httpx.HTTPError as e:
+        raise ValueError(f"Network error contacting Amazon: {e}")
 
     if response.status_code == 404:
-        raise ValueError(f"ASIN {asin} not found on Amazon {marketplace}")
+        raise ValueError(f"ASIN {asin} not found on Amazon {marketplace}.")
+
+    if response.status_code == 503:
+        raise ValueError("Amazon is temporarily unavailable (503). Wait a moment and try again.")
 
     if response.status_code != 200:
-        raise ValueError(f"Amazon returned status {response.status_code}. Try again or use a different marketplace.")
+        raise ValueError(
+            f"Amazon returned HTTP {response.status_code}. "
+            "The product may be unavailable or the marketplace may be incorrect."
+        )
 
     html = response.text
+    if not html or len(html) < 200:
+        raise ValueError("Amazon returned an empty page. Please try again.")
 
-    soup = BeautifulSoup(html, "lxml")
+    # Try parsers in order; fall back to html.parser if lxml is unavailable
+    soup = None
+    for parser in _PARSERS:
+        try:
+            soup = BeautifulSoup(html, parser)
+            break
+        except Exception:
+            continue
 
-    # Check if Amazon served a CAPTCHA page
-    if soup.select_one("form[action*='captcha']") or soup.select_one("#captchacharacters"):
+    if soup is None:
+        raise ValueError("Failed to parse the Amazon product page. Please try again.")
+
+    # Check for CAPTCHA / robot detection
+    page_title = soup.title.string if soup.title else ""
+    is_captcha = (
+        soup.select_one("form[action*='captcha']")
+        or soup.select_one("#captchacharacters")
+        or "robot check" in page_title.lower()
+        or "automated" in page_title.lower()
+        or "captcha" in page_title.lower()
+    )
+    if is_captcha:
         raise ValueError("Amazon is temporarily blocking automated requests. Wait a moment and try again.")
 
     # --- Title ---
     title = _extract_title(soup)
     if not title:
-        raise ValueError("Could not read product title. Amazon may have changed its page structure.")
+        raise ValueError(
+            "Could not read product title — Amazon may have changed its page layout "
+            "or this product is region-restricted. Try a different ASIN or marketplace."
+        )
 
     # --- Brand ---
     brand = _extract_brand(soup)

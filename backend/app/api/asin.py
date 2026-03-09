@@ -1,3 +1,4 @@
+import traceback
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from app.services.auth import get_current_user
@@ -23,9 +24,12 @@ async def get_asin_product(
         product = await lookup_asin(asin, marketplace)
         return {"success": True, "product": product}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e) or "Product not found.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lookup failed: {str(e)}")
+        detail = str(e) or "An unexpected error occurred during ASIN lookup."
+        print(f"[ASIN ERROR] {type(e).__name__}: {detail}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=detail)
 
 
 @router.get("/{asin}/prompt")
@@ -44,6 +48,7 @@ async def get_asin_prompt(
         prompt = build_prompt_from_product(product, template, strategy)
         return {"success": True, "product": product, "prompt": prompt}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e) or "Product not found.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lookup failed: {str(e)}")
+        detail = str(e) or "An unexpected error occurred during ASIN lookup."
+        raise HTTPException(status_code=500, detail=detail)

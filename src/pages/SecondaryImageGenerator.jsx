@@ -32,6 +32,7 @@ import {
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import KeywordInputPanel from '../components/KeywordInputPanel'
 
 // Secondary Image Types
 const SECONDARY_IMAGE_TYPES = [
@@ -94,12 +95,17 @@ const ASPECT_RATIOS = [
 
 // ─── Rich prompt builder ───────────────────────────────────────────────────
 // Generates a 180-250 word professional Amazon listing prompt per image type.
-function buildPromptForType(typeId, data) {
+// Pass `keywords` (string[]) to inject user-curated chips into the prompt.
+function buildPromptForType(typeId, data, keywords = []) {
   if (!data) return ''
   const { productName } = data
-  const b3 = (data.benefits || []).slice(0, 3).join(', ') || 'premium quality, lasting durability, trusted performance'
-  const f4 = (data.features  || []).slice(0, 4).join(', ') || 'premium materials, precision construction, thoughtful design, long-lasting quality'
-  const usp = (data.uniqueSellingPoints || data.benefits || []).slice(0, 3).join(', ') || 'superior quality, outstanding value, proven results'
+  const kwStr = keywords.length > 0 ? keywords.join(', ') : null
+  const b3 = kwStr || (data.benefits || []).slice(0, 3).join(', ') || 'premium quality, lasting durability, trusted performance'
+  const f4 = kwStr || (data.features  || []).slice(0, 4).join(', ') || 'premium materials, precision construction, thoughtful design, long-lasting quality'
+  const usp = kwStr || (data.uniqueSellingPoints || data.benefits || []).slice(0, 3).join(', ') || 'superior quality, outstanding value, proven results'
+  const steps = kwStr || 'simple setup, intuitive use, satisfying results'
+  const quality = kwStr || 'premium grade materials, built to last, quality certified'
+  const lifestyle = kwStr || 'active everyday use, modern lifestyle, trusted by customers'
 
   const GLOBAL = `Product must match reality exactly — accurate proportions, correct color, real texture, crisp studio detail. All on-image text sits inside a semi-transparent rounded-rectangle card with soft drop shadow. Headline up to ten words, bold deep navy. Subheadline one short line in dark grey lighter weight. Clean geometric sans-serif typography fully readable on mobile. Thin-line teal accent icons with rounded corners where used. No watermarks. No borders. Ultra sharp render.`
 
@@ -114,13 +120,13 @@ function buildPromptForType(typeId, data) {
       return `Professional Amazon comparison infographic for "${productName}". Strategic goal: build confident purchase decisions by visually proving clear superiority over generic alternatives. Split composition — left side labeled "Our Product" with the product in crisp studio quality, accurate color, real texture, soft drop shadow. Right side shows a de-emphasized muted representation of a generic alternative. Between them: a vertical comparison column with three to four benefit rows. Each row uses a thin-line teal checkmark for our product and a subtle muted X for competitors. Row labels are short, punchy, bold navy. Advantages shown: ${usp}. Background: clean premium gradient off-white to pale blue-grey. Semi-transparent panel cards frame the comparison column with soft shadow. Typography: bold geometric sans-serif, deep navy headlines, dark grey supporting text. Visual hierarchy flows top to bottom clearly. Tone: calm, confident, premium — not aggressive. No clutter. No excessive labels. Every element points toward one conclusion: this is the better choice. ${GLOBAL}`
 
     case 'lifestyle':
-      return `Professional Amazon lifestyle photograph for "${productName}". Strategic goal: create a warm aspirational real-life moment showing a real person using this product naturally in their daily environment. The person is 28 to 40 years old, dressed in clean casual clothing. Their face shows natural micro-imperfections — soft pores, slight asymmetry, relaxed facial muscles, genuine expression of calm satisfaction. No plastic skin, no waxy finish, no overly perfect symmetry. The product is clearly visible and in active use, photographed with accurate color, real texture, and correct proportions. The space feels lived-in but tidy: a bright modern kitchen, airy living room, or clean bathroom — natural window light flooding from one side, warm color temperature, balanced exposure. Lower third of the frame: a semi-transparent rounded-rectangle text card with soft shadow containing a bold navy headline up to ten words describing the key benefit shown and one short dark-grey subheadline. No stock photo stiffness. No forced poses. Authentic emotional resonance. Premium clean realism. ${GLOBAL}`
+      return `Professional Amazon lifestyle photograph for "${productName}". Strategic goal: create a warm aspirational real-life moment showing a real person using this product naturally in their daily environment. Scene context: ${lifestyle}. The person is 28 to 40 years old, dressed in clean casual clothing. Their face shows natural micro-imperfections — soft pores, slight asymmetry, relaxed facial muscles, genuine expression of calm satisfaction. No plastic skin, no waxy finish, no overly perfect symmetry. The product is clearly visible and in active use, photographed with accurate color, real texture, and correct proportions. The space feels lived-in but tidy: a bright modern kitchen, airy living room, or clean bathroom — natural window light flooding from one side, warm color temperature, balanced exposure. Lower third of the frame: a semi-transparent rounded-rectangle text card with soft shadow containing a bold navy headline up to ten words describing the key benefit shown and one short dark-grey subheadline. No stock photo stiffness. No forced poses. Authentic emotional resonance. Premium clean realism. ${GLOBAL}`
 
     case 'quality':
-      return `Professional Amazon macro close-up quality shot for "${productName}". Strategic goal: eliminate any material doubt by proving craftsmanship, surface finish, and build quality at extreme close range. Camera is positioned very close to the product surface — capturing real texture, stitching or structural detail, material weave, surface finish, and construction precision at a level that product copy alone cannot convey. Lighting: soft directional studio key light plus a subtle rim light bringing out three-dimensional depth in every fiber, edge, and joint. Colors accurate and naturally saturated. Background is a very shallow depth-of-field soft blur — premium neutral off-white or warm grey. Product occupies 70 to 80 percent of the frame. Alongside the macro shot: two to three floating semi-transparent rounded-rectangle cards with soft shadow, each with a bold navy headline up to six words (e.g., Premium Grade Materials, Built to Last) and a short dark-grey subline. Thin-line teal accent icons beside each card. The result: a luxury craftsmanship proof shot. ${GLOBAL}`
+      return `Professional Amazon macro close-up quality shot for "${productName}". Strategic goal: eliminate any material doubt by proving craftsmanship, surface finish, and build quality at extreme close range. Quality signals highlighted: ${quality}. Camera is positioned very close to the product surface — capturing real texture, stitching or structural detail, material weave, surface finish, and construction precision at a level that product copy alone cannot convey. Lighting: soft directional studio key light plus a subtle rim light bringing out three-dimensional depth in every fiber, edge, and joint. Colors accurate and naturally saturated. Background is a very shallow depth-of-field soft blur — premium neutral off-white or warm grey. Product occupies 70 to 80 percent of the frame. Alongside the macro shot: two to three floating semi-transparent rounded-rectangle cards with soft shadow, each with a bold navy headline up to six words and a short dark-grey subline. Thin-line teal accent icons beside each card. The result: a luxury craftsmanship proof shot. ${GLOBAL}`
 
     case 'howto':
-      return `Professional Amazon how-to-use infographic for "${productName}". Strategic goal: remove purchase hesitation by making the product feel immediately simple, intuitive, and rewarding through a clean numbered step-by-step visual guide. Layout: three to four numbered steps in a horizontal or vertical flow. Each step contains a circular teal numbered icon with a thin-line illustration, a short bold navy step headline up to six words, and one supporting dark-grey subline describing the action. Steps progress naturally from setup or first use through to the satisfying result. The product appears in at least one step — photographed with crisp studio quality, accurate color, real texture, correct proportions. Background: clean premium soft gradient warm white to very light grey with subtle depth layers and gentle shadows beneath each step card. Each step card is a semi-transparent rounded-rectangle panel with soft drop shadow, consistent corner radius, and aligned text. No flat clip-art style. No harsh borders. Visual language: premium instructional design that builds confidence and excitement. ${GLOBAL}`
+      return `Professional Amazon how-to-use infographic for "${productName}". Strategic goal: remove purchase hesitation by making the product feel immediately simple, intuitive, and rewarding through a clean numbered step-by-step visual guide. Usage steps: ${steps}. Layout: three to four numbered steps in a horizontal or vertical flow. Each step contains a circular teal numbered icon with a thin-line illustration, a short bold navy step headline up to six words, and one supporting dark-grey subline describing the action. Steps progress naturally from setup or first use through to the satisfying result. The product appears in at least one step — photographed with crisp studio quality, accurate color, real texture, correct proportions. Background: clean premium soft gradient warm white to very light grey with subtle depth layers and gentle shadows beneath each step card. Each step card is a semi-transparent rounded-rectangle panel with soft drop shadow, consistent corner radius, and aligned text. No flat clip-art style. No harsh borders. Visual language: premium instructional design that builds confidence and excitement. ${GLOBAL}`
 
     default:
       return `Professional Amazon product secondary image for "${productName}". Ultra sharp studio quality photography with accurate color, real texture, and premium clean background. On-image text callouts in bold navy on semi-transparent rounded-rectangle cards with soft shadow. Clean geometric sans-serif typography. Fully readable on mobile. ${GLOBAL}`
@@ -197,6 +203,9 @@ function SecondaryImageGenerator() {
   const [generatedImages, setGeneratedImages] = useState([])
   const [selectedImages, setSelectedImages] = useState([])
   const [error, setError] = useState(null)
+
+  // Keyword panel state: { [typeId]: string[] }
+  const [mergedKeywords, setMergedKeywords] = useState({})
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)
@@ -341,8 +350,16 @@ function SecondaryImageGenerator() {
     setTimeout(() => asinInputRef.current?.focus(), 50)
   }
 
+  // Called when user clicks "Merge & Use Selected" in the keyword panel
+  const handleKeywordsMerge = (typeId, keywords) => {
+    setMergedKeywords(prev => ({ ...prev, [typeId]: keywords }))
+    // Rebuild the prompt immediately with the new keywords
+    const newPrompt = buildPromptForType(typeId, campaignData, keywords)
+    setTypePrompts(prev => ({ ...prev, [typeId]: newPrompt }))
+  }
+
   // Generate default prompt for a given type based on campaign data
-  const getDefaultPrompt = (typeId) => buildPromptForType(typeId, campaignData)
+  const getDefaultPrompt = (typeId) => buildPromptForType(typeId, campaignData, mergedKeywords[typeId] || [])
 
   // Handle image type selection change
   const handleTypeChange = (typeId) => {
@@ -737,9 +754,19 @@ function SecondaryImageGenerator() {
                       </div>
                     </div>
 
+                    {hasCampaignData && (
+                      <KeywordInputPanel
+                        typeId={selectedType}
+                        asinProduct={asinProduct}
+                        onMerge={(kws) => handleKeywordsMerge(selectedType, kws)}
+                      />
+                    )}
+
                     <div className="prompt-edit-area">
                       <label className="prompt-label">
-                        Auto-generated prompt from campaign data (editable):
+                        {mergedKeywords[selectedType]?.length > 0
+                          ? `Prompt updated with ${mergedKeywords[selectedType].length} keywords (editable):`
+                          : 'Auto-generated prompt from campaign data (editable):'}
                       </label>
                       <textarea
                         className="prompt-textarea"

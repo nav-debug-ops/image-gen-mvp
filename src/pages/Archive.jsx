@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { fetchAPI } from '../api/client'
+import { fetchAPI, safeJson } from '../api/client'
 
 const PAGE_SIZE = 20
 
@@ -31,7 +31,8 @@ function Archive() {
     try {
       const res = await fetchAPI(`/api/images/?archived=true&limit=${PAGE_SIZE}&offset=${off}`)
       if (!res.ok) throw new Error('Failed to load archive')
-      const data = await res.json()
+      const data = await safeJson(res)
+      if (!data) throw new Error('Empty response from server')
       setImages(data.images)
       setTotal(data.total)
       setOffset(off)
