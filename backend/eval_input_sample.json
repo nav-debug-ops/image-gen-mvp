@@ -1,0 +1,20 @@
+[
+  {
+    "image_url": "/images/1162e61e.png",
+    "prompt": "A product on a clean white background, centered, professional Amazon main listing image",
+    "content_type": "listing_main",
+    "metadata": { "test": "sample-1", "note": "replace prompt with your actual prompt" }
+  },
+  {
+    "image_url": "/images/1b4b311b.png",
+    "prompt": "Infographic showing product key benefits with callout labels and clean layout",
+    "content_type": "listing_secondary",
+    "metadata": { "test": "sample-2" }
+  },
+  {
+    "image_url": "/images/24fd9075.png",
+    "prompt": "Premium brand lifestyle image for A+ content module, cohesive brand palette",
+    "content_type": "aplus_content",
+    "metadata": { "test": "sample-3" }
+  }
+]

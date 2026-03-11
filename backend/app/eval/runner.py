@@ -262,7 +262,7 @@ def _write_csv(
 
             writer.writerow(row)
 
-    print(f"[EVAL] Results written → {csv_path}")
+    print(f"[EVAL] Results written: {csv_path}")
 
 
 # ── Summary ────────────────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ def _print_summary(summary: BatchSummary) -> None:
     print(f"  Total images evaluated : {summary.total}")
     print(f"  Successfully scored    : {scored}")
     print(f"  Judge errors           : {summary.failed_eval}")
-    print(f"  Passed (≥3.5)          : {summary.passed}/{scored}")
+    print(f"  Passed (>=3.5)         : {summary.passed}/{scored}")
     print(f"  Avg composite score    : {summary.avg_composite:.2f}/5.00")
     if summary.avg_by_content_type:
         print("  Avg by content type:")
