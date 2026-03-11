@@ -27,8 +27,10 @@ export const AVAILABLE_MODELS = {
     { id: 'dall-e-2', name: 'DALL-E 2', description: 'Supports variations', supportsImg2Img: true }
   ],
   gemini: [
-    { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', description: 'Native image generation', supportsImg2Img: false },
-    { id: 'imagen-3.0-generate-002', name: 'Imagen 3', description: 'High quality Google model', supportsImg2Img: false }
+    { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', description: 'Fast native image generation', supportsImg2Img: true },
+    { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', description: 'Latest preview model', supportsImg2Img: true },
+    { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', description: 'Fast, high quality', supportsImg2Img: false },
+    { id: 'imagen-4.0-generate-001', name: 'Imagen 4', description: 'Best quality', supportsImg2Img: false }
   ]
 }
 

@@ -21,8 +21,8 @@ class GeminiProvider(ImageProvider):
 
     def get_available_models(self) -> list:
         return [
-            {"id": "gemini-2.0-flash-exp-image-generation", "name": "Gemini 2.0 Flash Image", "description": "Fast native image generation"},
-            {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image", "description": "High quality native generation"},
+            {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image", "description": "Fast, high quality native generation"},
+            {"id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image", "description": "Latest preview model"},
             {"id": "imagen-4.0-fast-generate-001", "name": "Imagen 4 Fast", "description": "Fast, high quality"},
             {"id": "imagen-4.0-generate-001", "name": "Imagen 4", "description": "Best quality"},
         ]
@@ -37,7 +37,7 @@ class GeminiProvider(ImageProvider):
         reference_image_url: Optional[str] = None,
         **kwargs,
     ) -> GenerationResult:
-        model_id = model or "gemini-2.0-flash-exp-image-generation"
+        model_id = model or "gemini-2.5-flash-image"
 
         if model_id.startswith("imagen"):
             return await self._generate_imagen(prompt, model_id, aspect_ratio)

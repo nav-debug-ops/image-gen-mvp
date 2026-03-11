@@ -19,6 +19,7 @@ import {
   Pencil,
   BookmarkCheck,
   ExternalLink,
+  Undo2,
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -91,7 +92,7 @@ const IMAGE_STRATEGIES = [
 
 const AI_MODELS = [
   { id: 'combined', name: 'GPT & Gemini (Combined)', description: 'Balanced results', badge: 'Recommended' },
-  { id: 'gemini', name: 'Gemini 2.0 Flash', description: 'Fast generation', badge: 'Fast' },
+  { id: 'gemini', name: 'Gemini 2.5 Flash Image', description: 'Fast generation', badge: 'Fast' },
   { id: 'replicate', name: 'Flux Pro', description: 'Photorealism', badge: 'Quality' },
   { id: 'openai', name: 'DALL-E 3', description: 'Artistic style', badge: null },
   { id: 'stability', name: 'SDXL', description: 'High quality', badge: null },
@@ -383,6 +384,7 @@ function MainImageGenerator() {
   const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
   const [showEditorMenu, setShowEditorMenu] = useState(false)
   const [regeneratingIds, setRegeneratingIds] = useState(new Set())
+  const [previousImages, setPreviousImages] = useState({}) // newImg.id → oldImg
 
   const EDITORS = [
     { id: 'photopea', name: 'Photopea', desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
@@ -459,6 +461,8 @@ function MainImageGenerator() {
         model: result.model,
         timestamp: new Date().toISOString(),
       }
+      // Save old image so user can undo
+      setPreviousImages(prev => ({ ...prev, [newImg.id]: img }))
       setGeneratedImages(prev => prev.map(i => i.id === img.id ? newImg : i))
       setLightboxImg(prev => prev?.id === img.id ? newImg : prev)
     } catch (err) {
@@ -470,6 +474,18 @@ function MainImageGenerator() {
         return next
       })
     }
+  }
+
+  const handleUndoRegenerate = (img) => {
+    const oldImg = previousImages[img.id]
+    if (!oldImg) return
+    setGeneratedImages(prev => prev.map(i => i.id === img.id ? oldImg : i))
+    setLightboxImg(prev => prev?.id === img.id ? oldImg : prev)
+    setPreviousImages(prev => {
+      const next = { ...prev }
+      delete next[img.id]
+      return next
+    })
   }
 
   const asinInputRef = useRef(null)
@@ -1004,6 +1020,15 @@ function MainImageGenerator() {
                     >
                       {regeneratingIds.has(img.id) ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
                     </button>
+                    {previousImages[img.id] && (
+                      <button
+                        className="action-btn action-btn-undo"
+                        title="Restore previous version"
+                        onClick={(e) => { e.stopPropagation(); handleUndoRegenerate(img) }}
+                      >
+                        <Undo2 size={16} />
+                      </button>
+                    )}
                     <button
                       className="action-btn"
                       title="Download"
@@ -1083,6 +1108,16 @@ function MainImageGenerator() {
                   ? <><Loader2 size={17} className="spin" /> Regenerating...</>
                   : <><RefreshCw size={17} /> Regenerate</>}
               </button>
+
+              {/* Undo regenerate */}
+              {previousImages[lightboxImg.id] && (
+                <button
+                  className="lightbox-btn lightbox-btn-undo"
+                  onClick={() => handleUndoRegenerate(lightboxImg)}
+                >
+                  <Undo2 size={17} /> Previous Version
+                </button>
+              )}
 
               {/* Edit — with editor picker */}
               <div className="lightbox-edit-wrap">

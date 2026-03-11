@@ -27,7 +27,8 @@ import {
   Maximize2,
   Pencil,
   BookmarkCheck,
-  ExternalLink
+  ExternalLink,
+  Undo2
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -212,6 +213,7 @@ function SecondaryImageGenerator() {
   const [saveStatus, setSaveStatus] = useState({})
   const [showEditorMenu, setShowEditorMenu] = useState(false)
   const [regeneratingIds, setRegeneratingIds] = useState(new Set())
+  const [previousImages, setPreviousImages] = useState({}) // newImg.id → oldImg
 
   const EDITORS = [
     { id: 'photopea', name: 'Photopea',      desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
@@ -282,8 +284,9 @@ function SecondaryImageGenerator() {
         provider: result.provider,
         timestamp: new Date().toISOString(),
       }
+      // Save old image so user can undo
+      setPreviousImages(prev => ({ ...prev, [newImg.id]: img }))
       setGeneratedImages(prev => prev.map(i => i.id === img.id ? newImg : i))
-      // If this image is open in the lightbox, update it there too
       setLightboxImg(prev => prev?.id === img.id ? newImg : prev)
     } catch (err) {
       console.error('Regeneration failed:', err)
@@ -294,6 +297,18 @@ function SecondaryImageGenerator() {
         return next
       })
     }
+  }
+
+  const handleUndoRegenerate = (img) => {
+    const oldImg = previousImages[img.id]
+    if (!oldImg) return
+    setGeneratedImages(prev => prev.map(i => i.id === img.id ? oldImg : i))
+    setLightboxImg(prev => prev?.id === img.id ? oldImg : prev)
+    setPreviousImages(prev => {
+      const next = { ...prev }
+      delete next[img.id]
+      return next
+    })
   }
 
   // ASIN lookup handlers
@@ -904,6 +919,15 @@ function SecondaryImageGenerator() {
                     >
                       {regeneratingIds.has(img.id) ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
                     </button>
+                    {previousImages[img.id] && (
+                      <button
+                        className="action-btn action-btn-undo"
+                        title="Restore previous version"
+                        onClick={(e) => { e.stopPropagation(); handleUndoRegenerate(img) }}
+                      >
+                        <Undo2 size={16} />
+                      </button>
+                    )}
                     <button
                       className="action-btn"
                       title="Download"
@@ -975,6 +999,15 @@ function SecondaryImageGenerator() {
                   ? <><Loader2 size={17} className="spin" /> Regenerating...</>
                   : <><RefreshCw size={17} /> Regenerate</>}
               </button>
+
+              {previousImages[lightboxImg.id] && (
+                <button
+                  className="lightbox-btn lightbox-btn-undo"
+                  onClick={() => handleUndoRegenerate(lightboxImg)}
+                >
+                  <Undo2 size={17} /> Previous Version
+                </button>
+              )}
 
               <div className="lightbox-edit-wrap">
                 <button
