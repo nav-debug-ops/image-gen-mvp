@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import {
   buildImagePrompt,
@@ -354,6 +355,7 @@ function MainImageGenerator() {
         const newImage = {
           id: Date.now() + i,
           url: result.url,
+          prompt,
           template: template.name,
           templateId: template.id,
           model: result.model,
@@ -993,6 +995,7 @@ function MainImageGenerator() {
                     />
                   </div>
                   <img src={img.url} alt={img.template} />
+                  <EvalScoreBadge imageUrl={img.url} prompt={img.prompt} contentType="listing_main" />
                   <div className="result-info">
                     <span className="result-template">{img.template}</span>
                     <div className="result-meta">
@@ -1071,6 +1074,9 @@ function MainImageGenerator() {
               <span className="lightbox-template">{lightboxImg.template}</span>
               <span className="lightbox-meta">{lightboxImg.provider} · {lightboxImg.aspectRatio}</span>
             </div>
+
+            {/* Eval score */}
+            <EvalScoreBadge imageUrl={lightboxImg.url} prompt={lightboxImg.prompt} contentType="listing_main" defaultExpanded />
 
             {/* Action bar */}
             <div className="lightbox-actions">

@@ -34,6 +34,7 @@ import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import KeywordInputPanel from '../components/KeywordInputPanel'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 
 // Secondary Image Types
 const SECONDARY_IMAGE_TYPES = [
@@ -894,6 +895,7 @@ function SecondaryImageGenerator() {
                     />
                   </div>
                   <img src={img.url} alt={img.typeName} />
+                  <EvalScoreBadge imageUrl={img.url} prompt={img.prompt} contentType="listing_secondary" />
                   <div className="result-info">
                     <span
                       className="result-type-badge"
@@ -966,6 +968,9 @@ function SecondaryImageGenerator() {
               <span className="lightbox-template">{lightboxImg.typeName}</span>
               <span className="lightbox-meta">{lightboxImg.provider} · {lightboxImg.aspectRatio}</span>
             </div>
+
+            {/* Eval score */}
+            <EvalScoreBadge imageUrl={lightboxImg.url} prompt={lightboxImg.prompt} contentType="listing_secondary" defaultExpanded />
 
             <div className="lightbox-actions">
 

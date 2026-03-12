@@ -6165,3 +6165,228 @@
 @media (max-width: 640px) {
   .kw-columns { grid-template-columns: 1fr; }
 }
+
+/* ── Eval Score Badge ──────────────────────────────────────────── */
+
+.eval-badge-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Compact pill — loading state */
+.eval-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: default;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.eval-badge-loading {
+  color: #94a3b8;
+  background: #f8fafc;
+}
+
+.eval-badge-error {
+  color: #cbd5e1;
+  background: #f8fafc;
+  font-size: 0.7rem;
+}
+
+/* Scored pill — clickable */
+.eval-badge-scored {
+  cursor: pointer;
+  background: #fafafa;
+  border: 1px solid;
+  border-radius: 6px;
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+  transition: opacity 0.15s;
+}
+.eval-badge-scored:hover { opacity: 0.8; }
+
+.eval-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.eval-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  animation: evalPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes evalPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.eval-badge-score {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.eval-badge-result {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.eval-badge-arrow {
+  margin-left: auto;
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+/* ── Expanded panel ── */
+.eval-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 0 8px 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  animation: evalFadeIn 0.18s ease;
+}
+
+@keyframes evalFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.eval-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-left: 3px solid;
+  background: #f8fafc;
+  flex-wrap: wrap;
+}
+
+.eval-panel-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  flex: 1;
+}
+
+.eval-panel-composite {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.eval-panel-pass {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.4px;
+}
+
+/* Dimension rows */
+.eval-dims {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eval-dim-row {
+  display: grid;
+  grid-template-columns: 1fr 28px 80px 30px;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.eval-dim-name {
+  font-size: 0.72rem;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eval-dim-weight {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.eval-dim-bar-bg {
+  background: #e2e8f0;
+  border-radius: 3px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.eval-dim-bar-fill {
+  height: 5px;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.eval-dim-score {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Top improvement */
+.eval-improvement {
+  display: flex;
+  gap: 6px;
+  padding: 7px 12px;
+  background: #fef9ec;
+  border-top: 1px solid #fde68a;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.eval-improvement-icon {
+  color: #d97706;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.eval-improvement-text {
+  color: #78350f;
+}
+
+/* ── Lightbox eval panel — full width, always expanded ── */
+.lightbox-modal .eval-badge-wrap {
+  padding: 0 4px;
+}
+
+.lightbox-modal .eval-badge-scored {
+  margin: 4px 0;
+  width: 100%;
+}
+
+.lightbox-modal .eval-panel {
+  margin: 0 0 6px;
+}
+
+.lightbox-modal .eval-dim-row {
+  grid-template-columns: 1fr 30px 120px 34px;
+}
