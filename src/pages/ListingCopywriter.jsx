@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { generateCopy } from '../api/copywriter'
 import {
   FileText,
   Search,
@@ -83,7 +84,9 @@ function ListingCopywriter() {
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
+  const [regeneratingField, setRegeneratingField] = useState(null) // 'bullets' | 'description' | `bullet-${i}` | `title-${i}`
   const [hasResults, setHasResults] = useState(false)
+  const [error, setError] = useState(null)
 
   // Results state
   const [titles, setTitles] = useState([])
@@ -95,17 +98,78 @@ function ListingCopywriter() {
   const [activeTitle, setActiveTitle] = useState(0)
   const [copiedField, setCopiedField] = useState(null)
 
+  const _callAPI = async () => generateCopy({
+    asin: asinValue,
+    marketplace,
+    language,
+    tone,
+    keywords: additionalKeywords,
+  })
+
   const handleGenerate = async () => {
     setIsGenerating(true)
-    await new Promise(r => setTimeout(r, 2000))
+    setError(null)
+    try {
+      const data = await _callAPI()
+      setTitles(data.titles)
+      setBullets(data.bullets)
+      setDescription(data.description)
+      setSearchTerms(data.search_terms)
+      setActiveTitle(0)
+      setHasResults(true)
+    } catch (err) {
+      setError(err.message || 'Generation failed. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
-    setTitles(MOCK_RESULTS.titles)
-    setBullets(MOCK_RESULTS.bullets)
-    setDescription(MOCK_RESULTS.description)
-    setSearchTerms(MOCK_RESULTS.searchTerms)
+  const handleRegenerateBullets = async () => {
+    setRegeneratingField('bullets')
+    try {
+      const data = await _callAPI()
+      setBullets(data.bullets)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRegeneratingField(null)
+    }
+  }
 
-    setIsGenerating(false)
-    setHasResults(true)
+  const handleRegenerateBullet = async (index) => {
+    setRegeneratingField(`bullet-${index}`)
+    try {
+      const data = await _callAPI()
+      setBullets(prev => prev.map((b, i) => i === index ? data.bullets[index] ?? data.bullets[0] : b))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRegeneratingField(null)
+    }
+  }
+
+  const handleRegenerateDescription = async () => {
+    setRegeneratingField('description')
+    try {
+      const data = await _callAPI()
+      setDescription(data.description)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRegeneratingField(null)
+    }
+  }
+
+  const handleRegenerateTitle = async (index) => {
+    setRegeneratingField(`title-${index}`)
+    try {
+      const data = await _callAPI()
+      setTitles(prev => prev.map((t, i) => i === index ? data.titles[index] ?? data.titles[0] : t))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRegeneratingField(null)
+    }
   }
 
   const copyToClipboard = async (text, field) => {
@@ -218,6 +282,12 @@ function ListingCopywriter() {
                 </span>
               </div>
 
+              {error && (
+                <div className="error-message" style={{ marginBottom: '12px' }}>
+                  <AlertCircle size={16} /> {error}
+                </div>
+              )}
+
               <button
                 className="btn btn-primary btn-large"
                 onClick={handleGenerate}
@@ -299,8 +369,15 @@ function ListingCopywriter() {
                         >
                           {copiedField === 'title' ? <Check size={16} /> : <Copy size={16} />}
                         </button>
-                        <button className="icon-btn">
-                          <RefreshCw size={16} />
+                        <button
+                          className="icon-btn"
+                          title="Regenerate this title"
+                          disabled={!!regeneratingField}
+                          onClick={() => handleRegenerateTitle(activeTitle)}
+                        >
+                          {regeneratingField === `title-${activeTitle}`
+                            ? <Loader2 size={16} className="spin" />
+                            : <RefreshCw size={16} />}
                         </button>
                       </div>
                     </div>
@@ -311,8 +388,14 @@ function ListingCopywriter() {
                 <div className="result-section">
                   <div className="section-header">
                     <h3>Bullet Points</h3>
-                    <button className="btn btn-ghost btn-sm">
-                      <RefreshCw size={14} />
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={!!regeneratingField}
+                      onClick={handleRegenerateBullets}
+                    >
+                      {regeneratingField === 'bullets'
+                        ? <Loader2 size={14} className="spin" />
+                        : <RefreshCw size={14} />}
                       Regenerate All
                     </button>
                   </div>
@@ -344,8 +427,15 @@ function ListingCopywriter() {
                               >
                                 {copiedField === `bullet-${i}` ? <Check size={16} /> : <Copy size={16} />}
                               </button>
-                              <button className="icon-btn">
-                                <RefreshCw size={16} />
+                              <button
+                                className="icon-btn"
+                                title="Regenerate this bullet"
+                                disabled={!!regeneratingField}
+                                onClick={() => handleRegenerateBullet(i)}
+                              >
+                                {regeneratingField === `bullet-${i}`
+                                  ? <Loader2 size={16} className="spin" />
+                                  : <RefreshCw size={16} />}
                               </button>
                             </div>
                           </div>
@@ -359,8 +449,14 @@ function ListingCopywriter() {
                 <div className="result-section">
                   <div className="section-header">
                     <h3>Product Description</h3>
-                    <button className="btn btn-ghost btn-sm">
-                      <RefreshCw size={14} />
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={!!regeneratingField}
+                      onClick={handleRegenerateDescription}
+                    >
+                      {regeneratingField === 'description'
+                        ? <Loader2 size={14} className="spin" />
+                        : <RefreshCw size={14} />}
                       Regenerate
                     </button>
                   </div>
