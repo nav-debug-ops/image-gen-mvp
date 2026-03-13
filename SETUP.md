@@ -1,129 +1,117 @@
-# Setup Guide
+# Local Setup Guide
 
-Complete step-by-step guide to run the ImageGen MVP locally.
+Step-by-step instructions to run the Amazon Listing Pro MVP on your local machine.
+
+---
 
 ## Prerequisites
 
-1. **Python 3.10+** - [Download](https://www.python.org/downloads/)
-2. **Node.js 18+** - [Download](https://nodejs.org/)
-3. **Replicate Account** - [Sign up](https://replicate.com/) (free tier available)
+Install these before starting:
+
+- **Python 3.10+** — [python.org/downloads](https://www.python.org/downloads/)
+- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
+- **Git** — [git-scm.com](https://git-scm.com/)
 
 ---
 
-## Step 1: Get Your Replicate API Token
-
-1. Go to [replicate.com](https://replicate.com)
-2. Sign up or log in
-3. Go to Account Settings → API Tokens
-4. Copy your API token
-
----
-
-## Step 2: Set Up Backend
-
-Open a terminal and run:
+## Step 1: Clone the Repo
 
 ```bash
-# Navigate to backend folder
-cd image-gen-mvp/backend
+git clone https://github.com/nav-debug-ops/image-gen-mvp.git
+cd image-gen-mvp
+```
 
-# Create virtual environment
+---
+
+## Step 2: Set Up the Backend
+
+Open a terminal in the project root:
+
+```bash
+cd backend
+
+# Create a virtual environment
 python -m venv venv
 
-# Activate it (Windows)
+# Activate it — Windows:
 venv\Scripts\activate
-
-# Activate it (Mac/Linux)
+# Activate it — Mac/Linux:
 # source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env file
+# Create your .env from the template
 copy .env.example .env
-# (Mac/Linux: cp .env.example .env)
+# Mac/Linux:
+# cp .env.example .env
+```
 
-# Edit .env and add your Replicate API token
-# REPLICATE_API_TOKEN=your_token_here
+Now open `backend/.env` and fill in your **Gemini API key**:
 
-# Run the backend
+```
+GEMINI_API_KEY=your_key_here
+```
+
+Get a free key at [aistudio.google.com](https://aistudio.google.com) → Get API Key.
+
+Start the backend:
+
+```bash
 uvicorn app.main:app --reload
 ```
 
-Backend will be running at: `http://localhost:8000`
-
-Test it: Open `http://localhost:8000` in your browser - you should see:
-```json
-{"message": "ImageGen MVP API", "status": "running"}
-```
+Backend runs at: `http://localhost:8000`
+Verify it's working: `http://localhost:8000/health` should return `{"status":"healthy"}`
 
 ---
 
-## Step 3: Set Up Frontend
+## Step 3: Set Up the Frontend
 
-Open a **new terminal** and run:
+Open a **new terminal** in the project root (not inside `backend/`):
 
 ```bash
-# Navigate to frontend folder
-cd image-gen-mvp/frontend
-
-# Install dependencies
+# From the image-gen-mvp/ root folder
 npm install
-
-# Create .env.local
-copy .env.example .env.local
-# (Mac/Linux: cp .env.example .env.local)
-
-# Run the frontend
 npm run dev
 ```
 
-Frontend will be running at: `http://localhost:3000`
+Frontend runs at: `http://localhost:3000`
 
 ---
 
-## Step 4: Use the App
+## Step 4: Open the App
 
-1. Open `http://localhost:3000` in your browser
-2. Type a prompt like "A cute cat in a garden"
-3. Select a style (optional)
-4. Click "Generate"
-5. Wait for your image!
+Go to `http://localhost:3000` in your browser.
+
+> **Note:** In development mode, login is automatically bypassed — you go straight to the dashboard without needing an account.
 
 ---
 
 ## Troubleshooting
 
-### "Failed to generate image"
-- Check that your Replicate API token is correct in `backend/.env`
-- Ensure you have credits in your Replicate account
-- Check the backend terminal for error messages
+### `pip install` fails
+Make sure your virtual environment is activated — you should see `(venv)` in your terminal prompt.
 
-### "Network Error" or CORS issues
+### Backend won't start — "module not found"
+You're probably not inside the `backend/` folder. Run `cd backend` first, then activate the venv, then run uvicorn.
+
+### Frontend shows blank page or "Network Error"
 - Make sure the backend is running on port 8000
-- Check that `FRONTEND_URL=http://localhost:3000` in backend `.env`
+- Make sure you ran `npm install` before `npm run dev`
 
-### Images not loading
-- Check that the `generated` folder exists in the backend directory
-- Verify the backend is serving static files correctly
-
----
-
-## Next Steps
-
-After confirming the MVP works:
-
-1. **Add authentication** - Protect your API
-2. **Deploy** - Use Vercel (frontend) + Railway/Render (backend)
-3. **Add more features** - See the roadmap in README.md
+### Images not generating
+- Check that `GEMINI_API_KEY` is set in `backend/.env`
+- Check the backend terminal for error messages
 
 ---
 
 ## Useful Commands
 
-| Command | Location | Purpose |
+| Command | Run from | Purpose |
 |---------|----------|---------|
-| `uvicorn app.main:app --reload` | backend/ | Run backend |
-| `npm run dev` | frontend/ | Run frontend |
-| `npm run build` | frontend/ | Build for production |
-| `pip freeze > requirements.txt` | backend/ | Update dependencies |
+| `uvicorn app.main:app --reload` | `backend/` | Start backend |
+| `npm run dev` | project root | Start frontend |
+| `npm run build` | project root | Build for production |
+| `pip install -r requirements.txt` | `backend/` | Install Python deps |
+| `npm install` | project root | Install JS deps |
