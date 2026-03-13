@@ -151,6 +151,42 @@ Generate exactly 3 title variants using different angles:
 Generate exactly 5 bullet points. Write all content in {language}."""
 
 
+def _recover_partial_json(text: str) -> dict | None:
+    """
+    Salvage titles, bullets, description, and search_terms from a
+    truncated JSON string by extracting whatever arrays/strings are
+    present before the cut-off point.
+    """
+    result: dict = {}
+
+    # Extract titles array
+    titles_match = re.search(r'"titles"\s*:\s*\[([^\]]*)', text, re.DOTALL)
+    if titles_match:
+        strings = re.findall(r'"((?:[^"\\]|\\.)*)"', titles_match.group(1))
+        if strings:
+            result["titles"] = [s for s in strings if len(s) > 10]
+
+    # Extract bullets array
+    bullets_match = re.search(r'"bullets"\s*:\s*\[([^\]]*)', text, re.DOTALL)
+    if bullets_match:
+        strings = re.findall(r'"((?:[^"\\]|\\.)*)"', bullets_match.group(1))
+        if strings:
+            result["bullets"] = [s for s in strings if len(s) > 10]
+
+    # Extract description (may be truncated — take what we have)
+    desc_match = re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.)*)', text, re.DOTALL)
+    if desc_match:
+        result["description"] = desc_match.group(1).rstrip("\\").strip()
+
+    # Extract search_terms
+    st_match = re.search(r'"search_terms"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
+    if st_match:
+        result["search_terms"] = st_match.group(1)
+
+    # Only return if we at least got some titles
+    return result if result.get("titles") else None
+
+
 async def _call_gemini(prompt: str) -> dict:
     if not settings.gemini_api_key:
         raise ValueError("GEMINI_API_KEY not configured in .env")
@@ -160,8 +196,7 @@ async def _call_gemini(prompt: str) -> dict:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 4096,
-            "responseMimeType": "application/json",
+            "maxOutputTokens": 8192,  # listing copy can be 1500+ tokens of content
         },
     }
 
@@ -191,8 +226,11 @@ async def _call_gemini(prompt: str) -> dict:
 
     try:
         result = json.loads(clean)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Gemini returned invalid JSON: {e} — raw: {text[:200]}")
+    except json.JSONDecodeError:
+        # Truncated response — attempt to salvage whatever was parsed before cut-off
+        result = _recover_partial_json(clean)
+        if not result:
+            raise ValueError(f"Gemini returned truncated JSON that could not be recovered. Try again.")
 
     # Validate and normalise
     if not isinstance(result.get("titles"), list):
