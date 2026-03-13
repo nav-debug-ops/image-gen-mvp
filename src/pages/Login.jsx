@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { forgotPassword } from '../api/auth'
-import { Sparkles, Mail, Lock, User, Loader2, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Sparkles, Mail, Lock, User, Loader2, ArrowRight, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
 function Login() {
   const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
@@ -12,6 +12,7 @@ function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const { login, register } = useAuth()
   const navigate = useNavigate()
@@ -175,14 +176,19 @@ function Login() {
                 <Lock size={16} />
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === 'register' ? 'Min 8 characters' : 'Your password'}
-                required
-                minLength={mode === 'register' ? 8 : undefined}
-              />
+              <div className="password-input-wrap">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? 'Min 8 characters' : 'Your password'}
+                  required
+                  minLength={mode === 'register' ? 8 : undefined}
+                />
+                <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)}>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {mode === 'login' && (

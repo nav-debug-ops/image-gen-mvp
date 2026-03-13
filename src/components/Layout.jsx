@@ -13,8 +13,10 @@ import {
   Menu,
   X,
   Archive,
+  LogOut,
 } from 'lucide-react'
 import { useState } from 'react'
+import { logout } from '../api/auth'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -80,6 +82,10 @@ function Layout() {
           <Link to="/legacy" className="legacy-link">
             Legacy Generator
           </Link>
+          <button className="logout-btn" onClick={logout}>
+            <LogOut size={16} />
+            Sign Out
+          </button>
         </div>
       </aside>
 

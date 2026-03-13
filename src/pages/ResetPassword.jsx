@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { resetPassword } from '../api/auth'
-import { Sparkles, Lock, Loader2, ArrowRight, CheckCircle } from 'lucide-react'
+import { Sparkles, Lock, Loader2, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
 function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -13,6 +13,8 @@ function ResetPassword() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   if (!token) {
     return (
@@ -89,14 +91,19 @@ function ResetPassword() {
               <Lock size={16} />
               New Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min 8 characters"
-              required
-              minLength={8}
-            />
+            <div className="password-input-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min 8 characters"
+                required
+                minLength={8}
+              />
+              <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
@@ -104,13 +111,18 @@ function ResetPassword() {
               <Lock size={16} />
               Confirm Password
             </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
-              required
-            />
+            <div className="password-input-wrap">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your password"
+                required
+              />
+              <button type="button" className="password-toggle" onClick={() => setShowConfirm(v => !v)}>
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {error && <div className="login-error">{error}</div>}

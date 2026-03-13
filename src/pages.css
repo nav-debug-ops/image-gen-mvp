@@ -114,6 +114,29 @@
   color: var(--text-secondary);
 }
 
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
 .main-content {
   flex: 1;
   margin-left: 260px;
@@ -5476,6 +5499,34 @@
 .login-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: var(--text-secondary);
 }
 
 .forgot-password-link {
