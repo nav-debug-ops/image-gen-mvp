@@ -154,36 +154,47 @@ Generate exactly 5 bullet points. Write all content in {language}."""
 def _recover_partial_json(text: str) -> dict | None:
     """
     Salvage titles, bullets, description, and search_terms from a
-    truncated JSON string by extracting whatever arrays/strings are
-    present before the cut-off point.
+    truncated JSON string. Handles both complete and mid-string cut-offs.
     """
     result: dict = {}
 
-    # Extract titles array
-    titles_match = re.search(r'"titles"\s*:\s*\[([^\]]*)', text, re.DOTALL)
-    if titles_match:
-        strings = re.findall(r'"((?:[^"\\]|\\.)*)"', titles_match.group(1))
+    def extract_strings(blob: str) -> list[str]:
+        """Extract all complete quoted strings AND any trailing partial string."""
+        complete = re.findall(r'"((?:[^"\\]|\\.)+)"', blob)
+        # Also grab a trailing partial string (no closing quote before end-of-blob)
+        partial_match = re.search(r'"((?:[^"\\]|\\.){20,})$', blob)
+        if partial_match and partial_match.group(1) not in complete:
+            complete.append(partial_match.group(1))
+        return [s.strip() for s in complete if len(s.strip()) > 10]
+
+    # Titles
+    m = re.search(r'"titles"\s*:\s*\[(.*)$', text, re.DOTALL)
+    if m:
+        blob = m.group(1)
+        end = blob.find(']')
+        strings = extract_strings(blob[:end] if end != -1 else blob)
         if strings:
-            result["titles"] = [s for s in strings if len(s) > 10]
+            result["titles"] = strings
 
-    # Extract bullets array
-    bullets_match = re.search(r'"bullets"\s*:\s*\[([^\]]*)', text, re.DOTALL)
-    if bullets_match:
-        strings = re.findall(r'"((?:[^"\\]|\\.)*)"', bullets_match.group(1))
+    # Bullets
+    m = re.search(r'"bullets"\s*:\s*\[(.*)$', text, re.DOTALL)
+    if m:
+        blob = m.group(1)
+        end = blob.find(']')
+        strings = extract_strings(blob[:end] if end != -1 else blob)
         if strings:
-            result["bullets"] = [s for s in strings if len(s) > 10]
+            result["bullets"] = strings
 
-    # Extract description (may be truncated — take what we have)
-    desc_match = re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.)*)', text, re.DOTALL)
-    if desc_match:
-        result["description"] = desc_match.group(1).rstrip("\\").strip()
+    # Description (take anything after the opening quote, even if truncated)
+    m = re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.)*)', text, re.DOTALL)
+    if m:
+        result["description"] = m.group(1).rstrip("\\").strip()
 
-    # Extract search_terms
-    st_match = re.search(r'"search_terms"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
-    if st_match:
-        result["search_terms"] = st_match.group(1)
+    # Search terms
+    m = re.search(r'"search_terms"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
+    if m:
+        result["search_terms"] = m.group(1)
 
-    # Only return if we at least got some titles
     return result if result.get("titles") else None
 
 
@@ -196,7 +207,8 @@ async def _call_gemini(prompt: str) -> dict:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 8192,  # listing copy can be 1500+ tokens of content
+            "maxOutputTokens": 8192,
+            "thinkingConfig": {"thinkingBudget": 0},  # disable reasoning tokens — all budget goes to output
         },
     }
 
