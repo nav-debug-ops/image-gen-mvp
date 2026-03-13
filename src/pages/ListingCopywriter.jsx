@@ -88,6 +88,11 @@ function ListingCopywriter() {
   const [hasResults, setHasResults] = useState(false)
   const [error, setError] = useState(null)
 
+  // Manual input fallback (shown when ASIN lookup fails)
+  const [showManualInput, setShowManualInput] = useState(false)
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualBullets, setManualBullets] = useState('')
+
   // Results state
   const [titles, setTitles] = useState([])
   const [bullets, setBullets] = useState([])
@@ -98,25 +103,54 @@ function ListingCopywriter() {
   const [activeTitle, setActiveTitle] = useState(0)
   const [copiedField, setCopiedField] = useState(null)
 
-  const _callAPI = async () => generateCopy({
+  const _buildManualBullets = () =>
+    manualBullets.split('\n').map(b => b.trim()).filter(Boolean)
+
+  const _callAPI = async (withManual = false) => generateCopy({
     asin: asinValue,
     marketplace,
     language,
     tone,
     keywords: additionalKeywords,
+    manualTitle: withManual ? manualTitle : '',
+    manualBullets: withManual ? _buildManualBullets() : [],
   })
+
+  const _applyResult = (data) => {
+    setTitles(data.titles)
+    setBullets(data.bullets)
+    setDescription(data.description)
+    setSearchTerms(data.search_terms)
+    setActiveTitle(0)
+    setHasResults(true)
+    setShowManualInput(false)
+  }
 
   const handleGenerate = async () => {
     setIsGenerating(true)
     setError(null)
+    setShowManualInput(false)
     try {
       const data = await _callAPI()
-      setTitles(data.titles)
-      setBullets(data.bullets)
-      setDescription(data.description)
-      setSearchTerms(data.search_terms)
-      setActiveTitle(0)
-      setHasResults(true)
+      _applyResult(data)
+    } catch (err) {
+      if (err.code === 'asin_lookup_failed') {
+        setShowManualInput(true)
+        setError(null)
+      } else {
+        setError(err.message || 'Generation failed. Please try again.')
+      }
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleGenerateWithManual = async () => {
+    setIsGenerating(true)
+    setError(null)
+    try {
+      const data = await _callAPI(true)
+      _applyResult(data)
     } catch (err) {
       setError(err.message || 'Generation failed. Please try again.')
     } finally {
@@ -231,21 +265,6 @@ function ListingCopywriter() {
               </div>
 
               <div className="form-group">
-                <label>Marketplace</label>
-                <div className="marketplace-grid-small">
-                  {MARKETPLACES.map((mp) => (
-                    <button
-                      key={mp.code}
-                      className={`mp-btn ${marketplace === mp.code ? 'selected' : ''}`}
-                      onClick={() => setMarketplace(mp.code)}
-                    >
-                      {mp.flag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
                 <label><Globe size={16} /> Target Language</label>
                 <select
                   value={language}
@@ -282,29 +301,81 @@ function ListingCopywriter() {
                 </span>
               </div>
 
+              <div className="form-group">
+                <label>Marketplace</label>
+                <select
+                  value={marketplace}
+                  onChange={(e) => setMarketplace(e.target.value)}
+                >
+                  {MARKETPLACES.map((mp) => (
+                    <option key={mp.code} value={mp.code}>{mp.flag} Amazon {mp.code}</option>
+                  ))}
+                </select>
+              </div>
+
               {error && (
                 <div className="error-message" style={{ marginBottom: '12px' }}>
                   <AlertCircle size={16} /> {error}
                 </div>
               )}
 
-              <button
-                className="btn btn-primary btn-large"
-                onClick={handleGenerate}
-                disabled={isGenerating || !asinValue}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 size={20} className="spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText size={20} />
-                    Generate Listing Copy
-                  </>
-                )}
-              </button>
+              {showManualInput && (
+                <div className="manual-input-panel">
+                  <div className="manual-input-header">
+                    <AlertCircle size={16} />
+                    <span>ASIN lookup failed — paste product data manually to keep output grounded</span>
+                  </div>
+                  <div className="form-group" style={{ marginTop: '12px' }}>
+                    <label>Product Title</label>
+                    <input
+                      type="text"
+                      placeholder="Paste the Amazon product title here"
+                      value={manualTitle}
+                      onChange={(e) => setManualTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Existing Bullet Points (one per line)</label>
+                    <textarea
+                      placeholder={"• Feature one\n• Feature two\n• Feature three"}
+                      value={manualBullets}
+                      onChange={(e) => setManualBullets(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-primary btn-large"
+                    onClick={handleGenerateWithManual}
+                    disabled={isGenerating || (!manualTitle && !manualBullets)}
+                  >
+                    {isGenerating ? (
+                      <><Loader2 size={20} className="spin" /> Generating...</>
+                    ) : (
+                      <><FileText size={20} /> Generate with Manual Data</>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {!showManualInput && (
+                <button
+                  className="btn btn-primary btn-large"
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !asinValue}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={20} className="spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={20} />
+                      Generate Listing Copy
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

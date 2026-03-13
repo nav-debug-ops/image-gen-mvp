@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { analyzeCampaign } from '../api/campaigns'
 import {
   Search,
   FileText,
@@ -18,83 +19,11 @@ import {
   Check,
   Star,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  AlertCircle
 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-// Mock data for demonstration
-const MOCK_MARKET_INTEL = {
-  overview: {
-    reviewsAnalyzed: 2847,
-    competitorsStudied: 12,
-    customerAvatars: 4,
-    dataPoints: 15420
-  },
-  sentiment: [
-    { name: 'Positive', value: 68, color: '#22C55E' },
-    { name: 'Pain Points', value: 22, color: '#EF4444' },
-    { name: 'Feature Requests', value: 10, color: '#3B82F6' }
-  ],
-  demographics: [
-    { age: '18-25', male: 15, female: 12 },
-    { age: '26-35', male: 28, female: 32 },
-    { age: '36-45', male: 22, female: 25 },
-    { age: '46-55', male: 18, female: 15 },
-    { age: '56-65', male: 8, female: 10 },
-    { age: '65+', male: 5, female: 6 }
-  ],
-  positiveThemes: [
-    { theme: 'Easy to use', count: 847 },
-    { theme: 'Great value', count: 632 },
-    { theme: 'High quality', count: 521 },
-    { theme: 'Fast shipping', count: 445 },
-    { theme: 'Durable', count: 389 }
-  ],
-  painPoints: [
-    { point: 'Battery life concerns', count: 234, impact: 12 },
-    { point: 'Confusing instructions', count: 187, impact: 8 },
-    { point: 'Size smaller than expected', count: 156, impact: 7 },
-    { point: 'Limited color options', count: 134, impact: 5 }
-  ],
-  featureRequests: [
-    { request: 'More color options', count: 189 },
-    { request: 'Longer warranty', count: 145 },
-    { request: 'USB-C charging', count: 123 },
-    { request: 'Travel case included', count: 98 }
-  ],
-  customerAvatars: [
-    {
-      name: 'Busy Professional',
-      segment: 'Primary',
-      percentage: 35,
-      demographics: { age: '28-42', gender: 'Mixed', location: 'Urban', income: '$75K-150K' },
-      psychographics: { lifestyle: 'Fast-paced', values: 'Efficiency', interests: 'Tech, Fitness' },
-      behaviors: ['Research before buying', 'Values reviews', 'Brand conscious'],
-      motivations: ['Save time', 'Quality', 'Professional image']
-    },
-    {
-      name: 'Health-Conscious Parent',
-      segment: 'Secondary',
-      percentage: 28,
-      demographics: { age: '32-48', gender: '65% Female', location: 'Suburban', income: '$60K-120K' },
-      psychographics: { lifestyle: 'Family-focused', values: 'Safety', interests: 'Health, Family' },
-      behaviors: ['Comparison shops', 'Reads all details', 'Asks questions'],
-      motivations: ['Family safety', 'Value', 'Convenience']
-    }
-  ],
-  competitors: [
-    { brand: 'CompetitorA', rating: 4.3, reviews: 12450, share: 28 },
-    { brand: 'CompetitorB', rating: 4.1, reviews: 8320, share: 22 },
-    { brand: 'CompetitorC', rating: 4.5, reviews: 5670, share: 18 },
-    { brand: 'Your Product', rating: 4.4, reviews: 2847, share: 15 }
-  ],
-  recommendations: {
-    pricing: ['Position in mid-premium range', 'Bundle options for value'],
-    product: ['Improve battery life', 'Add more color variants'],
-    marketing: ['Emphasize ease of use', 'Target busy professionals'],
-    operations: ['Improve instruction clarity', 'Consider size labeling']
-  }
-}
 
 const MARKETPLACES = [
   { code: 'US', flag: '🇺🇸' }, { code: 'UK', flag: '🇬🇧' }, { code: 'DE', flag: '🇩🇪' },
@@ -115,6 +44,8 @@ function CreativeCampaigns() {
 
   // Results state
   const [hasResults, setHasResults] = useState(false)
+  const [marketIntel, setMarketIntel] = useState(null)
+  const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('intel')
   const [expandedSections, setExpandedSections] = useState(['overview', 'sentiment'])
 
@@ -133,25 +64,39 @@ function CreativeCampaigns() {
 
   const handleGenerate = async () => {
     setIsProcessing(true)
-    setProgress({ step: 1, total: 5, message: 'Fetching product data...' })
+    setError(null)
 
-    // Simulate processing
     const steps = [
       'Fetching product data...',
-      'Analyzing reviews...',
-      'Studying competitors...',
+      'Analyzing customer reviews...',
+      'Studying competitor landscape...',
       'Building customer avatars...',
-      'Generating insights...'
+      'Generating strategic insights...'
     ]
 
-    for (let i = 0; i < steps.length; i++) {
-      setProgress({ step: i + 1, total: steps.length, message: steps[i] })
-      await new Promise(r => setTimeout(r, 1000))
-    }
+    // Advance progress independently while API call runs
+    let stepIdx = 0
+    setProgress({ step: 1, total: steps.length, message: steps[0] })
+    const interval = setInterval(() => {
+      if (stepIdx < steps.length - 2) {
+        stepIdx++
+        setProgress({ step: stepIdx + 1, total: steps.length, message: steps[stepIdx] })
+      }
+    }, 1500)
 
-    setIsProcessing(false)
-    setHasResults(true)
-    setProgress(null)
+    try {
+      const data = await analyzeCampaign({ asin: asinValue, marketplace })
+      clearInterval(interval)
+      setMarketIntel(data)
+      setHasResults(true)
+      setProgress(null)
+    } catch (err) {
+      clearInterval(interval)
+      setError(err.message || 'Analysis failed. Please try again.')
+      setProgress(null)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const sendChatMessage = () => {
@@ -280,6 +225,12 @@ function CreativeCampaigns() {
                 )}
               </button>
 
+              {error && (
+                <div className="error-message" style={{ marginTop: '12px' }}>
+                  <AlertCircle size={16} /> {error}
+                </div>
+              )}
+
               {isProcessing && progress && (
                 <div className="progress-bar">
                   <div
@@ -324,28 +275,28 @@ function CreativeCampaigns() {
                   <div className="stat-box">
                     <FileText size={24} />
                     <div>
-                      <span className="stat-number">{MOCK_MARKET_INTEL.overview.reviewsAnalyzed.toLocaleString()}</span>
+                      <span className="stat-number">{marketIntel.overview.reviewsAnalyzed.toLocaleString()}</span>
                       <span className="stat-label">Reviews Analyzed</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <Users size={24} />
                     <div>
-                      <span className="stat-number">{MOCK_MARKET_INTEL.overview.competitorsStudied}</span>
+                      <span className="stat-number">{marketIntel.overview.competitorsStudied}</span>
                       <span className="stat-label">Competitors Studied</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <Target size={24} />
                     <div>
-                      <span className="stat-number">{MOCK_MARKET_INTEL.overview.customerAvatars}</span>
+                      <span className="stat-number">{marketIntel.overview.customerAvatars}</span>
                       <span className="stat-label">Customer Avatars</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <TrendingUp size={24} />
                     <div>
-                      <span className="stat-number">{MOCK_MARKET_INTEL.overview.dataPoints.toLocaleString()}</span>
+                      <span className="stat-number">{marketIntel.overview.dataPoints.toLocaleString()}</span>
                       <span className="stat-label">Data Points</span>
                     </div>
                   </div>
@@ -361,7 +312,7 @@ function CreativeCampaigns() {
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
                         <Pie
-                          data={MOCK_MARKET_INTEL.sentiment}
+                          data={marketIntel.sentiment}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -369,7 +320,7 @@ function CreativeCampaigns() {
                           outerRadius={70}
                           label={({ name, value }) => `${name}: ${value}%`}
                         >
-                          {MOCK_MARKET_INTEL.sentiment.map((entry, index) => (
+                          {marketIntel.sentiment.map((entry, index) => (
                             <Cell key={index} fill={entry.color} />
                           ))}
                         </Pie>
@@ -380,7 +331,7 @@ function CreativeCampaigns() {
                   <div className="chart-box">
                     <h4>Customer Demographics</h4>
                     <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={MOCK_MARKET_INTEL.demographics}>
+                      <BarChart data={marketIntel.demographics}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="age" />
                         <YAxis />
@@ -399,7 +350,7 @@ function CreativeCampaigns() {
                   <div className="theme-column positive">
                     <h4><ThumbsUp size={18} /> Top Positive Themes</h4>
                     <ul>
-                      {MOCK_MARKET_INTEL.positiveThemes.map((item) => (
+                      {marketIntel.positiveThemes.map((item) => (
                         <li key={item.theme}>
                           <Check size={16} />
                           {item.theme}
@@ -411,7 +362,7 @@ function CreativeCampaigns() {
                   <div className="theme-column pain">
                     <h4><AlertTriangle size={18} /> Pain Points</h4>
                     <ul>
-                      {MOCK_MARKET_INTEL.painPoints.map((item) => (
+                      {marketIntel.painPoints.map((item) => (
                         <li key={item.point}>
                           <ThumbsDown size={16} />
                           {item.point}
@@ -423,7 +374,7 @@ function CreativeCampaigns() {
                   <div className="theme-column requests">
                     <h4><Lightbulb size={18} /> Feature Requests</h4>
                     <ul>
-                      {MOCK_MARKET_INTEL.featureRequests.map((item) => (
+                      {marketIntel.featureRequests.map((item) => (
                         <li key={item.request}>
                           <Star size={16} />
                           {item.request}
@@ -439,7 +390,7 @@ function CreativeCampaigns() {
               <section className="intel-section">
                 <h3>Customer Avatars</h3>
                 <div className="avatars-grid">
-                  {MOCK_MARKET_INTEL.customerAvatars.map((avatar) => (
+                  {marketIntel.customerAvatars.map((avatar) => (
                     <div key={avatar.name} className="avatar-card">
                       <div className="avatar-header">
                         <div className="avatar-icon">
@@ -478,7 +429,7 @@ function CreativeCampaigns() {
               <section className="intel-section">
                 <h3>Strategic Recommendations</h3>
                 <div className="recommendations-grid">
-                  {Object.entries(MOCK_MARKET_INTEL.recommendations).map(([key, items]) => (
+                  {Object.entries(marketIntel.recommendations).map(([key, items]) => (
                     <div key={key} className="recommendation-card">
                       <h4>{key.charAt(0).toUpperCase() + key.slice(1)} Strategy</h4>
                       <ul>

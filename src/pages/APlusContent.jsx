@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import { generateImage } from '../api/imageGen'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
   Search,
@@ -742,7 +744,8 @@ function APlusContent() {
   // UI state
   const [previewMode, setPreviewMode] = useState(false)
   const [expandedModule, setExpandedModule] = useState(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingModules, setGeneratingModules] = useState({}) // instanceId → bool
+  const [moduleErrors, setModuleErrors] = useState({})           // instanceId → string|null
   const [showGuidelines, setShowGuidelines] = useState(true)
 
   // Validation
@@ -922,24 +925,67 @@ function APlusContent() {
     reader.readAsDataURL(file)
   }, [])
 
-  // Generate AI content for module
-  const generateModuleContent = async (instanceId) => {
-    setIsGenerating(true)
-    // Simulated AI generation - in production, this would call the AI API
-    await new Promise(resolve => setTimeout(resolve, 1500))
+  // Map module dimensions to the nearest standard aspect ratio string
+  const getAspectRatio = (w, h) => {
+    if (!w || !h) return '1:1'
+    const r = w / h
+    if (r >= 2.5) return '3:1'
+    if (r >= 1.6) return '16:9'
+    if (r >= 1.2) return '4:3'
+    if (r >= 0.85) return '1:1'
+    if (r >= 0.65) return '3:4'
+    return '9:16'
+  }
 
+  // Generate AI images for a module — calls the existing /api/generate endpoint
+  const generateModuleImage = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
+    const data = moduleData[instanceId] || {}
+    if (!module || module.textOnly) return
 
-    // Generate sample content based on module type
+    const imageCount = module.imageCount || 1
+    const aspectRatio = getAspectRatio(module.width, module.height)
+    const prompt = data.aiPrompt || ''
+
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    setModuleErrors(prev => ({ ...prev, [instanceId]: null }))
+
+    try {
+      const generated = []
+      for (let i = 0; i < imageCount; i++) {
+        const result = await generateImage(prompt, { aspectRatio })
+        generated.push({
+          url: result.url,
+          preview: result.url,
+          name: 'AI Generated',
+          isGenerated: true,
+          prompt,
+        })
+      }
+      // Merge into existing images array preserving any manually uploaded slots
+      setModuleData(prev => {
+        const existing = [...(prev[instanceId]?.images || [])]
+        generated.forEach((img, i) => { existing[i] = img })
+        return { ...prev, [instanceId]: { ...prev[instanceId], images: existing } }
+      })
+    } catch (err) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: err.message || 'Generation failed' }))
+    } finally {
+      setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    }
+  }
+
+  // Generate AI text content for module (headline, body, highlights, specs)
+  const generateModuleContent = async (instanceId) => {
+    const module = selectedModules.find(m => m.instanceId === instanceId)
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     const sampleContent = {
       headline: `Premium Quality ${module?.name || 'Product'} Feature`,
       body: 'Discover the exceptional craftsmanship and attention to detail that sets our product apart. Made with premium materials for lasting durability and performance.',
-      highlights: [
-        'Premium quality materials',
-        'Ergonomic design for comfort',
-        'Built to last with durability',
-        'Satisfaction guaranteed'
-      ],
+      highlights: ['Premium quality materials', 'Ergonomic design for comfort', 'Built to last with durability', 'Satisfaction guaranteed'],
       specs: [
         { label: 'Material', value: 'Premium Grade' },
         { label: 'Dimensions', value: 'Standard Size' },
@@ -950,14 +996,10 @@ function APlusContent() {
 
     updateModuleData(instanceId, 'headline', sampleContent.headline)
     updateModuleData(instanceId, 'body', sampleContent.body)
-    if (module?.textType === 'highlights') {
-      updateModuleData(instanceId, 'highlights', sampleContent.highlights)
-    }
-    if (module?.textType === 'specs') {
-      updateModuleData(instanceId, 'specs', sampleContent.specs)
-    }
+    if (module?.textType === 'highlights') updateModuleData(instanceId, 'highlights', sampleContent.highlights)
+    if (module?.textType === 'specs') updateModuleData(instanceId, 'specs', sampleContent.specs)
 
-    setIsGenerating(false)
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
   }
 
   // Regenerate AI prompt for module
@@ -1051,10 +1093,10 @@ function APlusContent() {
           </div>
           <button
             className="btn btn-primary btn-generate-images"
-            disabled={isGenerating || !data.referenceImage}
-            onClick={() => generateModuleContent(module.instanceId)}
+            disabled={!!generatingModules[module.instanceId]}
+            onClick={() => generateModuleImage(module.instanceId)}
           >
-            {isGenerating ? (
+            {generatingModules[module.instanceId] ? (
               <>
                 <Loader2 size={16} className="spin" />
                 Generating...
@@ -1066,8 +1108,11 @@ function APlusContent() {
               </>
             )}
           </button>
-          {!data.referenceImage && (
-            <p className="ai-prompt-hint">Upload a reference image first to enable AI generation</p>
+          {moduleErrors[module.instanceId] && (
+            <p className="ai-prompt-hint" style={{ color: 'var(--error)' }}>
+              <AlertCircle size={14} style={{ display: 'inline', marginRight: 4 }} />
+              {moduleErrors[module.instanceId]}
+            </p>
           )}
         </div>
 
@@ -1088,19 +1133,28 @@ function APlusContent() {
                   }}
                 >
                   {data.images?.[idx] ? (
-                    <div className="module-image-preview">
-                      <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
-                      <button
-                        className="remove-image-btn"
-                        onClick={() => {
-                          const newImages = [...(data.images || [])]
-                          newImages[idx] = null
-                          updateModuleData(module.instanceId, 'images', newImages)
-                        }}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
+                    <>
+                      <div className="module-image-preview">
+                        <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
+                        <button
+                          className="remove-image-btn"
+                          onClick={() => {
+                            const newImages = [...(data.images || [])]
+                            newImages[idx] = null
+                            updateModuleData(module.instanceId, 'images', newImages)
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      {data.images[idx]?.isGenerated && (
+                        <EvalScoreBadge
+                          imageUrl={data.images[idx].url}
+                          prompt={data.images[idx].prompt || data.aiPrompt || ''}
+                          contentType="aplus_content"
+                        />
+                      )}
+                    </>
                   ) : (
                     <label className="module-image-upload">
                       <input
@@ -1215,9 +1269,9 @@ function APlusContent() {
             <button
               className="btn btn-secondary btn-sm ai-generate-btn"
               onClick={() => generateModuleContent(module.instanceId)}
-              disabled={isGenerating}
+              disabled={!!generatingModules[module.instanceId]}
             >
-              {isGenerating ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+              {generatingModules[module.instanceId] ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
               AI Generate Content
             </button>
           </div>

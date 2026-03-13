@@ -15,6 +15,11 @@ import httpx
 from app.config import get_settings
 from app.services.asin_lookup import lookup_asin
 
+
+class AsinLookupRequired(Exception):
+    """Raised when ASIN lookup fails and no manual product data was provided."""
+    pass
+
 settings = get_settings()
 
 _GEMINI_MODEL = "gemini-2.5-flash"
@@ -47,9 +52,15 @@ async def generate_listing_copy(
     language: str,
     tone: str,
     keywords: list[str],
+    manual_title: str = "",
+    manual_bullets: list[str] | None = None,
 ) -> dict:
     """
     Generate complete Amazon listing copy for a given ASIN.
+
+    If manual_title or manual_bullets are provided they are used directly
+    (skipping ASIN lookup). If neither is provided and ASIN lookup fails,
+    raises AsinLookupRequired so the caller can ask the user for manual data.
 
     Returns:
         {
@@ -60,12 +71,21 @@ async def generate_listing_copy(
             product_title: str              — original product title from Amazon
         }
     """
-    # ── 1. Fetch product data (non-fatal — generate even without ASIN data) ──
-    product: dict = {}
-    try:
-        product = await lookup_asin(asin, marketplace)
-    except Exception as e:
-        print(f"[COPYWRITER] ASIN lookup failed for {asin}: {e} — generating without product data")
+    # ── 1. Resolve product data ──
+    if manual_title or manual_bullets:
+        # Caller supplied manual data — use it directly, skip ASIN lookup
+        product: dict = {
+            "title": manual_title or "",
+            "bullets": manual_bullets or [],
+        }
+    else:
+        product = {}
+        try:
+            product = await lookup_asin(asin, marketplace)
+        except Exception as e:
+            raise AsinLookupRequired(
+                f"Could not fetch product data for ASIN {asin}: {e}"
+            )
 
     # ── 2. Build the generation prompt ──
     prompt = _build_prompt(product, marketplace, language, tone, keywords)
@@ -245,18 +265,21 @@ async def _call_gemini(prompt: str) -> dict:
             raise ValueError(f"Gemini returned truncated JSON that could not be recovered. Try again.")
 
     # Validate and normalise
-    if not isinstance(result.get("titles"), list):
+    if not isinstance(result.get("titles"), list) or not result["titles"]:
         raise ValueError("Response missing 'titles' array")
+
+    # Ensure bullets is a list even if truncation cut it off entirely
     if not isinstance(result.get("bullets"), list):
-        raise ValueError("Response missing 'bullets' array")
+        result["bullets"] = []
 
     # Pad/trim to exactly 3 titles and 5 bullets
     while len(result["titles"]) < 3:
         result["titles"].append(result["titles"][0])
     result["titles"] = result["titles"][:3]
 
+    placeholder = "(regenerate to fill)"
     while len(result["bullets"]) < 5:
-        result["bullets"].append(result["bullets"][-1])
+        result["bullets"].append(placeholder)
     result["bullets"] = result["bullets"][:5]
 
     result.setdefault("description", "")

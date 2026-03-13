@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.services.auth import get_current_user
-from app.services.copywriter_service import generate_listing_copy
+from app.services.copywriter_service import AsinLookupRequired, generate_listing_copy
 
 router = APIRouter()
 
@@ -15,6 +15,8 @@ class CopywriterRequest(BaseModel):
     language: str = "English"
     tone: str = "professional"
     keywords: list[str] = []
+    manual_title: str = ""
+    manual_bullets: list[str] = []
 
 
 class CopywriterResponse(BaseModel):
@@ -37,8 +39,15 @@ async def generate_copy(req: CopywriterRequest, user=Depends(get_current_user)):
             language=req.language,
             tone=req.tone,
             keywords=req.keywords,
+            manual_title=req.manual_title,
+            manual_bullets=req.manual_bullets,
         )
         return CopywriterResponse(**result)
+    except AsinLookupRequired as e:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "asin_lookup_failed", "message": str(e)},
+        )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
