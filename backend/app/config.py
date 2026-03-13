@@ -29,6 +29,23 @@ class Settings(BaseSettings):
     # Storage
     storage_path: str = "./generated"
 
+    # Storage backend: 'local' | 'r2' | 's3'
+    storage_backend: str = "local"
+
+    # Cloudflare R2
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = "imagegen-images"
+    r2_public_url: str = ""
+
+    # AWS S3
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
+    s3_bucket_name: str = "imagegen-images"
+    s3_public_url: str = ""
+
     # SMTP (Gmail)
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
