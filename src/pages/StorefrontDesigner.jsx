@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import { generateImage } from '../api/imageGen'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
   Search,
@@ -13,6 +15,7 @@ import {
   ChevronUp,
   Check,
   X,
+  AlertCircle,
   Info,
   Loader2,
   Download,
@@ -373,7 +376,8 @@ function StorefrontDesigner() {
   const [previewDevice, setPreviewDevice] = useState('desktop') // 'desktop' | 'mobile'
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingWidgets, setGeneratingWidgets] = useState({})
+  const [widgetErrors, setWidgetErrors] = useState({})
 
   // Current page helper
   const currentPage = pages.find(p => p.id === activePage) || pages[0]
@@ -556,16 +560,59 @@ function StorefrontDesigner() {
     reader.readAsDataURL(file)
   }, [])
 
-  // AI generation
-  const generateWidgetContent = async (instanceId) => {
-    setIsGenerating(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
+  const getAspectRatio = (w, h) => {
+    if (!w || !h) return '1:1'
+    const r = w / h
+    if (r >= 2.5) return '3:1'
+    if (r >= 1.6) return '16:9'
+    if (r >= 1.2) return '4:3'
+    if (r >= 0.85) return '1:1'
+    if (r >= 0.65) return '3:4'
+    return '9:16'
+  }
+
+  // Generate AI images — calls existing /api/generate endpoint
+  const generateWidgetImage = async (instanceId) => {
     const widget = currentWidgets.find(w => w.instanceId === instanceId)
+    const data = widgetData[instanceId] || {}
+    if (!widget || widget.textOnly || widget.isProductGrid) return
+
+    // For galleries cap at 4 to avoid very long waits
+    const imageCount = widget.isGallery ? Math.min(widget.imageCount || 1, 4) : 1
+    const aspectRatio = getAspectRatio(widget.width, widget.height)
+    const prompt = data.aiPrompt || ''
+
+    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: true }))
+    setWidgetErrors(prev => ({ ...prev, [instanceId]: null }))
+
+    try {
+      const generated = []
+      for (let i = 0; i < imageCount; i++) {
+        const result = await generateImage(prompt, { aspectRatio })
+        generated.push({ url: result.url, preview: result.url, name: 'AI Generated', isGenerated: true, prompt })
+      }
+      setWidgetData(prev => {
+        const existing = [...(prev[instanceId]?.images || [])]
+        generated.forEach((img, i) => { existing[i] = img })
+        return { ...prev, [instanceId]: { ...prev[instanceId], images: existing } }
+      })
+    } catch (err) {
+      setWidgetErrors(prev => ({ ...prev, [instanceId]: err.message || 'Generation failed' }))
+    } finally {
+      setGeneratingWidgets(prev => ({ ...prev, [instanceId]: false }))
+    }
+  }
+
+  // Generate AI text content (mock)
+  const generateWidgetContent = async (instanceId) => {
+    const widget = currentWidgets.find(w => w.instanceId === instanceId)
+    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: true }))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     if (widget?.hasText) {
       updateWidgetData(instanceId, 'headline', `${CREATIVE_CAMPAIGN_DATA.brandName} — ${CREATIVE_CAMPAIGN_DATA.keyBenefits[0]}`)
       updateWidgetData(instanceId, 'body', CREATIVE_CAMPAIGN_DATA.brandStory)
     }
-    setIsGenerating(false)
+    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: false }))
   }
 
   const regeneratePrompt = (instanceId, widgetType) => {
@@ -633,12 +680,17 @@ function StorefrontDesigner() {
           </div>
           <button
             className="btn btn-primary btn-generate-images"
-            disabled={isGenerating || !data.referenceImage}
-            onClick={() => generateWidgetContent(widget.instanceId)}
+            disabled={!!generatingWidgets[widget.instanceId]}
+            onClick={() => generateWidgetImage(widget.instanceId)}
           >
-            {isGenerating ? <><Loader2 size={16} className="spin" /> Generating...</> : <><Sparkles size={16} /> Generate with AI</>}
+            {generatingWidgets[widget.instanceId] ? <><Loader2 size={16} className="spin" /> Generating...</> : <><Sparkles size={16} /> Generate with AI</>}
           </button>
-          {!data.referenceImage && <p className="ai-prompt-hint">Upload a reference image first to enable AI generation</p>}
+          {widgetErrors[widget.instanceId] && (
+            <p className="ai-prompt-hint" style={{ color: 'var(--error)' }}>
+              <AlertCircle size={14} style={{ display: 'inline', marginRight: 4 }} />
+              {widgetErrors[widget.instanceId]}
+            </p>
+          )}
         </div>
 
         {/* Output Images */}
@@ -654,16 +706,25 @@ function StorefrontDesigner() {
               {Array.from({ length: imageCount }).map((_, idx) => (
                 <div key={idx} className="module-image-slot" style={{ aspectRatio: widget.width && widget.height ? `${widget.width}/${widget.height}` : '16/9' }}>
                   {data.images?.[idx] ? (
-                    <div className="module-image-preview">
-                      <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
-                      <button className="remove-image-btn" onClick={() => {
-                        const newImages = [...(data.images || [])]
-                        newImages[idx] = null
-                        updateWidgetData(widget.instanceId, 'images', newImages)
-                      }}>
-                        <X size={14} />
-                      </button>
-                    </div>
+                    <>
+                      <div className="module-image-preview">
+                        <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
+                        <button className="remove-image-btn" onClick={() => {
+                          const newImages = [...(data.images || [])]
+                          newImages[idx] = null
+                          updateWidgetData(widget.instanceId, 'images', newImages)
+                        }}>
+                          <X size={14} />
+                        </button>
+                      </div>
+                      {data.images[idx]?.isGenerated && (
+                        <EvalScoreBadge
+                          imageUrl={data.images[idx].url}
+                          prompt={data.images[idx].prompt || data.aiPrompt || ''}
+                          contentType="brand_store"
+                        />
+                      )}
+                    </>
                   ) : (
                     <label className="module-image-upload">
                       <input type="file" accept="image/*" onChange={(e) => handleWidgetImageUpload(widget.instanceId, idx, e)} style={{ display: 'none' }} />
@@ -820,8 +881,8 @@ function StorefrontDesigner() {
                 <span className="char-count">{(data.body || '').length}/{widget.bodyLimit || 1000}</span>
               </div>
             )}
-            <button className="btn btn-secondary btn-sm ai-generate-btn" onClick={() => generateWidgetContent(widget.instanceId)} disabled={isGenerating}>
-              {isGenerating ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+            <button className="btn btn-secondary btn-sm ai-generate-btn" onClick={() => generateWidgetContent(widget.instanceId)} disabled={!!generatingWidgets[widget.instanceId]}>
+              {generatingWidgets[widget.instanceId] ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
               AI Generate Content
             </button>
           </div>

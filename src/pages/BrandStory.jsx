@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import { generateImage } from '../api/imageGen'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
   Search,
@@ -14,6 +16,7 @@ import {
   ChevronUp,
   Check,
   X,
+  AlertCircle,
   Info,
   Loader2,
   Download,
@@ -226,7 +229,8 @@ function BrandStory() {
   const [expandedModule, setExpandedModule] = useState(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [showGuidelines, setShowGuidelines] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingModules, setGeneratingModules] = useState({})
+  const [moduleErrors, setModuleErrors] = useState({})
   const [asinValue, setAsinValue] = useState('')
   const [productCategory, setProductCategory] = useState('')
 
@@ -416,12 +420,53 @@ function BrandStory() {
     reader.readAsDataURL(file)
   }, [])
 
-  // Generate AI content
-  const generateModuleContent = async (instanceId) => {
-    setIsGenerating(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
+  const getAspectRatio = (w, h) => {
+    if (!w || !h) return '1:1'
+    const r = w / h
+    if (r >= 2.5) return '3:1'
+    if (r >= 1.6) return '16:9'
+    if (r >= 1.2) return '4:3'
+    if (r >= 0.85) return '1:1'
+    if (r >= 0.65) return '3:4'
+    return '9:16'
+  }
 
+  // Generate AI images for a module — calls existing /api/generate endpoint
+  const generateModuleImage = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
+    const data = moduleData[instanceId] || {}
+    if (!module || module.textOnly) return
+
+    const imageCount = module.imageCount || 1
+    const aspectRatio = getAspectRatio(module.width, module.height)
+    const prompt = data.aiPrompt || ''
+
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    setModuleErrors(prev => ({ ...prev, [instanceId]: null }))
+
+    try {
+      const generated = []
+      for (let i = 0; i < imageCount; i++) {
+        const result = await generateImage(prompt, { aspectRatio })
+        generated.push({ url: result.url, preview: result.url, name: 'AI Generated', isGenerated: true, prompt })
+      }
+      setModuleData(prev => {
+        const existing = [...(prev[instanceId]?.images || [])]
+        generated.forEach((img, i) => { existing[i] = img })
+        return { ...prev, [instanceId]: { ...prev[instanceId], images: existing } }
+      })
+    } catch (err) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: err.message || 'Generation failed' }))
+    } finally {
+      setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    }
+  }
+
+  // Generate AI text content (mock — headline/body/qa)
+  const generateModuleContent = async (instanceId) => {
+    const module = selectedModules.find(m => m.instanceId === instanceId)
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     if (module?.type === 'brand-qa') {
       updateModuleData(instanceId, 'qaItems', [
@@ -434,7 +479,7 @@ function BrandStory() {
       updateModuleData(instanceId, 'body', CREATIVE_CAMPAIGN_DATA.brandStory)
     }
 
-    setIsGenerating(false)
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
   }
 
   // Regenerate prompt
@@ -532,23 +577,20 @@ function BrandStory() {
           </div>
           <button
             className="btn btn-primary btn-generate-images"
-            disabled={isGenerating || !data.referenceImage}
-            onClick={() => generateModuleContent(module.instanceId)}
+            disabled={!!generatingModules[module.instanceId]}
+            onClick={() => generateModuleImage(module.instanceId)}
           >
-            {isGenerating ? (
-              <>
-                <Loader2 size={16} className="spin" />
-                Generating...
-              </>
+            {generatingModules[module.instanceId] ? (
+              <><Loader2 size={16} className="spin" /> Generating...</>
             ) : (
-              <>
-                <Sparkles size={16} />
-                Generate with AI
-              </>
+              <><Sparkles size={16} /> Generate with AI</>
             )}
           </button>
-          {!data.referenceImage && (
-            <p className="ai-prompt-hint">Upload a reference image first to enable AI generation</p>
+          {moduleErrors[module.instanceId] && (
+            <p className="ai-prompt-hint" style={{ color: 'var(--error)' }}>
+              <AlertCircle size={14} style={{ display: 'inline', marginRight: 4 }} />
+              {moduleErrors[module.instanceId]}
+            </p>
           )}
         </div>
 
@@ -567,19 +609,28 @@ function BrandStory() {
                   style={{ aspectRatio: `${module.width}/${module.height}` }}
                 >
                   {data.images?.[idx] ? (
-                    <div className="module-image-preview">
-                      <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
-                      <button
-                        className="remove-image-btn"
-                        onClick={() => {
-                          const newImages = [...(data.images || [])]
-                          newImages[idx] = null
-                          updateModuleData(module.instanceId, 'images', newImages)
-                        }}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
+                    <>
+                      <div className="module-image-preview">
+                        <img src={data.images[idx].preview} alt={`Image ${idx + 1}`} />
+                        <button
+                          className="remove-image-btn"
+                          onClick={() => {
+                            const newImages = [...(data.images || [])]
+                            newImages[idx] = null
+                            updateModuleData(module.instanceId, 'images', newImages)
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      {data.images[idx]?.isGenerated && (
+                        <EvalScoreBadge
+                          imageUrl={data.images[idx].url}
+                          prompt={data.images[idx].prompt || data.aiPrompt || ''}
+                          contentType="brand_story"
+                        />
+                      )}
+                    </>
                   ) : (
                     <label className="module-image-upload">
                       <input
@@ -712,9 +763,9 @@ function BrandStory() {
             <button
               className="btn btn-secondary btn-sm ai-generate-btn"
               onClick={() => generateModuleContent(module.instanceId)}
-              disabled={isGenerating}
+              disabled={!!generatingModules[module.instanceId]}
             >
-              {isGenerating ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+              {generatingModules[module.instanceId] ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
               AI Generate Q&A
             </button>
           </div>
@@ -769,9 +820,9 @@ function BrandStory() {
             <button
               className="btn btn-secondary btn-sm ai-generate-btn"
               onClick={() => generateModuleContent(module.instanceId)}
-              disabled={isGenerating}
+              disabled={!!generatingModules[module.instanceId]}
             >
-              {isGenerating ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
+              {generatingModules[module.instanceId] ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
               AI Generate Content
             </button>
           </div>
