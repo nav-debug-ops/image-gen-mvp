@@ -94,11 +94,12 @@ const IMAGE_STRATEGIES = [
 ]
 
 const AI_MODELS = [
-  { id: 'combined', name: 'GPT & Gemini (Combined)', description: 'Balanced results', badge: 'Recommended' },
-  { id: 'gemini', name: 'Gemini 2.5 Flash Image', description: 'Fast generation', badge: 'Fast' },
-  { id: 'replicate', name: 'Flux Pro', description: 'Photorealism', badge: 'Quality' },
-  { id: 'openai', name: 'DALL-E 3', description: 'Artistic style', badge: null },
-  { id: 'stability', name: 'SDXL', description: 'High quality', badge: null },
+  { id: 'imagen-4',       provider: 'gemini', model: 'imagen-4.0-generate-001',        name: 'Imagen 4',               description: 'Best quality hero images',      badge: 'Recommended' },
+  { id: 'imagen-4-ultra', provider: 'gemini', model: 'imagen-4.0-ultra-generate-001',   name: 'Imagen 4 Ultra',         description: 'Highest quality, slower',       badge: 'Ultra' },
+  { id: 'imagen-4-fast',  provider: 'gemini', model: 'imagen-4.0-fast-generate-001',    name: 'Imagen 4 Fast',          description: 'Faster generation',             badge: 'Fast' },
+  { id: 'gemini-flash',   provider: 'gemini', model: 'gemini-2.5-flash-image',          name: 'Gemini 2.5 Flash Image', description: 'Native gen + img2img support',  badge: null },
+  { id: 'gemini-3-flash', provider: 'gemini', model: 'gemini-3.1-flash-image-preview',  name: 'Gemini 3.1 Flash Image', description: 'Latest native image preview',    badge: 'New' },
+  { id: 'gemini-3-pro',   provider: 'gemini', model: 'gemini-3-pro-image-preview',      name: 'Gemini 3 Pro Image',     description: 'Pro-quality native generation', badge: null },
 ]
 
 const MARKETPLACES = [
@@ -135,7 +136,7 @@ function MainImageGenerator() {
 
   // Configuration state
   const [quantity, setQuantity] = useState(3)
-  const [selectedModel, setSelectedModel] = useState('combined')
+  const [selectedModel, setSelectedModel] = useState('imagen-4')
   const [marketplace, setMarketplace] = useState('US')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [selectedTemplates, setSelectedTemplates] = useState([])
@@ -356,8 +357,10 @@ function MainImageGenerator() {
             productDesc
           )
           const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
+          const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
           result = await generateImage(prompt, {
-            provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
+            provider: modelOption.provider,
+            model: modelOption.model,
             width: selectedRatio?.width || 2000,
             height: selectedRatio?.height || 2000,
             aspectRatio: aspectRatio,
@@ -489,8 +492,10 @@ function MainImageGenerator() {
     try {
       const prompt = buildImagePrompt(img.template, img.category, img.strategy, productDesc)
       const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
+      const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
       const result = await generateImage(prompt, {
-        provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
+        provider: modelOption.provider,
+        model: modelOption.model,
         width: selectedRatio.width,
         height: selectedRatio.height,
         aspectRatio: img.aspectRatio,
