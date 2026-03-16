@@ -8,6 +8,8 @@ from app.models.user import User
 from app.services.auth import get_current_user
 from app.services.generation_service import generate_image
 from app.services.providers import get_all_providers
+from app.services.asin_lookup import lookup_asin
+from app.services.hero_prompt_builder import build_hero_prompt
 
 router = APIRouter()
 
@@ -90,6 +92,60 @@ async def create_generation(
         )
     except HTTPException:
         raise  # Re-raise 429 rate limit errors
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HeroGenerateRequest(BaseModel):
+    asin: str
+    marketplace: str = "US"
+    template_name: str = "Plain White Background"
+    aspect_ratio: str = "1:1"
+
+
+@router.post("/hero", response_model=GenerateResponse)
+async def create_hero_generation(
+    request: HeroGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an Amazon hero image from an ASIN using dynamic prompt + Imagen 3."""
+    if len(request.asin) != 10:
+        raise HTTPException(status_code=422, detail="ASIN must be exactly 10 characters")
+
+    try:
+        product = await lookup_asin(request.asin, request.marketplace)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Could not fetch product data: {e}")
+
+    prompt = build_hero_prompt(product, request.template_name)
+
+    try:
+        gen = await generate_image(
+            user_id=current_user.id,
+            prompt=prompt,
+            provider_name="gemini",
+            model="imagen-3.0-generate-001",
+            aspect_ratio=request.aspect_ratio,
+            width=1024,
+            height=1024,
+            failover=True,
+            db=db,
+        )
+        return GenerateResponse(
+            success=True,
+            generation_id=gen.id,
+            image_url=gen.image_url,
+            image_id=gen.image_id,
+            provider=gen.provider,
+            model=gen.model,
+            cost_estimate=gen.cost_estimate,
+            duration_ms=gen.duration_ms,
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

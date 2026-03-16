@@ -21,6 +21,8 @@ class GeminiProvider(ImageProvider):
 
     def get_available_models(self) -> list:
         return [
+            {"id": "imagen-3.0-generate-001", "name": "Imagen 3", "description": "Google Imagen 3 — high quality hero images"},
+            {"id": "imagen-3.0-fast-generate-001", "name": "Imagen 3 Fast", "description": "Google Imagen 3 Fast — quick generation"},
             {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image", "description": "Fast, high quality native generation"},
             {"id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image", "description": "Latest preview model"},
             {"id": "imagen-4.0-fast-generate-001", "name": "Imagen 4 Fast", "description": "Fast, high quality"},

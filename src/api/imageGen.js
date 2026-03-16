@@ -27,6 +27,8 @@ export const AVAILABLE_MODELS = {
     { id: 'dall-e-2', name: 'DALL-E 2', description: 'Supports variations', supportsImg2Img: true }
   ],
   gemini: [
+    { id: 'imagen-3.0-generate-001', name: 'Imagen 3', description: 'Google Imagen 3 — best for hero images', supportsImg2Img: false },
+    { id: 'imagen-3.0-fast-generate-001', name: 'Imagen 3 Fast', description: 'Google Imagen 3 Fast', supportsImg2Img: false },
     { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', description: 'Fast native image generation', supportsImg2Img: true },
     { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', description: 'Latest preview model', supportsImg2Img: true },
     { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', description: 'Fast, high quality', supportsImg2Img: false },
@@ -87,6 +89,55 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
       generationId: data.generation_id,
       costEstimate: data.cost_estimate,
       usedReferences: 0,
+    }
+  } catch (error) {
+    onProgress?.({ status: 'error', message: error.message })
+    throw error
+  }
+}
+
+/**
+ * Generate an Amazon hero image from an ASIN using dynamic prompt + Imagen 3.
+ * Calls POST /api/generate/hero — backend handles ASIN lookup + prompt building.
+ */
+export async function generateHeroImage({ asin, marketplace = 'US', templateName = 'Plain White Background', aspectRatio = '1:1' }, onProgress = null) {
+  onProgress?.({ status: 'starting', progress: 0, message: 'Building product brief...' })
+
+  const body = {
+    asin,
+    marketplace,
+    template_name: templateName,
+    aspect_ratio: aspectRatio,
+  }
+
+  onProgress?.({ status: 'processing', progress: 20, message: 'Generating with Imagen 3...' })
+
+  try {
+    const response = await fetchAPI('/api/generate/hero', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+
+    if (response.status === 429) {
+      const err = await safeJson(response)
+      throw new Error(err?.detail?.message || 'Rate limit exceeded. Try again later.')
+    }
+
+    if (!response.ok) {
+      const err = await safeJson(response)
+      throw new Error(err?.detail || `Hero generation failed (${response.status})`)
+    }
+
+    onProgress?.({ status: 'completed', progress: 100, message: 'Image ready!' })
+
+    const data = await safeJson(response)
+    if (!data) throw new Error('Empty response from server')
+    return {
+      url: data.image_url,
+      provider: data.provider,
+      model: data.model,
+      generationId: data.generation_id,
+      costEstimate: data.cost_estimate,
     }
   } catch (error) {
     onProgress?.({ status: 'error', message: error.message })

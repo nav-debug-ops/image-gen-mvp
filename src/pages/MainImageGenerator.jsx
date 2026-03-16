@@ -23,7 +23,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { generateImage } from '../api/imageGen'
+import { generateImage, generateHeroImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
@@ -336,28 +336,41 @@ function MainImageGenerator() {
           template: template.name
         })
 
-        const prompt = buildImagePrompt(
-          template.name,
-          productCategory,
-          imageStrategy,
-          productDesc
-        )
-
-        const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
-        const result = await generateImage(prompt, {
-          provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
-          width: selectedRatio?.width || 2000,
-          height: selectedRatio?.height || 2000,
-          aspectRatio: aspectRatio,
-          referenceImageUrl: referenceImageUrl || undefined,
-        }, (p) => {
-          setProgress(prev => ({ ...prev, ...p }))
-        })
+        let result
+        if (inputMode === 'asin' && asinValue) {
+          // Dynamic Imagen 3 hero generation — backend builds the rich prompt
+          result = await generateHeroImage({
+            asin: asinValue,
+            marketplace,
+            templateName: template.name,
+            aspectRatio,
+          }, (p) => {
+            setProgress(prev => ({ ...prev, ...p }))
+          })
+        } else {
+          // Manual prompt or upload mode — use existing flow
+          const prompt = buildImagePrompt(
+            template.name,
+            productCategory,
+            imageStrategy,
+            productDesc
+          )
+          const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
+          result = await generateImage(prompt, {
+            provider: selectedModel === 'combined' ? 'gemini' : selectedModel,
+            width: selectedRatio?.width || 2000,
+            height: selectedRatio?.height || 2000,
+            aspectRatio: aspectRatio,
+            referenceImageUrl: referenceImageUrl || undefined,
+          }, (p) => {
+            setProgress(prev => ({ ...prev, ...p }))
+          })
+        }
 
         const newImage = {
           id: Date.now() + i,
           url: result.url,
-          prompt,
+          prompt: result.prompt || `${template.name} — ${asinValue || productDesc}`,
           template: template.name,
           templateId: template.id,
           model: result.model,
