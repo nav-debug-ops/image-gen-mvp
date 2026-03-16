@@ -1,96 +1,101 @@
 """
 Dynamic Amazon hero image prompt builder.
-Applies a detailed, structured commercial photography brief to any product
-scraped from Amazon — composition, lighting, labeling, compliance all fixed;
-product name, bullets, colors, materials, and accents injected dynamically.
+Based on a premium commercial photography creative brief —
+structure, lighting, effects, and compliance rules stay fixed;
+product name, material, color, components, and emotional tone
+are injected dynamically from scraped Amazon product data.
 """
 import re
 
-# Per-category accent colors, natural props, and emotional tone
+# Per-category dynamic effects, emotional resonance, and floating particles
 CATEGORY_DEFAULTS = {
     "Pet Supplies": {
+        "floatingEffect": "soft wisps of natural wool or fine organic fibers floating gently near the product, symbolizing gentle care and eco-friendly materials",
+        "particleEffect": "delicate white and natural brown/gray fleck particles near the base, alluding to earthiness and biodegradable story",
+        "glowTone": "warm amber-ivory halo glow",
+        "emotion": "gentleness, love, security, and respectful farewell — serene closure, only the best for a beloved companion",
         "accentColor": "#A3B18A",
         "accentColorName": "sage green",
-        "naturalAccent": "a single pressed wildflower or small sprig of natural leaves",
-        "targetEmotion": "comfort, warmth, and dignified farewell",
-        "targetAudience": "pet owners, eco-conscious families",
     },
     "Kitchen & Dining": {
+        "floatingEffect": "soft wisps of steam or delicate herb particles drifting near the product",
+        "particleEffect": "fine golden spice or flour particles near the base, evoking warmth and home cooking",
+        "glowTone": "warm golden halo glow",
+        "emotion": "warmth, nourishment, and the joy of cooking — inviting and trustworthy",
         "accentColor": "#C4A882",
         "accentColorName": "warm linen",
-        "naturalAccent": "a small sprig of fresh herbs or a lemon slice",
-        "targetEmotion": "freshness, warmth, and daily joy",
-        "targetAudience": "home cooks, health-conscious adults 25–55",
     },
     "Home & Kitchen": {
+        "floatingEffect": "gentle dust-of-light particles or soft fabric wisps near the product",
+        "particleEffect": "fine ivory particles near the base suggesting cleanliness and quality",
+        "glowTone": "clean white-warm halo glow",
+        "emotion": "comfort, organization, and pride of home — reliable and premium",
         "accentColor": "#C4A882",
         "accentColorName": "warm linen",
-        "naturalAccent": "a small sprig of fresh herbs",
-        "targetEmotion": "freshness, warmth, and daily joy",
-        "targetAudience": "home cooks, health-conscious adults 25–55",
     },
     "Beauty & Personal Care": {
+        "floatingEffect": "delicate rose petals or fine botanical mist floating softly near the product",
+        "particleEffect": "soft pearl-shimmer particles near the base evoking luxury and self-care",
+        "glowTone": "soft rose-pink halo glow",
+        "emotion": "confidence, elegance, and self-care — aspirational and luxurious",
         "accentColor": "#D4A5A5",
         "accentColorName": "dusty rose",
-        "naturalAccent": "a single rose petal or botanical leaf",
-        "targetEmotion": "self-care and confidence",
-        "targetAudience": "women 18–45, skincare enthusiasts",
     },
     "Health & Household": {
+        "floatingEffect": "clean fresh-air particles or soft green botanical wisps near the product",
+        "particleEffect": "fine white cleansing particles near the base suggesting purity and wellness",
+        "glowTone": "crisp clean-white halo glow",
+        "emotion": "vitality, cleanliness, and wellbeing — trustworthy and effective",
         "accentColor": "#5D8A6A",
         "accentColorName": "forest green",
-        "naturalAccent": "a small green botanical sprig",
-        "targetEmotion": "wellbeing, cleanliness, and vitality",
-        "targetAudience": "health-conscious adults 30–60",
     },
     "Sports & Outdoors": {
+        "floatingEffect": "dynamic motion-streak particles or fine water droplets near the product",
+        "particleEffect": "energetic fine particles near the base evoking speed and performance",
+        "glowTone": "cool electric-blue edge glow",
+        "emotion": "energy, performance, and achievement — powerful and inspiring",
         "accentColor": "#4A90D9",
         "accentColorName": "sky blue",
-        "naturalAccent": "a subtle pine sprig or smooth river stone",
-        "targetEmotion": "energy, performance, and achievement",
-        "targetAudience": "active adults 18–45, fitness enthusiasts",
     },
     "Electronics": {
+        "floatingEffect": "subtle geometric light particles or fine circuitry-inspired wisps near the product",
+        "particleEffect": "cool blue-white light flecks near the base suggesting precision and technology",
+        "glowTone": "cool blue-white edge glow",
+        "emotion": "precision, innovation, and reliability — cutting-edge and dependable",
         "accentColor": "#2C3E50",
         "accentColorName": "deep slate",
-        "naturalAccent": "a subtle geometric accent piece",
-        "targetEmotion": "precision, innovation, and reliability",
-        "targetAudience": "tech enthusiasts, professionals 25–50",
     },
     "Toys & Games": {
+        "floatingEffect": "playful colorful confetti or star-shaped sparkles floating near the product",
+        "particleEffect": "bright multi-color particles near the base evoking fun and excitement",
+        "glowTone": "warm cheerful amber glow",
+        "emotion": "joy, excitement, and wonder — irresistibly fun and celebratory",
         "accentColor": "#F5A623",
         "accentColorName": "warm amber",
-        "naturalAccent": "a small colorful ribbon or playful accent",
-        "targetEmotion": "fun, joy, and excitement",
-        "targetAudience": "parents of children 3–12, gift buyers",
     },
     "Clothing": {
+        "floatingEffect": "soft fabric wisps or fine thread filaments floating gently near the product",
+        "particleEffect": "delicate lint-free textile particles near the base suggesting softness and quality",
+        "glowTone": "soft warm-neutral halo glow",
+        "emotion": "style, comfort, and confidence — effortlessly elegant",
         "accentColor": "#8E6B5A",
         "accentColorName": "warm taupe",
-        "naturalAccent": "a folded fabric swatch or ribbon detail",
-        "targetEmotion": "style, comfort, and confidence",
-        "targetAudience": "fashion-conscious adults 18–45",
     },
     "Baby": {
+        "floatingEffect": "ultra-soft pastel mist or tiny star particles floating near the product",
+        "particleEffect": "gentle pastel flecks near the base evoking softness and safety",
+        "glowTone": "gentle pastel-blue or blush halo glow",
+        "emotion": "tenderness, safety, and nurturing love — pure and reassuring",
         "accentColor": "#B8D4E8",
         "accentColorName": "soft sky blue",
-        "naturalAccent": "a small pastel ribbon or soft knitted accent",
-        "targetEmotion": "softness, safety, and nurturing",
-        "targetAudience": "new parents, baby shower gift buyers",
-    },
-    "Garden & Outdoor": {
-        "accentColor": "#7EA97A",
-        "accentColorName": "fresh sage",
-        "naturalAccent": "a small succulent or smooth pebbles",
-        "targetEmotion": "freshness, nature, and growth",
-        "targetAudience": "home gardeners, outdoor living enthusiasts",
     },
     "DEFAULT": {
+        "floatingEffect": "subtle light particles or fine natural wisps floating softly near the product",
+        "particleEffect": "delicate neutral particles near the base suggesting quality and craftsmanship",
+        "glowTone": "soft warm-white halo glow",
+        "emotion": "quality, trust, and value — dependable and premium",
         "accentColor": "#8AA3B1",
         "accentColorName": "muted blue-grey",
-        "naturalAccent": "a subtle botanical sprig",
-        "targetEmotion": "quality and trust",
-        "targetAudience": "value-conscious online shoppers",
     },
 }
 
@@ -104,6 +109,7 @@ _MATERIALS = [
     "stainless steel", "bamboo", "ceramic", "silicone", "leather", "linen",
     "glass", "wood", "aluminum", "polyester", "nylon", "rubber", "foam",
     "copper", "brass", "velvet", "microfiber", "cotton", "wool", "plastic",
+    "merino", "cashmere", "fleece", "canvas", "mesh",
 ]
 
 
@@ -112,12 +118,12 @@ def _extract_color(title: str) -> str:
     return next((c for c in _COLORS if c in title_lower), "natural")
 
 
-def _extract_material(bullets: list[str]) -> str:
-    combined = " ".join(bullets).lower()
+def _extract_material(title: str, bullets: list[str]) -> str:
+    combined = (title + " " + " ".join(bullets)).lower()
     return next((m for m in _MATERIALS if m in combined), "premium")
 
 
-def _clean_bullet(bullet: str | None, max_len: int = 55) -> str | None:
+def _clean_bullet(bullet: str | None, max_len: int = 60) -> str | None:
     if not bullet:
         return None
     cleaned = re.sub(r"[^a-zA-Z0-9\s\-–&,®™°%]", "", bullet).strip()
@@ -135,9 +141,9 @@ def _get_category_defaults(category: str | None) -> dict:
     return CATEGORY_DEFAULTS["DEFAULT"]
 
 
-def build_hero_prompt(product: dict, template_name: str = "Flat-lay") -> str:
+def build_hero_prompt(product: dict, template_name: str = "Hero") -> str:
     """
-    Build a detailed commercial photography brief from scraped Amazon product data.
+    Build a scroll-stopping Amazon main image brief from scraped product data.
 
     product dict shape (from asin_lookup.py):
       title, brand, image_url, bullets (list[str]), category, asin, marketplace
@@ -148,7 +154,7 @@ def build_hero_prompt(product: dict, template_name: str = "Flat-lay") -> str:
     brand    = product.get("brand") or ""
 
     primary_color = _extract_color(title)
-    material      = _extract_material(bullets)
+    material      = _extract_material(title, bullets)
     defaults      = _get_category_defaults(category)
 
     product_name = (
@@ -157,77 +163,54 @@ def build_hero_prompt(product: dict, template_name: str = "Flat-lay") -> str:
         else title
     )
 
-    # Box bullets — use up to 4 real bullets, pad with generic if fewer
-    box_bullets = []
-    for b in bullets[:4]:
-        cleaned = _clean_bullet(b)
-        if cleaned:
-            box_bullets.append(f"• {cleaned}")
-    while len(box_bullets) < 3:
-        box_bullets.append(f"• Premium {category} Product")
+    # Up to 3 key components from bullets for accessory description
+    components = []
+    for b in bullets[:3]:
+        c = _clean_bullet(b, max_len=50)
+        if c:
+            components.append(c)
+    components_text = "; ".join(components) if components else f"{category} components"
 
-    box_bullets_text = "\n    ".join(box_bullets)
-
-    # Hangtag badge lines
-    badge1 = _clean_bullet(bullets[0]) if bullets else "Premium Quality"
-    badge2 = _clean_bullet(bullets[1]) if len(bullets) > 1 else "Complete Kit Included"
-    badge3 = _clean_bullet(bullets[2]) if len(bullets) > 2 else category
-
-    return f"""Photorealistic commercial Amazon main listing image, 2000x2000px, 300 DPI, square format.
+    return f"""Craft an iconic, Amazon-compliant main product image on a pristine white background (#FFFFFF), featuring ultra-high realism and flawless studio lighting.
 
 PRODUCT: {product_name}
 CATEGORY: {category}
 
---- OVERALL COMPOSITION ---
-- Flat-lay arrangement on a pure white (#FFFFFF) background per Amazon TOS.
-- All product contents and packaging fanned out neatly, balanced, demonstrating kit completeness.
-- Soft, bright, natural lighting from above-right with gentle realistic shadows.
-- Subtle soft shine on {material} surfaces for premium appeal; all textures clearly visible.
+--- HERO COMPOSITION ---
+Camera angle: gentle 3/4 hero angle with a slight top-down tilt to reveal the product's depth, texture, and artisanal construction — both layers and structural features fully visible and three-dimensional.
+Product placement: center the product large in frame, in its most open, welcoming, ready-to-use form revealing the premium {material} texture and {primary_color} color detail.
+Frame fill: 85–90% of image area, no distortion.
+The product dominates the frame with bold, crisp edges, precisely true-to-life color, and lifelike tactile detail — "so real you want to reach out and touch it" fidelity.
 
---- HERO PRODUCT & CONTENTS PLACEMENT ---
-- Main product laid out slightly left of center, perfectly proportioned, tidy and reassuring.
-- {primary_color.capitalize()} coloring and {material} texture clearly visible throughout.
-- All included components arranged at right angles for geometric harmony.
-- Each component labeled below it in a soft {defaults["accentColorName"]} banner, Montserrat Semi-Bold font, HEX {defaults["accentColor"]}.
-- Items sized and spaced for easy visual inspection — no clutter.
+--- DYNAMIC EFFECTS (subtle and purpose-driven) ---
+Floating effect: {defaults["floatingEffect"]}. Effect most pronounced on the side opposite accessories for visual balance.
+Soft glow: a diffused {defaults["glowTone"]} emanates subtly from behind and beneath the product, enhancing warmth, comfort, and premium presence, creating gentle edge-lighting that isolates and spotlights the product.
+Particle scatter: {defaults["particleEffect"]}.
+All effects are soft, restrained, and purpose-driven — never overwhelming the product.
 
---- RETAIL BOX PLACEMENT ---
-- Box placed slightly back and right, face-front, angled ~15° left to show depth.
-- Eco-friendly cues on box (recycled texture, natural color palette).
-- Box front shows product name in high-contrast {defaults["accentColorName"]}, Montserrat Semi-Bold:
-  "{product_name}"
-- Short bullets on box front:
-    {box_bullets_text}
-- Bottom-right of box: round badge "100% Quality Guaranteed" in {defaults["accentColorName"]} on ivory, Montserrat font.
+--- ACCESSORIES & VISUAL BALANCE ---
+Neatly position any included components ({components_text}) just in front of or alongside the main product, angled to hint at their shape and quality.
+Components must not obscure or visually compete with the main product — they reinforce completeness and category authority, not clutter.
+Colors of all accessories echo the main product palette ({primary_color}, {defaults["accentColorName"]}) for unity.
 
---- ACCESSORY LABELS ---
-- Every visible component receives a small {defaults["accentColorName"]} text label in Montserrat Semi-Bold, HEX {defaults["accentColor"]}, for mobile legibility.
-- No floating text other than component labels and packaging print.
-- All labels in clear English.
+--- LIGHTING & SHADOW ---
+High-key, soft yet directional studio lighting — top-front 45 degrees — creating micro-detail in {material} surfaces and shape-defining shadowing in product folds and edges.
+Edge-lighting adds luminosity and creates a sense of depth.
+Anchor the product with a feather-soft, realistic cast shadow directly below for subtle lift and premium presence.
+Every stitch, weave, surface detail, and edge: razor sharp.
 
---- PROPS & EMOTIONAL ACCENT ---
-- Place {defaults["naturalAccent"]} at the lower front corner, angled naturally, casting a soft shadow.
-- Prop is subtle, grounded, and reinforces the {defaults["targetEmotion"]} theme.
-- Target aesthetic resonates with: {defaults["targetAudience"]}.
+--- COLOR & CLARITY ---
+All {material} and surface colors true to life — rich yet soft saturation, {primary_color} dominant.
+{defaults["accentColorName"]} ({defaults["accentColor"]}) as complementary accent.
+No harsh contrast; muted natural palette throughout.
 
---- LIGHTING & SURFACE ---
-- Clean diffuse white studio lighting, premium feel, gentle realistic reflections on {material} and packaging.
-- All edges sharp; shadows only under products and props — soft and natural.
-- Product displayed atop pale natural-wood tabletop or subtle faux-wood texture; table edges softly visible but fades into white background.
-- Muted, natural color palette dominated by {primary_color} and {defaults["accentColorName"]}; no harsh contrast or oversaturated hues.
-
---- HANGTAG BADGE (physical swing-tag on product, NOT a digital overlay) ---
-- Real swing-tag overlapping bottom-right product edge, slightly angled, string-attached, partially behind product.
-- Badge color: {defaults["accentColor"]}. Font: Montserrat. Text color: white.
-- Line 1: {badge1 or "Premium Quality"}
-- Line 2: {badge2 or "Complete Kit Included"}
-- Line 3: {badge3 or category}
+--- EMOTIONAL RESONANCE ---
+{defaults["emotion"]}
+The image should radiate serene confidence — making the customer believe "only the best" is in this product.
 
 --- AMAZON COMPLIANCE ---
-- No floating text anywhere on background — text only on packaging or as grounded kit-part labels.
-- No watermarks, no hands, no lifestyle background beyond the faint tabletop texture.
-- All elements are realistic photographic renderings — no digital stickers or icons off-product.
-- Product and box fill at least 85% of frame height.
-- All label and badge text at least 26px tall for mobile legibility.
-- Photorealistic product photography, ultra-sharp focus.
-- NOT illustration, NOT cartoon, NOT 3D render, NOT CGI.""".strip()
+Pristine white (#FFFFFF) background — NO lifestyle props, NO text, NO badges, NO watermarks.
+Full clarity and correct proportions, no distortion.
+All key components visible but non-distracting.
+Premium, natural dynamic effects only — all effects soft, restrained, and purpose-driven.
+Photorealistic commercial product photography — NOT illustration, NOT cartoon, NOT 3D render, NOT CGI.""".strip()
