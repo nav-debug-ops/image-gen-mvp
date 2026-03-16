@@ -163,9 +163,6 @@ class GeminiProvider(ImageProvider):
             "parameters": {
                 "sampleCount": 1,
                 "aspectRatio": aspect_ratio,
-                "safetyFilterLevel": "block_few",
-                "personGeneration": "allow_adult",
-                "outputOptions": {"mimeType": "image/png"},
             },
         }
 
@@ -182,13 +179,22 @@ class GeminiProvider(ImageProvider):
 
             data = response.json()
 
+        predictions = data.get("predictions") or []
+        if not predictions:
+            # Safety filter or empty response — log details for debugging
+            blocked = data.get("safetyAttributes") or data.get("filters") or data.get("error")
+            print(f"[imagen] Empty predictions. Keys in response: {list(data.keys())}. Blocked: {blocked}")
+            raise Exception("Imagen returned no image — prompt may have been blocked by safety filters. Try simplifying the prompt.")
+
+        prediction = predictions[0]
         image_data = (
-            data.get("predictions", [{}])[0].get("bytesBase64Encoded")
-            or data.get("predictions", [{}])[0].get("image", {}).get("bytesBase64Encoded")
+            prediction.get("bytesBase64Encoded")
+            or prediction.get("image", {}).get("bytesBase64Encoded")
         )
 
         if not image_data:
-            raise Exception("No image returned from Imagen API")
+            print(f"[imagen] Prediction keys: {list(prediction.keys())}")
+            raise Exception("No image data in Imagen response. Try a different prompt.")
 
         image_url = self._save_base64_image(image_data)
 
