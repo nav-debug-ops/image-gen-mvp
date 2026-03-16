@@ -127,7 +127,7 @@ async def create_hero_generation(
             user_id=current_user.id,
             prompt=prompt,
             provider_name="gemini",
-            model="imagen-3.0-generate-001",
+            model="imagen-4.0-generate-001",
             aspect_ratio=request.aspect_ratio,
             width=1024,
             height=1024,
