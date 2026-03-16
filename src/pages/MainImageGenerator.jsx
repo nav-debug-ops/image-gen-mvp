@@ -20,6 +20,8 @@ import {
   BookmarkCheck,
   ExternalLink,
   Undo2,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -383,6 +385,7 @@ function MainImageGenerator() {
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)  // null = closed
+  const [zoomLevel, setZoomLevel] = useState(1)
   const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
   const [showEditorMenu, setShowEditorMenu] = useState(false)
   const [regeneratingIds, setRegeneratingIds] = useState(new Set())
@@ -397,12 +400,18 @@ function MainImageGenerator() {
   const handleOpenLightbox = (img) => {
     setLightboxImg(img)
     setShowEditorMenu(false)
+    setZoomLevel(1)
   }
 
   const handleCloseLightbox = () => {
     setLightboxImg(null)
     setShowEditorMenu(false)
+    setZoomLevel(1)
   }
+
+  const handleZoomIn = (e) => { e.stopPropagation(); setZoomLevel(v => Math.min(v + 0.25, 3)) }
+  const handleZoomOut = (e) => { e.stopPropagation(); setZoomLevel(v => Math.max(v - 0.25, 0.5)) }
+  const handleZoomReset = (e) => { e.stopPropagation(); setZoomLevel(1) }
 
   const handleSaveToArchive = async (img) => {
     const id = img.id
@@ -994,7 +1003,12 @@ function MainImageGenerator() {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                  <img src={img.url} alt={img.template} />
+                  <img
+                    src={img.url}
+                    alt={img.template}
+                    style={{ cursor: 'zoom-in' }}
+                    onClick={(e) => { e.stopPropagation(); handleOpenLightbox(img) }}
+                  />
                   <EvalScoreBadge imageUrl={img.url} prompt={img.prompt} contentType="listing_main" />
                   <div className="result-info">
                     <span className="result-template">{img.template}</span>
@@ -1065,8 +1079,29 @@ function MainImageGenerator() {
             </button>
 
             {/* Image */}
-            <div className="lightbox-image-wrap">
-              <img src={lightboxImg.url} alt={lightboxImg.template} />
+            <div className="lightbox-image-wrap" style={{ overflow: zoomLevel > 1 ? 'auto' : 'hidden' }}>
+              <img
+                src={lightboxImg.url}
+                alt={lightboxImg.template}
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.2s ease',
+                  cursor: zoomLevel > 1 ? 'grab' : 'default',
+                }}
+              />
+              {/* Zoom controls — lower right */}
+              <div className="lightbox-zoom-controls">
+                <button className="lightbox-zoom-btn" onClick={handleZoomOut} title="Zoom out" disabled={zoomLevel <= 0.5}>
+                  <ZoomOut size={15} />
+                </button>
+                <span className="lightbox-zoom-level" onClick={handleZoomReset} title="Reset zoom">
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button className="lightbox-zoom-btn" onClick={handleZoomIn} title="Zoom in" disabled={zoomLevel >= 3}>
+                  <ZoomIn size={15} />
+                </button>
+              </div>
             </div>
 
             {/* Info strip */}
