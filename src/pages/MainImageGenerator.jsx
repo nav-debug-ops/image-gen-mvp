@@ -22,6 +22,9 @@ import {
   Undo2,
   ZoomIn,
   ZoomOut,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { generateImage, generateHeroImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -156,6 +159,54 @@ function MainImageGenerator() {
   const [asinLookupLoading, setAsinLookupLoading] = useState(false)
   const [asinProduct, setAsinProduct] = useState(null)  // confirmed product data
   const [asinError, setAsinError] = useState(null)
+
+  // Hero prompts modal state
+  const [promptsModal, setPromptsModal] = useState(null)  // null | { img, prompts, allText }
+  const [variationGenerating, setVariationGenerating] = useState(null)  // index being generated
+
+  const handleViewPrompts = (img, e) => {
+    e.stopPropagation()
+    setPromptsModal({ img, prompts: img.heroPrompts, allText: img.allPromptsText })
+  }
+
+  const handleGenerateVariation = async (variationIdx) => {
+    if (!promptsModal) return
+    const { img } = promptsModal
+    setVariationGenerating(variationIdx)
+    try {
+      const result = await generateHeroImage({
+        asin: img.asin,
+        marketplace: img.marketplace,
+        templateName: img.template,
+        aspectRatio: img.aspectRatio,
+        promptVariation: variationIdx,
+      })
+      const newImage = {
+        id: Date.now(),
+        url: result.url,
+        prompt: result.activePrompt || promptsModal.prompts[variationIdx] || '',
+        template: img.template,
+        templateId: img.templateId,
+        model: result.model,
+        provider: result.provider,
+        aspectRatio: img.aspectRatio,
+        strategy: img.strategy,
+        category: img.category,
+        timestamp: new Date().toISOString(),
+        heroPrompts: result.imagePrompts || img.heroPrompts,
+        allPromptsText: result.allPrompts || img.allPromptsText,
+        isHeroGenerated: true,
+        asin: img.asin,
+        marketplace: img.marketplace,
+      }
+      setGeneratedImages(prev => [newImage, ...prev])
+      setPromptsModal(null)
+    } catch (err) {
+      alert(`Generation failed: ${err.message}`)
+    } finally {
+      setVariationGenerating(null)
+    }
+  }
 
   // ASIN validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
@@ -339,12 +390,13 @@ function MainImageGenerator() {
 
         let result
         if (inputMode === 'asin' && asinValue) {
-          // Dynamic Imagen 3 hero generation — backend builds the rich prompt
+          // AI-powered hero generation: Gemini builds 16 professional prompts → Imagen 4 generates the image
           result = await generateHeroImage({
             asin: asinValue,
             marketplace,
             templateName: template.name,
             aspectRatio,
+            promptVariation: 0,
           }, (p) => {
             setProgress(prev => ({ ...prev, ...p }))
           })
@@ -373,7 +425,7 @@ function MainImageGenerator() {
         const newImage = {
           id: Date.now() + i,
           url: result.url,
-          prompt: result.prompt || `${template.name} — ${asinValue || productDesc}`,
+          prompt: result.activePrompt || result.prompt || `${template.name} — ${asinValue || productDesc}`,
           template: template.name,
           templateId: template.id,
           model: result.model,
@@ -381,7 +433,13 @@ function MainImageGenerator() {
           aspectRatio,
           strategy: imageStrategy,
           category: productCategory,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          // Hero: AI-generated prompt variations (ASIN mode only)
+          heroPrompts: result.imagePrompts || [],
+          allPromptsText: result.allPrompts || '',
+          isHeroGenerated: !!(result.imagePrompts && result.imagePrompts.length > 0),
+          asin: inputMode === 'asin' ? asinValue : null,
+          marketplace: inputMode === 'asin' ? marketplace : null,
         }
 
         results.push(newImage)
@@ -1056,6 +1114,11 @@ function MainImageGenerator() {
                           <MousePointerClick size={10} /> High-CTR
                         </span>
                       )}
+                      {img.isHeroGenerated && (
+                        <span className="result-strategy-badge result-strategy-badge--prompts">
+                          <FileText size={10} /> {img.heroPrompts.length} prompts
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="result-actions">
@@ -1066,6 +1129,15 @@ function MainImageGenerator() {
                     >
                       <Maximize2 size={16} />
                     </button>
+                    {img.isHeroGenerated && (
+                      <button
+                        className="action-btn action-btn-prompts"
+                        title="View all 16 prompt variations"
+                        onClick={(e) => handleViewPrompts(img, e)}
+                      >
+                        <FileText size={16} />
+                      </button>
+                    )}
                     <button
                       className="action-btn"
                       title="Regenerate"
@@ -1104,6 +1176,71 @@ function MainImageGenerator() {
           )}
         </div>
       </div>
+
+      {/* ── Hero Prompts Modal ── */}
+      {promptsModal && (
+        <div className="lightbox-overlay" onClick={() => setPromptsModal(null)}>
+          <div className="prompts-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prompts-modal-header">
+              <div className="prompts-modal-title">
+                <FileText size={18} />
+                <span>16 Professional Image Prompts</span>
+                <span className="prompts-modal-sub">AI-generated · Click any variation to generate that image</span>
+              </div>
+              <button className="lightbox-close" onClick={() => setPromptsModal(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="prompts-modal-body">
+              {/* Group prompts into 4 images × 4 variations */}
+              {[0, 1, 2, 3].map((imgIdx) => {
+                const imageLabels = ['Pure Product Shot', 'Product + Packaging', 'Product with Tag', 'Creative High-CTR']
+                const imageRoles = [
+                  'Ultra-safe main image. Product only, pure white background, zero text.',
+                  'Prove value, gift-ready. Primary keyword on box or tag.',
+                  'Primary keyword impossible to miss via clean tag.',
+                  'High-reward variant with one dramatic creative element.',
+                ]
+                return (
+                  <div key={imgIdx} className="prompts-image-group">
+                    <div className="prompts-image-label">
+                      <span className="prompts-image-num">Image {imgIdx + 1}</span>
+                      <span className="prompts-image-name">{imageLabels[imgIdx]}</span>
+                      <span className="prompts-image-role">{imageRoles[imgIdx]}</span>
+                    </div>
+                    <div className="prompts-variations">
+                      {[0, 1, 2, 3].map((varIdx) => {
+                        const globalIdx = imgIdx * 4 + varIdx
+                        const prompt = promptsModal.prompts[globalIdx]
+                        const varLabels = ['Variation 1', 'Variation 2', 'Variation 3', 'Variation 4 (Minimal)']
+                        if (!prompt) return null
+                        return (
+                          <div key={varIdx} className="prompts-variation-card">
+                            <div className="prompts-variation-header">
+                              <span className="prompts-var-label">{varLabels[varIdx]}</span>
+                              <button
+                                className="prompts-generate-btn"
+                                onClick={() => handleGenerateVariation(globalIdx)}
+                                disabled={variationGenerating !== null}
+                              >
+                                {variationGenerating === globalIdx
+                                  ? <><Loader2 size={13} className="spin" /> Generating...</>
+                                  : <><RefreshCw size={13} /> Generate this</>}
+                              </button>
+                            </div>
+                            <p className="prompts-variation-text">{prompt}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Lightbox Modal ── */}
       {lightboxImg && (

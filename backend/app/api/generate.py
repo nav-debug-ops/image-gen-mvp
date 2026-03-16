@@ -10,6 +10,7 @@ from app.services.generation_service import generate_image
 from app.services.providers import get_all_providers
 from app.services.asin_lookup import lookup_asin
 from app.services.hero_prompt_builder import build_hero_prompt
+from app.services.prompt_ai_service import generate_hero_prompts
 
 router = APIRouter()
 
@@ -51,6 +52,10 @@ class GenerateResponse(BaseModel):
     duration_ms: Optional[int] = None
     failover_from: Optional[str] = None
     error: Optional[str] = None
+    # Hero-specific: AI-generated prompts from the photography brief template
+    all_prompts: Optional[str] = None
+    image_prompts: Optional[list] = None
+    active_prompt: Optional[str] = None
 
 
 @router.post("/", response_model=GenerateResponse)
@@ -101,6 +106,8 @@ class HeroGenerateRequest(BaseModel):
     marketplace: str = "US"
     template_name: str = "Plain White Background"
     aspect_ratio: str = "1:1"
+    # Which variation to generate (0-based index into image_prompts list; default = 0 = Image 1 Var 1)
+    prompt_variation: int = 0
 
 
 @router.post("/hero", response_model=GenerateResponse)
@@ -109,7 +116,12 @@ async def create_hero_generation(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate an Amazon hero image from an ASIN using dynamic prompt + Imagen 3."""
+    """
+    Generate an Amazon hero image from an ASIN.
+    Uses Gemini Flash to build 16 professional prompts following the
+    commercial photography brief template, then generates the selected
+    variation with Imagen 4.
+    """
     if len(request.asin) != 10:
         raise HTTPException(status_code=422, detail="ASIN must be exactly 10 characters")
 
@@ -120,12 +132,23 @@ async def create_hero_generation(
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Could not fetch product data: {e}")
 
-    prompt = build_hero_prompt(product, request.template_name)
+    # Generate 16 prompts using the AI photography brief template
+    try:
+        prompt_result = await generate_hero_prompts(product)
+        prompts_list = prompt_result["image_prompts"]
+        # Pick the requested variation (default 0 = Image 1, Variation 1)
+        variation_idx = max(0, min(request.prompt_variation, len(prompts_list) - 1))
+        active_prompt = prompts_list[variation_idx] if prompts_list else prompt_result["primary_prompt"]
+    except Exception as e:
+        # Fall back to deterministic prompt builder if AI prompt generation fails
+        print(f"[hero] AI prompt generation failed ({e}), falling back to template builder")
+        active_prompt = build_hero_prompt(product, request.template_name)
+        prompt_result = {"all_prompts": None, "image_prompts": [], "primary_prompt": active_prompt}
 
     try:
         gen = await generate_image(
             user_id=current_user.id,
-            prompt=prompt,
+            prompt=active_prompt,
             provider_name="gemini",
             model="imagen-4.0-generate-001",
             aspect_ratio=request.aspect_ratio,
@@ -143,6 +166,9 @@ async def create_hero_generation(
             model=gen.model,
             cost_estimate=gen.cost_estimate,
             duration_ms=gen.duration_ms,
+            all_prompts=prompt_result.get("all_prompts"),
+            image_prompts=prompt_result.get("image_prompts"),
+            active_prompt=active_prompt,
         )
     except HTTPException:
         raise

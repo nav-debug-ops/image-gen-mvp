@@ -100,7 +100,7 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
  * Generate an Amazon hero image from an ASIN using dynamic prompt + Imagen 3.
  * Calls POST /api/generate/hero — backend handles ASIN lookup + prompt building.
  */
-export async function generateHeroImage({ asin, marketplace = 'US', templateName = 'Plain White Background', aspectRatio = '1:1' }, onProgress = null) {
+export async function generateHeroImage({ asin, marketplace = 'US', templateName = 'Plain White Background', aspectRatio = '1:1', promptVariation = 0 }, onProgress = null) {
   onProgress?.({ status: 'starting', progress: 0, message: 'Building product brief...' })
 
   const body = {
@@ -108,9 +108,10 @@ export async function generateHeroImage({ asin, marketplace = 'US', templateName
     marketplace,
     template_name: templateName,
     aspect_ratio: aspectRatio,
+    prompt_variation: promptVariation,
   }
 
-  onProgress?.({ status: 'processing', progress: 20, message: 'Generating with Imagen 3...' })
+  onProgress?.({ status: 'processing', progress: 20, message: 'Generating professional prompts + image...' })
 
   try {
     const response = await fetchAPI('/api/generate/hero', {
@@ -138,6 +139,9 @@ export async function generateHeroImage({ asin, marketplace = 'US', templateName
       model: data.model,
       generationId: data.generation_id,
       costEstimate: data.cost_estimate,
+      allPrompts: data.all_prompts,
+      imagePrompts: data.image_prompts,
+      activePrompt: data.active_prompt,
     }
   } catch (error) {
     onProgress?.({ status: 'error', message: error.message })
