@@ -5832,6 +5832,7 @@
   min-height: 0;
   padding: 16px;
   position: relative;
+  user-select: none;
 }
 .lightbox-image-wrap img {
   max-width: 100%;

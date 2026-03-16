@@ -386,6 +386,9 @@ function MainImageGenerator() {
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)  // null = closed
   const [zoomLevel, setZoomLevel] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef(null)
   const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
   const [showEditorMenu, setShowEditorMenu] = useState(false)
   const [regeneratingIds, setRegeneratingIds] = useState(new Set())
@@ -401,17 +404,33 @@ function MainImageGenerator() {
     setLightboxImg(img)
     setShowEditorMenu(false)
     setZoomLevel(1)
+    setPan({ x: 0, y: 0 })
   }
 
   const handleCloseLightbox = () => {
     setLightboxImg(null)
     setShowEditorMenu(false)
     setZoomLevel(1)
+    setPan({ x: 0, y: 0 })
   }
 
   const handleZoomIn = (e) => { e.stopPropagation(); setZoomLevel(v => Math.min(v + 0.25, 3)) }
   const handleZoomOut = (e) => { e.stopPropagation(); setZoomLevel(v => Math.max(v - 0.25, 0.5)) }
-  const handleZoomReset = (e) => { e.stopPropagation(); setZoomLevel(1) }
+  const handleZoomReset = (e) => { e.stopPropagation(); setZoomLevel(1); setPan({ x: 0, y: 0 }) }
+
+  const handleDragStart = (e) => {
+    if (zoomLevel <= 1) return
+    setIsDragging(true)
+    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+  }
+  const handleDragMove = (e) => {
+    if (!isDragging || !dragStart.current) return
+    setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y })
+  }
+  const handleDragEnd = () => {
+    setIsDragging(false)
+    dragStart.current = null
+  }
 
   const handleSaveToArchive = async (img) => {
     const id = img.id
@@ -1079,15 +1098,23 @@ function MainImageGenerator() {
             </button>
 
             {/* Image */}
-            <div className="lightbox-image-wrap" style={{ overflow: zoomLevel > 1 ? 'auto' : 'hidden' }}>
+            <div
+              className="lightbox-image-wrap"
+              onMouseDown={handleDragStart}
+              onMouseMove={handleDragMove}
+              onMouseUp={handleDragEnd}
+              onMouseLeave={handleDragEnd}
+              style={{ cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+            >
               <img
                 src={lightboxImg.url}
                 alt={lightboxImg.template}
+                draggable={false}
                 style={{
-                  transform: `scale(${zoomLevel})`,
+                  transform: `scale(${zoomLevel}) translate(${pan.x / zoomLevel}px, ${pan.y / zoomLevel}px)`,
                   transformOrigin: 'center center',
-                  transition: 'transform 0.2s ease',
-                  cursor: zoomLevel > 1 ? 'grab' : 'default',
+                  transition: isDragging ? 'none' : 'transform 0.2s ease',
+                  userSelect: 'none',
                 }}
               />
               {/* Zoom controls — lower right */}
