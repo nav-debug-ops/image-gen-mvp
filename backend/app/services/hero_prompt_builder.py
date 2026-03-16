@@ -1,82 +1,95 @@
 """
 Dynamic Amazon hero image prompt builder.
-Takes scraped product data and produces a rich, structured Imagen 3 prompt
-tailored to the product's category, color, material, and key features.
+Applies a detailed, structured commercial photography brief to any product
+scraped from Amazon — composition, lighting, labeling, compliance all fixed;
+product name, bullets, colors, materials, and accents injected dynamically.
 """
 import re
 
-# Per-category aesthetic defaults
+# Per-category accent colors, natural props, and emotional tone
 CATEGORY_DEFAULTS = {
     "Pet Supplies": {
-        "targetEmotion": "comfort and gentle care",
-        "naturalAccent": "a small daisy or wildflower",
         "accentColor": "#A3B18A",
+        "accentColorName": "sage green",
+        "naturalAccent": "a single pressed wildflower or small sprig of natural leaves",
+        "targetEmotion": "comfort, warmth, and dignified farewell",
         "targetAudience": "pet owners, eco-conscious families",
     },
     "Kitchen & Dining": {
-        "targetEmotion": "freshness, warmth, and daily joy",
-        "naturalAccent": "a sprig of fresh herbs",
         "accentColor": "#C4A882",
+        "accentColorName": "warm linen",
+        "naturalAccent": "a small sprig of fresh herbs or a lemon slice",
+        "targetEmotion": "freshness, warmth, and daily joy",
         "targetAudience": "home cooks, health-conscious adults 25–55",
     },
     "Home & Kitchen": {
-        "targetEmotion": "freshness, warmth, and daily joy",
-        "naturalAccent": "a sprig of fresh herbs",
         "accentColor": "#C4A882",
+        "accentColorName": "warm linen",
+        "naturalAccent": "a small sprig of fresh herbs",
+        "targetEmotion": "freshness, warmth, and daily joy",
         "targetAudience": "home cooks, health-conscious adults 25–55",
     },
     "Beauty & Personal Care": {
-        "targetEmotion": "self-care and confidence",
-        "naturalAccent": "a single rose petal or botanical leaf",
         "accentColor": "#D4A5A5",
+        "accentColorName": "dusty rose",
+        "naturalAccent": "a single rose petal or botanical leaf",
+        "targetEmotion": "self-care and confidence",
         "targetAudience": "women 18–45, skincare enthusiasts",
     },
     "Health & Household": {
-        "targetEmotion": "wellbeing, cleanliness, and vitality",
-        "naturalAccent": "a green botanical sprig",
         "accentColor": "#5D8A6A",
+        "accentColorName": "forest green",
+        "naturalAccent": "a small green botanical sprig",
+        "targetEmotion": "wellbeing, cleanliness, and vitality",
         "targetAudience": "health-conscious adults 30–60",
     },
     "Sports & Outdoors": {
-        "targetEmotion": "energy, performance, and achievement",
-        "naturalAccent": "a subtle motion-blur trail",
         "accentColor": "#4A90D9",
+        "accentColorName": "sky blue",
+        "naturalAccent": "a subtle pine sprig or smooth river stone",
+        "targetEmotion": "energy, performance, and achievement",
         "targetAudience": "active adults 18–45, fitness enthusiasts",
     },
     "Electronics": {
-        "targetEmotion": "precision, innovation, and reliability",
-        "naturalAccent": "subtle geometric accent lines",
         "accentColor": "#2C3E50",
+        "accentColorName": "deep slate",
+        "naturalAccent": "a subtle geometric accent piece",
+        "targetEmotion": "precision, innovation, and reliability",
         "targetAudience": "tech enthusiasts, professionals 25–50",
     },
     "Toys & Games": {
-        "targetEmotion": "fun, joy, and excitement",
-        "naturalAccent": "colorful confetti or playful shapes",
         "accentColor": "#F5A623",
+        "accentColorName": "warm amber",
+        "naturalAccent": "a small colorful ribbon or playful accent",
+        "targetEmotion": "fun, joy, and excitement",
         "targetAudience": "parents of children 3–12, gift buyers",
     },
     "Clothing": {
-        "targetEmotion": "style, comfort, and confidence",
-        "naturalAccent": "a folded fabric texture detail",
         "accentColor": "#8E6B5A",
+        "accentColorName": "warm taupe",
+        "naturalAccent": "a folded fabric swatch or ribbon detail",
+        "targetEmotion": "style, comfort, and confidence",
         "targetAudience": "fashion-conscious adults 18–45",
     },
     "Baby": {
-        "targetEmotion": "softness, safety, and nurturing",
-        "naturalAccent": "a small plush toy or pastel ribbon",
         "accentColor": "#B8D4E8",
+        "accentColorName": "soft sky blue",
+        "naturalAccent": "a small pastel ribbon or soft knitted accent",
+        "targetEmotion": "softness, safety, and nurturing",
         "targetAudience": "new parents, baby shower gift buyers",
     },
     "Garden & Outdoor": {
-        "targetEmotion": "freshness, nature, and growth",
-        "naturalAccent": "a small potted succulent or pebbles",
         "accentColor": "#7EA97A",
+        "accentColorName": "fresh sage",
+        "naturalAccent": "a small succulent or smooth pebbles",
+        "targetEmotion": "freshness, nature, and growth",
         "targetAudience": "home gardeners, outdoor living enthusiasts",
     },
     "DEFAULT": {
-        "targetEmotion": "quality and trust",
-        "naturalAccent": "a subtle botanical accent",
         "accentColor": "#8AA3B1",
+        "accentColorName": "muted blue-grey",
+        "naturalAccent": "a subtle botanical sprig",
+        "targetEmotion": "quality and trust",
         "targetAudience": "value-conscious online shoppers",
     },
 }
@@ -104,11 +117,11 @@ def _extract_material(bullets: list[str]) -> str:
     return next((m for m in _MATERIALS if m in combined), "premium")
 
 
-def _clean_bullet(bullet: str | None) -> str | None:
+def _clean_bullet(bullet: str | None, max_len: int = 55) -> str | None:
     if not bullet:
         return None
-    cleaned = re.sub(r"[^a-zA-Z0-9\s\-–&,]", "", bullet).strip()
-    return cleaned[:60] if cleaned else None
+    cleaned = re.sub(r"[^a-zA-Z0-9\s\-–&,®™°%]", "", bullet).strip()
+    return cleaned[:max_len] if cleaned else None
 
 
 def _get_category_defaults(category: str | None) -> dict:
@@ -116,32 +129,27 @@ def _get_category_defaults(category: str | None) -> dict:
         return CATEGORY_DEFAULTS["DEFAULT"]
     if category in CATEGORY_DEFAULTS:
         return CATEGORY_DEFAULTS[category]
-    # Partial match
     for key in CATEGORY_DEFAULTS:
         if key != "DEFAULT" and key.lower() in category.lower():
             return CATEGORY_DEFAULTS[key]
     return CATEGORY_DEFAULTS["DEFAULT"]
 
 
-def build_hero_prompt(product: dict, template_name: str = "Plain White Background") -> str:
+def build_hero_prompt(product: dict, template_name: str = "Flat-lay") -> str:
     """
-    Build a rich Imagen 3 prompt from scraped Amazon product data.
+    Build a detailed commercial photography brief from scraped Amazon product data.
 
     product dict shape (from asin_lookup.py):
-      title, brand, image_url, bullets (list), category, asin, marketplace
+      title, brand, image_url, bullets (list[str]), category, asin, marketplace
     """
-    title = product.get("title") or "Product"
+    title    = product.get("title") or "Product"
     category = product.get("category") or "General"
-    bullets = product.get("bullets") or []
-    brand = product.get("brand") or ""
+    bullets  = product.get("bullets") or []
+    brand    = product.get("brand") or ""
 
     primary_color = _extract_color(title)
-    material = _extract_material(bullets)
-    defaults = _get_category_defaults(category)
-
-    key_feature1 = _clean_bullet(bullets[0]) if len(bullets) > 0 else "Premium Quality"
-    key_feature2 = _clean_bullet(bullets[1]) if len(bullets) > 1 else "Complete Kit Included"
-    key_feature3 = _clean_bullet(bullets[2]) if len(bullets) > 2 else category
+    material      = _extract_material(bullets)
+    defaults      = _get_category_defaults(category)
 
     product_name = (
         f"{brand} {title}".strip()
@@ -149,36 +157,77 @@ def build_hero_prompt(product: dict, template_name: str = "Plain White Backgroun
         else title
     )
 
-    return f"""Photorealistic commercial Amazon hero product image, 300 DPI, square format.
+    # Box bullets — use up to 4 real bullets, pad with generic if fewer
+    box_bullets = []
+    for b in bullets[:4]:
+        cleaned = _clean_bullet(b)
+        if cleaned:
+            box_bullets.append(f"• {cleaned}")
+    while len(box_bullets) < 3:
+        box_bullets.append(f"• Premium {category} Product")
+
+    box_bullets_text = "\n    ".join(box_bullets)
+
+    # Hangtag badge lines
+    badge1 = _clean_bullet(bullets[0]) if bullets else "Premium Quality"
+    badge2 = _clean_bullet(bullets[1]) if len(bullets) > 1 else "Complete Kit Included"
+    badge3 = _clean_bullet(bullets[2]) if len(bullets) > 2 else category
+
+    return f"""Photorealistic commercial Amazon main listing image, 2000x2000px, 300 DPI, square format.
 
 PRODUCT: {product_name}
 CATEGORY: {category}
 
-COMPOSITION:
-- {template_name} layout. Front-right three-quarter angle, product fills 80-85% of frame.
-- Show product in its most open or ready-to-use state to reveal {material} texture and {primary_color} color.
-- Arrange any included accessories naturally around the hero product on a flat surface.
-- Background: pure white HEX #FFFFFF or soft ivory HEX #FAFAF5. No lifestyle backgrounds.
+--- OVERALL COMPOSITION ---
+- Flat-lay arrangement on a pure white (#FFFFFF) background per Amazon TOS.
+- All product contents and packaging fanned out neatly, balanced, demonstrating kit completeness.
+- Soft, bright, natural lighting from above-right with gentle realistic shadows.
+- Subtle soft shine on {material} surfaces for premium appeal; all textures clearly visible.
 
-NATURAL ACCENT:
-- Place {defaults["naturalAccent"]} at the product base, physically grounded, no floating elements.
+--- HERO PRODUCT & CONTENTS PLACEMENT ---
+- Main product laid out slightly left of center, perfectly proportioned, tidy and reassuring.
+- {primary_color.capitalize()} coloring and {material} texture clearly visible throughout.
+- All included components arranged at right angles for geometric harmony.
+- Each component labeled below it in a soft {defaults["accentColorName"]} banner, Montserrat Semi-Bold font, HEX {defaults["accentColor"]}.
+- Items sized and spaced for easy visual inspection — no clutter.
 
-LIGHTING & MOOD:
-- Soft diffused natural side lighting evoking {defaults["targetEmotion"]}.
-- Warm studio-quality shadows directly beneath the product.
-- Subtle vignette at edges to draw focus to center.
+--- RETAIL BOX PLACEMENT ---
+- Box placed slightly back and right, face-front, angled ~15° left to show depth.
+- Eco-friendly cues on box (recycled texture, natural color palette).
+- Box front shows product name in high-contrast {defaults["accentColorName"]}, Montserrat Semi-Bold:
+  "{product_name}"
+- Short bullets on box front:
+    {box_bullets_text}
+- Bottom-right of box: round badge "100% Quality Guaranteed" in {defaults["accentColorName"]} on ivory, Montserrat font.
 
-HANGTAG BADGE (physical swing-tag, NOT a digital overlay):
-- Real swing-tag overlapping the bottom-right product edge.
-- Badge color: {defaults["accentColor"]}. Font: Montserrat. Text color: white.
-- Line 1: {key_feature1 or "Premium Quality"}
-- Line 2: {key_feature2 or "Complete Kit Included"}
-- Line 3: {key_feature3 or category}
-- Tag is slightly angled, string-attached, partially behind product edge — looks physically real.
+--- ACCESSORY LABELS ---
+- Every visible component receives a small {defaults["accentColorName"]} text label in Montserrat Semi-Bold, HEX {defaults["accentColor"]}, for mobile legibility.
+- No floating text other than component labels and packaging print.
+- All labels in clear English.
 
-STYLE RULES:
-- Accent colors only: {defaults["accentColor"]}, {primary_color}, ivory. Nothing else.
+--- PROPS & EMOTIONAL ACCENT ---
+- Place {defaults["naturalAccent"]} at the lower front corner, angled naturally, casting a soft shadow.
+- Prop is subtle, grounded, and reinforces the {defaults["targetEmotion"]} theme.
 - Target aesthetic resonates with: {defaults["targetAudience"]}.
+
+--- LIGHTING & SURFACE ---
+- Clean diffuse white studio lighting, premium feel, gentle realistic reflections on {material} and packaging.
+- All edges sharp; shadows only under products and props — soft and natural.
+- Product displayed atop pale natural-wood tabletop or subtle faux-wood texture; table edges softly visible but fades into white background.
+- Muted, natural color palette dominated by {primary_color} and {defaults["accentColorName"]}; no harsh contrast or oversaturated hues.
+
+--- HANGTAG BADGE (physical swing-tag on product, NOT a digital overlay) ---
+- Real swing-tag overlapping bottom-right product edge, slightly angled, string-attached, partially behind product.
+- Badge color: {defaults["accentColor"]}. Font: Montserrat. Text color: white.
+- Line 1: {badge1 or "Premium Quality"}
+- Line 2: {badge2 or "Complete Kit Included"}
+- Line 3: {badge3 or category}
+
+--- AMAZON COMPLIANCE ---
+- No floating text anywhere on background — text only on packaging or as grounded kit-part labels.
+- No watermarks, no hands, no lifestyle background beyond the faint tabletop texture.
+- All elements are realistic photographic renderings — no digital stickers or icons off-product.
+- Product and box fill at least 85% of frame height.
+- All label and badge text at least 26px tall for mobile legibility.
 - Photorealistic product photography, ultra-sharp focus.
-- NOT illustration, NOT cartoon, NOT 3D render, NOT CGI.
-- No floating text, no digital banners, no false claims.""".strip()
+- NOT illustration, NOT cartoon, NOT 3D render, NOT CGI.""".strip()
