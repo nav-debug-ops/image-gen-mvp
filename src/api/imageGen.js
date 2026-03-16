@@ -27,11 +27,12 @@ export const AVAILABLE_MODELS = {
     { id: 'dall-e-2', name: 'DALL-E 2', description: 'Supports variations', supportsImg2Img: true }
   ],
   gemini: [
-    { id: 'imagen-4.0-generate-001', name: 'Imagen 4', description: 'Best quality — used for hero images', supportsImg2Img: false },
-    { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', description: 'Fast, high quality', supportsImg2Img: false },
-    { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', description: 'Ultra quality', supportsImg2Img: false },
-    { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', description: 'Fast native image generation', supportsImg2Img: true },
-    { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', description: 'Latest preview model', supportsImg2Img: true },
+    { id: 'imagen-4.0-generate-001', name: 'Imagen 4', description: 'Best quality — recommended for hero images', supportsImg2Img: false },
+    { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', description: 'Faster Imagen 4', supportsImg2Img: false },
+    { id: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', description: 'Highest quality Imagen 4', supportsImg2Img: false },
+    { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', description: 'Native image gen, supports img2img', supportsImg2Img: true },
+    { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', description: 'Latest native image preview', supportsImg2Img: true },
+    { id: 'gemini-3-pro-image-preview', name: 'Gemini 3 Pro Image', description: 'Pro-quality native image gen', supportsImg2Img: true },
   ]
 }
 

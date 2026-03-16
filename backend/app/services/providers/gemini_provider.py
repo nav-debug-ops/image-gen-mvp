@@ -21,11 +21,14 @@ class GeminiProvider(ImageProvider):
 
     def get_available_models(self) -> list:
         return [
-            {"id": "imagen-4.0-generate-001", "name": "Imagen 4", "description": "Best quality — used for hero images"},
-            {"id": "imagen-4.0-fast-generate-001", "name": "Imagen 4 Fast", "description": "Fast, high quality"},
-            {"id": "imagen-4.0-ultra-generate-001", "name": "Imagen 4 Ultra", "description": "Ultra quality"},
-            {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image", "description": "Fast, high quality native generation"},
-            {"id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image", "description": "Latest preview model"},
+            # Imagen 4 — dedicated image models via :predict
+            {"id": "imagen-4.0-generate-001", "name": "Imagen 4", "description": "Best quality — recommended for hero images"},
+            {"id": "imagen-4.0-fast-generate-001", "name": "Imagen 4 Fast", "description": "Faster Imagen 4"},
+            {"id": "imagen-4.0-ultra-generate-001", "name": "Imagen 4 Ultra", "description": "Highest quality Imagen 4"},
+            # Gemini native image generation via generateContent
+            {"id": "gemini-2.5-flash-image", "name": "Gemini 2.5 Flash Image", "description": "Native image gen, supports img2img"},
+            {"id": "gemini-3.1-flash-image-preview", "name": "Gemini 3.1 Flash Image", "description": "Latest native image preview"},
+            {"id": "gemini-3-pro-image-preview", "name": "Gemini 3 Pro Image", "description": "Pro-quality native image gen"},
         ]
 
     async def generate(
