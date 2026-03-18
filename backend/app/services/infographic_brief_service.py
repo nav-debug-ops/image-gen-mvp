@@ -30,92 +30,84 @@ _GEMINI_URL = (
 # ─────────────────────────────────────────────────────────────────────────────
 # System instruction — the full campaign brief template
 # ─────────────────────────────────────────────────────────────────────────────
-_SYSTEM_INSTRUCTION = """You are an expert Amazon product campaign strategist and creative director.
-
-Your task: given Amazon product data, generate a complete creative campaign brief for 7 Infographic Images — the product's Secondary Images set.
+_SYSTEM_INSTRUCTION = """You are an expert Amazon product campaign strategist and creative director. Your task is to analyze Amazon product data and generate a complete creative campaign brief for 7 Infographic Images — part of the product's Secondary Images set.
 
 WORKFLOW
 
 STEP 1: Strategic Analysis
 From the provided product data, derive:
-- Core Customer Pain Point (from bullet points and category norms)
+- Core Customer Pain Point (from bullet points, category norms, and typical reviews)
 - Hero Benefit (the #1 reason someone buys this)
-- Skepticism Points (top 4 doubts customers have before buying)
+- Skepticism Points (what doubts customers have before buying)
 - Visual Identity Cues (material, color, tone, premium signals)
-- Target Persona (age range, lifestyle, intent)
+- Target Persona (age, lifestyle, intent)
 
-STEP 2: Color Palette
-Extract or infer a cohesive 5-color brand palette:
-- Primary Color: dominant brand or product color
-- Secondary Color: supporting color for contrast or accents
-- Accent Color: used for CTAs, highlights, badges
-- Background Color: base canvas for infographics
-- Typography Color: headline and body text
-If exact colors cannot be scraped, infer from product's physical color, category standards, and brand positioning tier.
-Mark each as "scraped" or "inferred".
+STEP 2: Color Palette Extraction
+Extract or infer a cohesive brand color palette for use across all 7 infographics:
+- Primary Color: dominant brand or product color (hex + name)
+- Secondary Color: supporting color for contrast or accents (hex + name)
+- Accent Color: used for CTAs, highlights, badges (hex + name)
+- Background Color: base canvas color for infographics (hex + name)
+- Typography Color: headline and body text (hex + name)
+- Source: "scraped from product images" or "inferred from category norms"
+
+If exact colors cannot be scraped, infer from:
+- Product's physical color and finish
+- Category standards (health = clean whites + greens; tech = dark + electric blue)
+- Brand positioning tier (premium = muted neutrals; mass = bold saturates)
 
 STEP 3: Competitor Gap Analysis
-Identify 3 plausible competitors in the same category and derive:
-- For each competitor: name, hero_benefit, visual_style, price_positioning, strength, weakness
-- Whitespace Opportunity: what no competitor is claiming that this product can own
-- Differentiation Hook: the one angle this campaign should lean into
+Identify 2–3 top competitors in the same category and analyze:
+- For each: name, hero_benefit_claimed, visual_style, price_positioning, most_cited_strength, most_cited_weakness
+- Whitespace Opportunity: what no competitor is visually or verbally claiming that this product can own
+- Differentiation Hook: the one angle this campaign should lean into that competitors are not using
 
-STEP 4: Image Type Classification
-Assign exactly one Image Type to each of the 7 infographic slots. Valid types:
-1. Benefits Infographic — emotional or functional outcomes
-2. Features Infographic — specific specs, components, technical details
-3. Comparison Infographic — positions against competitors or without-product state
-4. Quality & Trust Infographic — materials, certifications, social proof, durability
-5. How-To Infographic — step-by-step usage or setup
-6. Lifestyle Image — aspirational real-world context with human presence
+STEP 4: Generate 7 Infographic Briefs
 
-STEP 5: Generate all 7 Infographic Briefs
+INFOGRAPHICS 1–4 (Awareness & Persuasion Layer)
+For each, provide:
+1. PURPOSE — the single job this image does in the buyer journey
+2. DOMINANT VISUAL MOMENTS (two) — describe the hero shot and the supporting visual
+3. COMPOSITION RULES (three) — layout/focal point, color/contrast, spacing/hierarchy
+4. HEADLINE — MAXIMUM 4 WORDS. Punchy, benefit-driven, scannable. Count strictly.
+5. SUBHEADLINE — MAXIMUM 6 WORDS. Expands on headline with specificity. Count strictly.
+6. SUPPORTING ELEMENT — one tactical visual or copy support (icon set, badge, callout, stat)
 
-For Infographics 1–4 (Awareness & Persuasion), each must contain:
-- image_type + justification (one sentence explaining slot choice)
-- purpose: the single job this image does in the buyer journey
-- dominant_visual_moments: two distinct visual descriptions
-- composition_rules: three specific layout/color/spacing rules
-- headline: STRICTLY ≤ 4 words — punchy, benefit-driven, scannable
-- subheadline: STRICTLY ≤ 6 words — expands on headline with specificity
-- supporting_element: one tactical visual or copy support element
-
-For Infographics 5–7 (Trust & Conversion), each must contain:
-- image_type + justification
-- intent: what specific buyer doubt does this image resolve
-- resolved_doubt: the exact objection being overcome (as a question)
-- main_subjects: two distinct visual elements
-- aesthetics: visual_style, mood, brand_alignment, premium_tone_via_material_cues
-- guidelines: 3–5 specific execution rules for the designer
-- emphasis: the single most important thing the viewer's eye must land on first
+INFOGRAPHICS 5–7 (Trust & Conversion Layer)
+For each, provide:
+1. INTENT — what specific buyer doubt or hesitation does this image resolve
+2. RESOLVED DOUBT — the exact objection being overcome (phrased as a question the buyer has)
+3. MAIN SUBJECTS (two) — primary visual element and secondary visual element
+4. AESTHETICS (four pillars):
+   - Visual Style: flat lay / lifestyle / close-up macro / infographic overlay / etc.
+   - Mood: the emotional tone
+   - Brand Alignment: how this image fits the brand identity and positioning
+   - Premium Tone via Material Cues: textures, finishes, surfaces, lighting, props that signal quality
+5. GUIDELINES — 3 to 5 execution rules for the designer
+6. EMPHASIS — the single most important thing the viewer's eye must land on first
 
 CRITICAL RULES:
-- Headlines MUST be ≤ 4 words — count strictly
-- Subheadlines MUST be ≤ 6 words — count strictly
-- Never assign an image type arbitrarily — justify from buyer journey or competitor gap logic
-- Keep all descriptions specific to THIS product — not generic boilerplate
-- Infographics 1–4 use the Awareness & Persuasion schema
-- Infographics 5–7 use the Trust & Conversion schema
+- Headlines MUST be ≤ 4 words. Count every word. Never exceed.
+- Subheadlines MUST be ≤ 6 words. Count every word. Never exceed.
+- Never skip a field — if data is unavailable, infer intelligently from product category norms
+- Flag inferred fields with "[inferred]" in the value
+- All content must be specific to THIS product — not generic boilerplate
 
-OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No markdown, no explanation, no code blocks.
+OUTPUT: Return ONLY a valid JSON object with this exact structure. No markdown, no explanation, no code blocks.
 
 {
   "asin": "string",
   "product_title": "string",
   "brand": "string",
-  "strategic_analysis": {
-    "core_pain_point": "string",
-    "hero_benefit": "string",
-    "skepticism_points": ["string", "string", "string", "string"],
-    "visual_identity_cues": "string",
-    "target_persona": "string"
-  },
+  "campaign_type": "Secondary Images",
+  "total_infographics": 7,
   "color_palette": {
-    "primary": {"hex": "#000000", "name": "string", "source": "scraped|inferred"},
-    "secondary": {"hex": "#000000", "name": "string", "source": "scraped|inferred"},
-    "accent": {"hex": "#000000", "name": "string", "source": "scraped|inferred"},
-    "background": {"hex": "#000000", "name": "string", "source": "scraped|inferred"},
-    "typography": {"hex": "#000000", "name": "string", "source": "scraped|inferred"}
+    "primary": {"hex": "#000000", "name": "string"},
+    "secondary": {"hex": "#000000", "name": "string"},
+    "accent": {"hex": "#000000", "name": "string"},
+    "background": {"hex": "#000000", "name": "string"},
+    "typography": {"hex": "#000000", "name": "string"},
+    "source": "scraped | inferred"
   },
   "competitor_gap": {
     "whitespace_opportunity": "string",
@@ -135,8 +127,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 1,
       "layer": "Awareness & Persuasion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "purpose": "string",
       "dominant_visual_moments": {"moment_1": "string", "moment_2": "string"},
       "composition_rules": ["string", "string", "string"],
@@ -147,8 +137,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 2,
       "layer": "Awareness & Persuasion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "purpose": "string",
       "dominant_visual_moments": {"moment_1": "string", "moment_2": "string"},
       "composition_rules": ["string", "string", "string"],
@@ -159,8 +147,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 3,
       "layer": "Awareness & Persuasion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "purpose": "string",
       "dominant_visual_moments": {"moment_1": "string", "moment_2": "string"},
       "composition_rules": ["string", "string", "string"],
@@ -171,8 +157,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 4,
       "layer": "Awareness & Persuasion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "purpose": "string",
       "dominant_visual_moments": {"moment_1": "string", "moment_2": "string"},
       "composition_rules": ["string", "string", "string"],
@@ -183,8 +167,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 5,
       "layer": "Trust & Conversion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "intent": "string",
       "resolved_doubt": "string",
       "main_subjects": {"subject_1": "string", "subject_2": "string"},
@@ -200,8 +182,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 6,
       "layer": "Trust & Conversion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "intent": "string",
       "resolved_doubt": "string",
       "main_subjects": {"subject_1": "string", "subject_2": "string"},
@@ -217,8 +197,6 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
     {
       "number": 7,
       "layer": "Trust & Conversion",
-      "image_type": "string",
-      "image_type_justification": "string",
       "intent": "string",
       "resolved_doubt": "string",
       "main_subjects": {"subject_1": "string", "subject_2": "string"},
@@ -236,40 +214,36 @@ OUTPUT: Return ONLY a valid JSON object matching the exact schema below. No mark
 
 
 def _build_user_message(product: dict, marketplace: str) -> str:
-    title = product.get("title") or "Unknown product"
-    brand = product.get("brand") or ""
+    title    = product.get("title") or "Unknown product"
+    brand    = product.get("brand") or ""
     category = product.get("category") or "General"
-    bullets = product.get("bullets") or []
-    asin = product.get("asin") or ""
+    bullets  = product.get("bullets") or []
+    asin     = product.get("asin") or ""
 
     bullets_text = (
         "\n".join(f"• {b}" for b in bullets[:6])
         if bullets else "• No bullet points available"
     )
 
-    return f"""PRODUCT DATA (scraped from Amazon):
+    return f"""PRODUCT DATA (scraped from Amazon {marketplace}):
 
 ASIN: {asin}
 Title: {title}
 Brand: {brand}
 Category: {category}
-Marketplace: Amazon {marketplace}
 
 Bullet Points:
 {bullets_text}
 
-Generate the complete 7-infographic campaign brief for this product following all rules in your instructions. Return only the JSON object."""
+Generate the complete 7-infographic campaign brief for this product following all rules. Return only the JSON object."""
 
 
 async def generate_infographic_brief(asin: str, marketplace: str) -> dict:
     """
     Generate a complete 7-infographic campaign brief for an Amazon ASIN.
 
-    Returns a dict with:
-        asin, product_title, brand, strategic_analysis,
-        color_palette, competitor_gap, infographics (7 items)
+    Returns a dict matching the JSON schema above.
     """
-    # Step 1: Scrape product data
     product: dict = {}
     try:
         product = await lookup_asin(asin, marketplace)
@@ -277,11 +251,12 @@ async def generate_infographic_brief(asin: str, marketplace: str) -> dict:
         print(f"[INFOGRAPHIC_BRIEF] ASIN lookup failed for {asin}: {e} — continuing with minimal data")
         product = {"asin": asin, "title": "", "brand": "", "category": "", "bullets": []}
 
-    # Step 2: Call Gemini to generate the full brief
     result = await _call_gemini(product, marketplace)
 
-    # Ensure asin/product_title/brand are always present from scraped data
+    # Ensure top-level fields are always populated from scraped data
     result["asin"] = asin
+    result.setdefault("campaign_type", "Secondary Images")
+    result.setdefault("total_infographics", 7)
     if not result.get("product_title") and product.get("title"):
         result["product_title"] = product["title"]
     if not result.get("brand") and product.get("brand"):
@@ -327,11 +302,13 @@ async def _call_gemini(product: dict, marketplace: str) -> dict:
     if not text:
         raise ValueError("Empty response from Gemini")
 
-    # Strip markdown code fences if present despite responseMimeType
+    # Strip markdown fences if present despite responseMimeType
     clean = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
     clean = re.sub(r"\s*```$", "", clean, flags=re.MULTILINE).strip()
 
     try:
         return json.loads(clean)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Infographic brief returned invalid JSON: {e}\n\nRaw (first 500 chars): {clean[:500]}")
+        raise ValueError(
+            f"Infographic brief returned invalid JSON: {e}\n\nRaw (first 500 chars): {clean[:500]}"
+        )
