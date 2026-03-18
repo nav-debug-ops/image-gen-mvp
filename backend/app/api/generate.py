@@ -145,15 +145,24 @@ async def create_hero_generation(
         active_prompt = build_hero_prompt(product, request.template_name)
         prompt_result = {"all_prompts": None, "image_prompts": [], "primary_prompt": active_prompt}
 
+    # If the scraped product has an image, use Gemini img2img (preserves actual
+    # product design). Fall back to Imagen 4 text-to-image when no image is available.
+    product_image_url = product.get("image_url")
+    if product_image_url:
+        generation_model = "gemini-2.5-flash-image"
+    else:
+        generation_model = "imagen-4.0-generate-001"
+
     try:
         gen = await generate_image(
             user_id=current_user.id,
             prompt=active_prompt,
             provider_name="gemini",
-            model="imagen-4.0-generate-001",
+            model=generation_model,
             aspect_ratio=request.aspect_ratio,
             width=1024,
             height=1024,
+            reference_image_url=product_image_url or None,
             failover=True,
             db=db,
         )
@@ -169,6 +178,7 @@ async def create_hero_generation(
             all_prompts=prompt_result.get("all_prompts"),
             image_prompts=prompt_result.get("image_prompts"),
             active_prompt=active_prompt,
+            failover_from="imagen-4" if product_image_url else None,
         )
     except HTTPException:
         raise
