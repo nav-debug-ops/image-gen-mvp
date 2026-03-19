@@ -8,7 +8,12 @@ httpx>=0.26.0
 
 # Database
 sqlalchemy>=2.0.25
-aiosqlite>=0.19.0
+aiosqlite>=0.19.0        # SQLite async (dev / single-server)
+asyncpg>=0.29.0          # PostgreSQL async (production)
+
+# HTML parsing
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
 
 # Authentication & Security
 python-jose[cryptography]>=3.3.0

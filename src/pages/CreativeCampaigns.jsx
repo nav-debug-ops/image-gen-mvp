@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { analyzeCampaign } from '../api/campaigns'
+import { analyzeCampaign, generateInfographicBrief } from '../api/campaigns'
 import {
   Search,
   FileText,
@@ -20,7 +20,12 @@ import {
   Star,
   ThumbsUp,
   ThumbsDown,
-  AlertCircle
+  AlertCircle,
+  Layers,
+  Copy,
+  Eye,
+  ShieldCheck,
+  Palette
 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -49,6 +54,12 @@ function CreativeCampaigns() {
   const [activeTab, setActiveTab] = useState('intel')
   const [expandedSections, setExpandedSections] = useState(['overview', 'sentiment'])
 
+  // Infographic brief state
+  const [infoBrief, setInfoBrief] = useState(null)
+  const [isBriefLoading, setIsBriefLoading] = useState(false)
+  const [briefLoadError, setBriefLoadError] = useState(null)
+  const [copiedHex, setCopiedHex] = useState(null)
+
   // Chat state
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
@@ -60,6 +71,32 @@ function CreativeCampaigns() {
         ? prev.filter(s => s !== section)
         : [...prev, section]
     )
+  }
+
+  const handleGenerateBrief = async () => {
+    if (!asinValue) return
+    setIsBriefLoading(true)
+    setBriefLoadError(null)
+    if (!hasResults) {
+      setHasResults(true)
+      setActiveTab('brief')
+    } else {
+      setActiveTab('brief')
+    }
+    try {
+      const result = await generateInfographicBrief({ asin: asinValue, marketplace })
+      setInfoBrief(result)
+    } catch (err) {
+      setBriefLoadError(err.message || 'Brief generation failed. Please try again.')
+    } finally {
+      setIsBriefLoading(false)
+    }
+  }
+
+  const copyHex = (hex) => {
+    navigator.clipboard.writeText(hex)
+    setCopiedHex(hex)
+    setTimeout(() => setCopiedHex(null), 1500)
   }
 
   const handleGenerate = async () => {
@@ -207,23 +244,42 @@ function CreativeCampaigns() {
                 </div>
               </div>
 
-              <button
-                className="btn btn-primary btn-large"
-                onClick={handleGenerate}
-                disabled={isProcessing || (inputMode === 'asin' ? !asinValue : !keyword)}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={20} className="spin" />
-                    {progress?.message}
-                  </>
-                ) : (
-                  <>
-                    <TrendingUp size={20} />
-                    Generate Market Intelligence
-                  </>
-                )}
-              </button>
+              <div className="cc-action-row">
+                <button
+                  className="btn btn-primary btn-large"
+                  onClick={handleGenerate}
+                  disabled={isProcessing || isBriefLoading || (inputMode === 'asin' ? !asinValue : !keyword)}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={20} className="spin" />
+                      {progress?.message}
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp size={20} />
+                      Market Intelligence
+                    </>
+                  )}
+                </button>
+                <button
+                  className="btn btn-secondary btn-large"
+                  onClick={handleGenerateBrief}
+                  disabled={isBriefLoading || isProcessing || !asinValue}
+                >
+                  {isBriefLoading ? (
+                    <>
+                      <Loader2 size={20} className="spin" />
+                      Building Brief...
+                    </>
+                  ) : (
+                    <>
+                      <Layers size={20} />
+                      Infographic Brief
+                    </>
+                  )}
+                </button>
+              </div>
 
               {error && (
                 <div className="error-message" style={{ marginTop: '12px' }}>
@@ -252,16 +308,17 @@ function CreativeCampaigns() {
               onClick={() => setActiveTab('intel')}
             >
               <BarChart3 size={18} />
-              View Market Intel
+              Market Intel
             </button>
             <button
               className={`results-tab ${activeTab === 'brief' ? 'active' : ''}`}
               onClick={() => setActiveTab('brief')}
             >
-              <Image size={18} />
-              View Brief
+              <Layers size={18} />
+              Infographic Brief
+              {infoBrief && <span className="tab-badge">7</span>}
             </button>
-            <button className="btn btn-secondary btn-sm export-btn">
+            <button className="btn btn-secondary btn-sm export-btn" style={{ marginLeft: 'auto' }}>
               <Download size={16} />
               Export PDF
             </button>
@@ -444,7 +501,269 @@ function CreativeCampaigns() {
             </div>
           ) : (
             <div className="creative-brief">
-              <p>Creative brief generation coming soon...</p>
+              {/* Loading state */}
+              {isBriefLoading && (
+                <div className="brief-loading-state">
+                  <Loader2 size={36} className="spin" />
+                  <p>Generating 7-infographic campaign brief...</p>
+                  <span>Analyzing product, extracting color palette, mapping competitor gaps</span>
+                </div>
+              )}
+
+              {/* Error state */}
+              {briefLoadError && !isBriefLoading && (
+                <div className="brief-error-state">
+                  <AlertCircle size={32} />
+                  <p>{briefLoadError}</p>
+                  <button className="btn btn-primary btn-sm" onClick={handleGenerateBrief}>
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!infoBrief && !isBriefLoading && !briefLoadError && (
+                <div className="brief-empty-state">
+                  <Layers size={48} />
+                  <p>No infographic brief yet</p>
+                  <span>Click "Infographic Brief" from the input screen, or:</span>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleGenerateBrief}
+                    disabled={!asinValue}
+                  >
+                    <Layers size={15} /> Generate Brief for {asinValue || 'this ASIN'}
+                  </button>
+                </div>
+              )}
+
+              {/* Full brief document */}
+              {infoBrief && !isBriefLoading && (
+                <div className="brief-doc">
+
+                  {/* Doc header */}
+                  <div className="brief-doc-header">
+                    <div className="brief-doc-title">
+                      <h2>{infoBrief.product_title || 'Product Brief'}</h2>
+                      <p className="brief-doc-meta">
+                        {infoBrief.brand && <span>{infoBrief.brand}</span>}
+                        {infoBrief.asin && <span>ASIN: {infoBrief.asin}</span>}
+                        <span>{infoBrief.campaign_type || 'Secondary Images'}</span>
+                      </p>
+                    </div>
+                    <div className="brief-doc-stats">
+                      <div className="brief-doc-stat">
+                        <span className="brief-doc-stat-num">{infoBrief.total_infographics || 7}</span>
+                        <span className="brief-doc-stat-label">Infographics</span>
+                      </div>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleGenerateBrief}
+                        disabled={isBriefLoading}
+                      >
+                        <Loader2 size={13} className={isBriefLoading ? 'spin' : ''} style={{ opacity: isBriefLoading ? 1 : 0, position: 'absolute' }} />
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Color Palette */}
+                  {infoBrief.color_palette && (
+                    <section className="brief-section">
+                      <div className="brief-section-title">
+                        <Palette size={18} />
+                        <h3>Brand Color Palette</h3>
+                        <span className="brief-section-source">{infoBrief.color_palette.source}</span>
+                      </div>
+                      <div className="brief-palette-grid">
+                        {['primary','secondary','accent','background','typography'].map(role => {
+                          const c = infoBrief.color_palette[role]
+                          if (!c) return null
+                          return (
+                            <div key={role} className="brief-palette-tile" onClick={() => copyHex(c.hex)}>
+                              <div className="brief-palette-color" style={{ background: c.hex }} />
+                              <div className="brief-palette-info">
+                                <span className="brief-palette-role">{role}</span>
+                                <span className="brief-palette-name">{c.name}</span>
+                                <span className="brief-palette-hex">
+                                  {copiedHex === c.hex ? <Check size={11} /> : <Copy size={11} />}
+                                  {c.hex}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Competitor Gap */}
+                  {infoBrief.competitor_gap && (
+                    <section className="brief-section">
+                      <div className="brief-section-title">
+                        <Target size={18} />
+                        <h3>Competitor Gap Analysis</h3>
+                      </div>
+                      <div className="brief-gap-cards">
+                        <div className="brief-gap-card brief-gap-whitespace">
+                          <div className="brief-gap-icon"><Eye size={18} /></div>
+                          <div>
+                            <h4>Whitespace Opportunity</h4>
+                            <p>{infoBrief.competitor_gap.whitespace_opportunity}</p>
+                          </div>
+                        </div>
+                        <div className="brief-gap-card brief-gap-hook">
+                          <div className="brief-gap-icon"><Zap size={18} /></div>
+                          <div>
+                            <h4>Differentiation Hook</h4>
+                            <p>{infoBrief.competitor_gap.differentiation_hook}</p>
+                          </div>
+                        </div>
+                      </div>
+                      {infoBrief.competitor_gap.competitors?.length > 0 && (
+                        <div className="brief-competitors-table-wrap">
+                          <table className="brief-competitors-table">
+                            <thead>
+                              <tr>
+                                <th>Competitor</th>
+                                <th>Hero Benefit</th>
+                                <th>Visual Style</th>
+                                <th>Price</th>
+                                <th>Strength</th>
+                                <th>Weakness</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {infoBrief.competitor_gap.competitors.map((c, i) => (
+                                <tr key={i}>
+                                  <td className="comp-name">{c.name}</td>
+                                  <td>{c.hero_benefit}</td>
+                                  <td>{c.visual_style}</td>
+                                  <td>{c.price_positioning}</td>
+                                  <td className="comp-strength">{c.strength}</td>
+                                  <td className="comp-weakness">{c.weakness}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Awareness & Persuasion Layer */}
+                  {infoBrief.infographics?.filter(i => i.layer === 'Awareness & Persuasion').length > 0 && (
+                    <section className="brief-section">
+                      <div className="brief-section-title">
+                        <TrendingUp size={18} />
+                        <h3>Layer 1: Awareness & Persuasion</h3>
+                        <span className="brief-layer-pill awareness">Infographics 1–4</span>
+                      </div>
+                      <div className="brief-infographics-grid awareness-grid">
+                        {infoBrief.infographics.filter(i => i.layer === 'Awareness & Persuasion').map(brief => (
+                          <div key={brief.number} className="brief-infographic-card awareness-card">
+                            <div className="bic-header">
+                              <div className="bic-num">{brief.number}</div>
+                              <div className="bic-headlines">
+                                <span className="bic-headline">{brief.headline}</span>
+                                <span className="bic-subheadline">{brief.subheadline}</span>
+                              </div>
+                            </div>
+                            <div className="bic-body">
+                              <div className="bic-field">
+                                <label>Purpose</label>
+                                <p>{brief.purpose}</p>
+                              </div>
+                              <div className="bic-visuals">
+                                <div className="bic-field">
+                                  <label>Hero Shot</label>
+                                  <p>{brief.dominant_visual_moments?.moment_1}</p>
+                                </div>
+                                <div className="bic-field">
+                                  <label>Supporting Visual</label>
+                                  <p>{brief.dominant_visual_moments?.moment_2}</p>
+                                </div>
+                              </div>
+                              {brief.composition_rules?.length > 0 && (
+                                <div className="bic-field">
+                                  <label>Composition Rules</label>
+                                  <ul className="bic-rules">
+                                    {brief.composition_rules.map((r, i) => <li key={i}>{r}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {brief.supporting_element && (
+                                <div className="bic-field bic-support">
+                                  <label>Supporting Element</label>
+                                  <p>{brief.supporting_element}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Trust & Conversion Layer */}
+                  {infoBrief.infographics?.filter(i => i.layer === 'Trust & Conversion').length > 0 && (
+                    <section className="brief-section">
+                      <div className="brief-section-title">
+                        <ShieldCheck size={18} />
+                        <h3>Layer 2: Trust & Conversion</h3>
+                        <span className="brief-layer-pill trust">Infographics 5–7</span>
+                      </div>
+                      <div className="brief-infographics-grid trust-grid">
+                        {infoBrief.infographics.filter(i => i.layer === 'Trust & Conversion').map(brief => (
+                          <div key={brief.number} className="brief-infographic-card trust-card">
+                            <div className="bic-header">
+                              <div className="bic-num trust-num">{brief.number}</div>
+                              <div className="bic-headlines">
+                                <span className="bic-headline">{brief.intent}</span>
+                                <span className="bic-subheadline bic-doubt">"{brief.resolved_doubt}"</span>
+                              </div>
+                            </div>
+                            <div className="bic-body">
+                              <div className="bic-visuals">
+                                <div className="bic-field">
+                                  <label>Primary Subject</label>
+                                  <p>{brief.main_subjects?.subject_1}</p>
+                                </div>
+                                <div className="bic-field">
+                                  <label>Secondary Subject</label>
+                                  <p>{brief.main_subjects?.subject_2}</p>
+                                </div>
+                              </div>
+                              {brief.aesthetics && (
+                                <div className="bic-aesthetics">
+                                  <span><strong>Style:</strong> {brief.aesthetics.visual_style}</span>
+                                  <span><strong>Mood:</strong> {brief.aesthetics.mood}</span>
+                                  <span className="bic-premium">{brief.aesthetics.premium_tone_via_material_cues}</span>
+                                </div>
+                              )}
+                              {brief.guidelines?.length > 0 && (
+                                <div className="bic-field">
+                                  <label>Designer Guidelines</label>
+                                  <ul className="bic-rules">
+                                    {brief.guidelines.map((g, i) => <li key={i}>{g}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {brief.emphasis && (
+                                <div className="bic-field bic-emphasis-field">
+                                  <label>Key Emphasis</label>
+                                  <p className="bic-emphasis">{brief.emphasis}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                </div>
+              )}
             </div>
           )}
 

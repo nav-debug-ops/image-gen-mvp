@@ -313,7 +313,7 @@ async def generate_hero_prompts(product: dict) -> dict:
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.0-flash:generateContent?key={settings.gemini_api_key}"
+        f"gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
     )
 
     request_body = {
@@ -325,7 +325,7 @@ async def generate_hero_prompts(product: dict) -> dict:
         ],
         "generationConfig": {
             "temperature": 0.75,
-            "maxOutputTokens": 8192,
+            "maxOutputTokens": 16384,
             "responseMimeType": "text/plain",
         },
     }

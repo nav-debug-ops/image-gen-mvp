@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
+import { generateInfographicBrief } from '../api/campaigns'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import KeywordInputPanel from '../components/KeywordInputPanel'
 import EvalScoreBadge from '../components/EvalScoreBadge'
@@ -136,6 +137,41 @@ function buildPromptForType(typeId, data, keywords = []) {
 }
 // ───────────────────────────────────────────────────────────────────────────
 
+// Build a generatable image prompt from a 7-infographic brief card
+function buildPromptFromBrief(brief, productTitle) {
+  const title = productTitle || 'the product'
+  if (brief.layer === 'Awareness & Persuasion') {
+    const m1 = brief.dominant_visual_moments?.moment_1 || ''
+    const m2 = brief.dominant_visual_moments?.moment_2 || ''
+    const rules = (brief.composition_rules || []).join('. ')
+    return (
+      `Professional Amazon listing infographic for "${title}". ` +
+      `${brief.purpose}. ` +
+      `Hero shot: ${m1}. Supporting visual: ${m2}. ` +
+      `Composition: ${rules}. ` +
+      `Headline text on image: "${brief.headline}". ` +
+      `Subheadline: "${brief.subheadline}". ` +
+      `Include: ${brief.supporting_element}. ` +
+      `Ultra sharp studio quality, clean professional Amazon secondary image.`
+    )
+  } else {
+    const s1 = brief.main_subjects?.subject_1 || ''
+    const s2 = brief.main_subjects?.subject_2 || ''
+    const guidelines = (brief.guidelines || []).join('. ')
+    const a = brief.aesthetics || {}
+    return (
+      `Professional Amazon listing image for "${title}". ` +
+      `${brief.intent}. ` +
+      `Primary subject: ${s1}. Secondary subject: ${s2}. ` +
+      `Visual style: ${a.visual_style}. Mood: ${a.mood}. ` +
+      `Premium cues: ${a.premium_tone_via_material_cues}. ` +
+      `${guidelines}. ` +
+      `Focus emphasis: ${brief.emphasis}. ` +
+      `Ultra sharp studio quality, professional Amazon listing image.`
+    )
+  }
+}
+
 // Mock campaign summary data (would come from Creative Campaigns)
 const MOCK_CAMPAIGN_SUMMARY = {
   productName: 'Premium Stainless Steel Water Bottle',
@@ -208,6 +244,14 @@ function SecondaryImageGenerator() {
 
   // Keyword panel state: { [typeId]: string[] }
   const [mergedKeywords, setMergedKeywords] = useState({})
+
+  // Infographic brief state
+  const [infographicBrief, setInfographicBrief] = useState(null)
+  const [briefLoading, setBriefLoading] = useState(false)
+  const [briefError, setBriefError] = useState(null)
+  const [briefMode, setBriefMode] = useState(false)
+  const [briefGenerating, setBriefGenerating] = useState({}) // { [brief.number]: bool }
+  const [briefImages, setBriefImages] = useState({})         // { [brief.number]: imageObj }
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)
@@ -364,6 +408,61 @@ function SecondaryImageGenerator() {
     setReferenceImageUrl(null)
     setTypePrompts({})
     setTimeout(() => asinInputRef.current?.focus(), 50)
+  }
+
+  // Fetch the 7-infographic AI brief from the backend
+  const handleGenerateBrief = async () => {
+    if (!asinProduct) return
+    setBriefLoading(true)
+    setBriefError(null)
+    try {
+      const result = await generateInfographicBrief({
+        asin: asinProduct.asin || asin.trim().toUpperCase(),
+        marketplace: 'US',
+      })
+      setInfographicBrief(result)
+      setBriefMode(true)
+      setBriefImages({})
+    } catch (err) {
+      setBriefError(err.message || 'Failed to generate infographic brief')
+    } finally {
+      setBriefLoading(false)
+    }
+  }
+
+  // Generate one image from a brief card
+  const handleGenerateBriefImage = async (brief) => {
+    const num = brief.number
+    setBriefGenerating(prev => ({ ...prev, [num]: true }))
+    const prompt = buildPromptFromBrief(brief, campaignData?.productName || infographicBrief?.product_title || '')
+    const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
+    try {
+      const result = await generateImage(prompt, {
+        width: selectedRatio?.width || 2000,
+        height: selectedRatio?.height || 2000,
+        aspectRatio,
+        referenceImageUrl: referenceImageUrl || undefined,
+      })
+      const isAwareness = brief.layer === 'Awareness & Persuasion'
+      const newImg = {
+        id: Date.now(),
+        url: result.url,
+        typeName: `Infographic ${num} — ${isAwareness ? brief.headline : brief.intent?.slice(0, 30)}`,
+        typeId: `brief_${num}`,
+        typeColor: isAwareness ? '#ff9900' : '#8B5CF6',
+        prompt,
+        briefNumber: num,
+        provider: result.provider,
+        aspectRatio,
+        timestamp: new Date().toISOString(),
+      }
+      setBriefImages(prev => ({ ...prev, [num]: newImg }))
+      setGeneratedImages(prev => [...prev, newImg])
+    } catch (err) {
+      setError(err.message || `Failed to generate brief image ${num}`)
+    } finally {
+      setBriefGenerating(prev => ({ ...prev, [num]: false }))
+    }
   }
 
   // Called when user clicks "Merge & Use Selected" in the keyword panel
@@ -586,6 +685,20 @@ function SecondaryImageGenerator() {
                     <button className="asin-change-btn" onClick={handleRejectProduct} style={{ marginTop: 6 }}>
                       Change product
                     </button>
+                    <button
+                      className="btn btn-primary btn-sm brief-trigger-btn"
+                      onClick={handleGenerateBrief}
+                      disabled={briefLoading}
+                    >
+                      {briefLoading ? (
+                        <><Loader2 size={14} className="spin" /> Generating Brief...</>
+                      ) : infographicBrief ? (
+                        <><Sparkles size={14} /> Regenerate AI Brief</>
+                      ) : (
+                        <><Sparkles size={14} /> Generate 7-Infographic Brief</>
+                      )}
+                    </button>
+                    {briefError && <div className="asin-lookup-error" style={{ marginTop: 6 }}>{briefError}</div>}
                   </div>
                 )}
               </div>
@@ -724,99 +837,222 @@ function SecondaryImageGenerator() {
           </button>
         </div>
 
-        {/* Center Panel - Prompt Editor */}
+        {/* Center Panel - Prompt Editor / AI Brief */}
         <div className="prompts-section">
           <div className="prompts-header">
-            <h3>
-              <Edit3 size={18} />
-              Prompt Editor
-            </h3>
+            <div className="brief-mode-tabs">
+              <button
+                className={`brief-tab ${!briefMode ? 'active' : ''}`}
+                onClick={() => setBriefMode(false)}
+              >
+                <Edit3 size={14} /> Prompt Editor
+              </button>
+              <button
+                className={`brief-tab ${briefMode ? 'active' : ''}`}
+                onClick={() => setBriefMode(true)}
+                disabled={!infographicBrief}
+                title={!infographicBrief ? 'Generate an AI brief first' : ''}
+              >
+                <Sparkles size={14} /> AI Brief {infographicBrief ? '(7)' : ''}
+              </button>
+            </div>
           </div>
 
-          {!selectedType ? (
-            <div className="prompts-empty">
-              <Sparkles size={48} />
-              <p>Select an image type to see the auto-generated prompt</p>
-              <span>You can edit the prompt before generating</span>
-            </div>
-          ) : (
-            <div className="prompt-editor-container">
-              {(() => {
-                const imageType = SECONDARY_IMAGE_TYPES.find(t => t.id === selectedType)
+          {briefMode && infographicBrief ? (
+            <div className="brief-cards-container">
+              {/* Color palette strip */}
+              {infographicBrief.color_palette && (
+                <div className="brief-palette-strip">
+                  {['primary','secondary','accent','background','typography'].map(key => {
+                    const c = infographicBrief.color_palette[key]
+                    return c ? (
+                      <div key={key} className="brief-palette-swatch" title={`${key}: ${c.name} ${c.hex}`}>
+                        <div className="brief-swatch-color" style={{ background: c.hex }} />
+                        <span>{key}</span>
+                      </div>
+                    ) : null
+                  })}
+                </div>
+              )}
+
+              {infographicBrief.infographics.map((brief) => {
+                const isAwareness = brief.layer === 'Awareness & Persuasion'
+                const isGeneratingThis = briefGenerating[brief.number]
+                const generatedImg = briefImages[brief.number]
                 return (
-                  <div className="prompt-card active-prompt">
-                    <div className="prompt-header">
-                      <span
-                        className="prompt-type-badge"
-                        style={{ backgroundColor: imageType?.color }}
+                  <div key={brief.number} className={`brief-card ${isAwareness ? 'brief-card-awareness' : 'brief-card-trust'}`}>
+                    <div className="brief-card-header">
+                      <div className="brief-card-num">{brief.number}</div>
+                      <div className="brief-card-meta">
+                        <span className={`brief-layer-badge ${isAwareness ? 'awareness' : 'trust'}`}>
+                          {isAwareness ? 'Awareness' : 'Trust & Conversion'}
+                        </span>
+                        {isAwareness && brief.headline && (
+                          <span className="brief-headline-preview">"{brief.headline}"</span>
+                        )}
+                        {!isAwareness && brief.intent && (
+                          <span className="brief-headline-preview">{brief.intent.slice(0, 60)}{brief.intent.length > 60 ? '…' : ''}</span>
+                        )}
+                      </div>
+                      <button
+                        className="brief-generate-img-btn"
+                        onClick={() => handleGenerateBriefImage(brief)}
+                        disabled={isGeneratingThis}
                       >
-                        {imageType?.name}
-                      </span>
-                      <div className="prompt-actions">
-                        <button
-                          className="action-btn"
-                          onClick={() => copyPrompt(typePrompts[selectedType] || '')}
-                          title="Copy prompt"
-                        >
-                          <Copy size={14} />
-                        </button>
-                        <button
-                          className="action-btn"
-                          onClick={() => resetToDefault(selectedType)}
-                          title="Reset to auto-generated prompt"
-                        >
-                          <RefreshCw size={14} />
-                        </button>
-                      </div>
+                        {isGeneratingThis
+                          ? <><Loader2 size={13} className="spin" /> Generating…</>
+                          : generatedImg
+                          ? <><RefreshCw size={13} /> Regenerate</>
+                          : <><Image size={13} /> Generate Image</>}
+                      </button>
                     </div>
 
-                    {hasCampaignData && (
-                      <KeywordInputPanel
-                        typeId={selectedType}
-                        asinProduct={asinProduct}
-                        onMerge={(kws) => handleKeywordsMerge(selectedType, kws)}
-                      />
+                    <div className="brief-card-body">
+                      {isAwareness ? (
+                        <>
+                          <p className="brief-field"><strong>Purpose:</strong> {brief.purpose}</p>
+                          <div className="brief-two-col">
+                            <p className="brief-field"><strong>Headline:</strong> {brief.headline}</p>
+                            <p className="brief-field"><strong>Subheadline:</strong> {brief.subheadline}</p>
+                          </div>
+                          <p className="brief-field"><strong>Moment 1:</strong> {brief.dominant_visual_moments?.moment_1}</p>
+                          <p className="brief-field"><strong>Moment 2:</strong> {brief.dominant_visual_moments?.moment_2}</p>
+                          {brief.supporting_element && (
+                            <p className="brief-field"><strong>Supporting:</strong> {brief.supporting_element}</p>
+                          )}
+                          {brief.composition_rules?.length > 0 && (
+                            <ul className="brief-rules-list">
+                              {brief.composition_rules.map((r, i) => <li key={i}>{r}</li>)}
+                            </ul>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="brief-field"><strong>Intent:</strong> {brief.intent}</p>
+                          <p className="brief-field brief-field-doubt"><strong>Resolved doubt:</strong> {brief.resolved_doubt}</p>
+                          <div className="brief-two-col">
+                            <p className="brief-field"><strong>Subject 1:</strong> {brief.main_subjects?.subject_1}</p>
+                            <p className="brief-field"><strong>Subject 2:</strong> {brief.main_subjects?.subject_2}</p>
+                          </div>
+                          {brief.aesthetics && (
+                            <div className="brief-aesthetics">
+                              <span><strong>Style:</strong> {brief.aesthetics.visual_style}</span>
+                              <span><strong>Mood:</strong> {brief.aesthetics.mood}</span>
+                            </div>
+                          )}
+                          {brief.guidelines?.length > 0 && (
+                            <ul className="brief-rules-list">
+                              {brief.guidelines.map((g, i) => <li key={i}>{g}</li>)}
+                            </ul>
+                          )}
+                          {brief.emphasis && (
+                            <p className="brief-field brief-emphasis"><strong>Emphasis:</strong> {brief.emphasis}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {generatedImg && (
+                      <div className="brief-card-result">
+                        <img
+                          src={generatedImg.url}
+                          alt={`Brief ${brief.number}`}
+                          onClick={() => handleOpenLightbox(generatedImg)}
+                        />
+                      </div>
                     )}
-
-                    <div className="prompt-edit-area">
-                      <label className="prompt-label">
-                        {mergedKeywords[selectedType]?.length > 0
-                          ? `Prompt updated with ${mergedKeywords[selectedType].length} keywords (editable):`
-                          : 'Auto-generated prompt from campaign data (editable):'}
-                      </label>
-                      <textarea
-                        className="prompt-textarea"
-                        value={typePrompts[selectedType] || ''}
-                        onChange={(e) => updateTypePrompt(selectedType, e.target.value)}
-                        rows={8}
-                        placeholder="Enter your custom prompt or let it auto-generate from campaign data..."
-                      />
-                      <div className="prompt-char-count">
-                        {(typePrompts[selectedType] || '').length} characters
-                      </div>
-                    </div>
                   </div>
                 )
-              })()}
-
-              {error && <div className="error-message">{error}</div>}
+              })}
             </div>
-          )}
+          ) : (
+            <>
+              {!selectedType ? (
+                <div className="prompts-empty">
+                  <Sparkles size={48} />
+                  <p>Select an image type to see the auto-generated prompt</p>
+                  <span>You can edit the prompt before generating</span>
+                </div>
+              ) : (
+                <div className="prompt-editor-container">
+                  {(() => {
+                    const imageType = SECONDARY_IMAGE_TYPES.find(t => t.id === selectedType)
+                    return (
+                      <div className="prompt-card active-prompt">
+                        <div className="prompt-header">
+                          <span
+                            className="prompt-type-badge"
+                            style={{ backgroundColor: imageType?.color }}
+                          >
+                            {imageType?.name}
+                          </span>
+                          <div className="prompt-actions">
+                            <button
+                              className="action-btn"
+                              onClick={() => copyPrompt(typePrompts[selectedType] || '')}
+                              title="Copy prompt"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <button
+                              className="action-btn"
+                              onClick={() => resetToDefault(selectedType)}
+                              title="Reset to auto-generated prompt"
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                          </div>
+                        </div>
 
-          {/* Progress Bar */}
-          {isGenerating && progress && (
-            <div className="generation-progress">
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{ width: `${progress.percentage || 0}%` }}
-                />
-              </div>
-              <div className="progress-info">
-                <span className="progress-text">{progress.message}</span>
-                <span className="progress-count">{progress.current} / {progress.total}</span>
-              </div>
-            </div>
+                        {hasCampaignData && (
+                          <KeywordInputPanel
+                            typeId={selectedType}
+                            asinProduct={asinProduct}
+                            onMerge={(kws) => handleKeywordsMerge(selectedType, kws)}
+                          />
+                        )}
+
+                        <div className="prompt-edit-area">
+                          <label className="prompt-label">
+                            {mergedKeywords[selectedType]?.length > 0
+                              ? `Prompt updated with ${mergedKeywords[selectedType].length} keywords (editable):`
+                              : 'Auto-generated prompt from campaign data (editable):'}
+                          </label>
+                          <textarea
+                            className="prompt-textarea"
+                            value={typePrompts[selectedType] || ''}
+                            onChange={(e) => updateTypePrompt(selectedType, e.target.value)}
+                            rows={8}
+                            placeholder="Enter your custom prompt or let it auto-generate from campaign data..."
+                          />
+                          <div className="prompt-char-count">
+                            {(typePrompts[selectedType] || '').length} characters
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {error && <div className="error-message">{error}</div>}
+                </div>
+              )}
+
+              {/* Progress Bar */}
+              {isGenerating && progress && (
+                <div className="generation-progress">
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${progress.percentage || 0}%` }}
+                    />
+                  </div>
+                  <div className="progress-info">
+                    <span className="progress-text">{progress.message}</span>
+                    <span className="progress-count">{progress.current} / {progress.total}</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 

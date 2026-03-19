@@ -1,0 +1,29 @@
+# ── Railway deployment config ─────────────────────────────────────────────────
+# Deploys only the FastAPI backend.
+# Railway provides a managed PostgreSQL plugin — set DATABASE_URL in the
+# Railway dashboard using the connection string Railway generates.
+#
+# Required env vars (set in Railway dashboard → Variables):
+#   DATABASE_URL      — from Railway Postgres plugin (set automatically if linked)
+#   SECRET_KEY        — 64-char random string
+#   REPLICATE_API_TOKEN
+#   GEMINI_API_KEY
+#   FRONTEND_URL      — e.g. https://your-frontend.railway.app (or Vercel URL)
+#   APP_ENV           — production
+#   DEBUG             — false
+# ──────────────────────────────────────────────────────────────────────────────
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "backend/Dockerfile"
+buildCommand = ""
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "backend"

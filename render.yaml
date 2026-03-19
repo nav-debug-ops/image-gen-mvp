@@ -1,0 +1,62 @@
+# ── Render.com deployment config ──────────────────────────────────────────────
+# Deploys backend (FastAPI) + a managed PostgreSQL database.
+#
+# Steps to deploy:
+#   1. Push this repo to GitHub
+#   2. Go to render.com → New → Blueprint → connect repo
+#   3. Render auto-discovers this file and creates all services
+#   4. Set secret env vars in Render dashboard:
+#        SECRET_KEY, REPLICATE_API_TOKEN, GEMINI_API_KEY,
+#        SMTP_PASSWORD, FRONTEND_URL
+# ──────────────────────────────────────────────────────────────────────────────
+
+databases:
+  - name: imagegen-db
+    plan: free          # upgrade to starter ($7/mo) for production
+    databaseName: imagegen
+    user: imagegen
+
+services:
+  - type: web
+    name: imagegen-backend
+    plan: free          # upgrade to starter for no cold-start
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: imagegen-db
+          property: connectionString
+      # Transform postgres:// → postgresql+asyncpg:// for SQLAlchemy
+      - key: DATABASE_URL
+        value: ""         # overridden by fromDatabase above; asyncpg prefix added below
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        sync: false       # set manually in Render dashboard
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_PATH
+        value: ./generated
+      - key: DAILY_GENERATION_LIMIT
+        value: "50"
+      - key: MONTHLY_GENERATION_LIMIT
+        value: "1000"
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "10080"
+    healthCheckPath: /health
+    disk:
+      name: generated-images
+      mountPath: /app/generated
+      sizeGB: 5

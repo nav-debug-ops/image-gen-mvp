@@ -13,3 +13,17 @@ export async function analyzeCampaign({ asin, marketplace }) {
 
   return safeJson(res)
 }
+
+export async function generateInfographicBrief({ asin, marketplace = 'US' }) {
+  const res = await fetchAPI('/api/campaigns/infographic-brief', {
+    method: 'POST',
+    body: JSON.stringify({ asin, marketplace }),
+  })
+
+  if (!res.ok) {
+    const err = await safeJson(res)
+    throw new Error(typeof err?.detail === 'string' ? err.detail : `Infographic brief failed (${res.status})`)
+  }
+
+  return safeJson(res)
+}

@@ -1,32 +1,75 @@
 version: '3.9'
 
+# ─── Production docker-compose ────────────────────────────────────────────────
+# Usage:
+#   cp backend/.env.example backend/.env   # fill in API keys & secrets
+#   POSTGRES_PASSWORD=strongpassword docker-compose up -d --build
+#
+# Required env vars (set in shell or a root .env file):
+#   POSTGRES_PASSWORD  — PostgreSQL superuser password
+# All other backend settings live in backend/.env
+# ──────────────────────────────────────────────────────────────────────────────
+
 services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: imagegen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
+      POSTGRES_DB: imagegen
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U imagegen -d imagegen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── FastAPI backend ─────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
     env_file:
       - ./backend/.env
+    environment:
+      # Override database_url so it always points to the postgres container
+      DATABASE_URL: postgresql+asyncpg://imagegen:${POSTGRES_PASSWORD:-changeme_in_production}@db:5432/imagegen
+      APP_ENV: production
+      DEBUG: "false"
     volumes:
       - generated_images:/app/generated
-    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    # Do NOT expose port 8000 publicly — nginx proxies to it
+    expose:
+      - "8000"
 
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.frontend
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - backend
-  #   restart: unless-stopped
+  # ── Nginx + React frontend ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   generated_images:
+  postgres_data:

@@ -141,7 +141,6 @@ async def create_hero_generation(
         active_prompt = prompts_list[variation_idx] if prompts_list else prompt_result["primary_prompt"]
     except Exception as e:
         # Fall back to deterministic prompt builder if AI prompt generation fails
-        print(f"[hero] AI prompt generation failed ({e}), falling back to template builder")
         active_prompt = build_hero_prompt(product, request.template_name)
         prompt_result = {"all_prompts": None, "image_prompts": [], "primary_prompt": active_prompt}
 
@@ -179,6 +178,7 @@ async def create_hero_generation(
             image_prompts=prompt_result.get("image_prompts"),
             active_prompt=active_prompt,
             failover_from="imagen-4" if product_image_url else None,
+            error=None,
         )
     except HTTPException:
         raise
