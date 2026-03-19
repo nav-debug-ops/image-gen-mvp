@@ -7,7 +7,7 @@ import os
 from app.config import get_settings
 from app.database import create_tables
 from app.services.providers import init_providers
-from app.api import auth, generate, images, prompts, usage, asin, keywords, eval as eval_api, copywriter, campaigns
+from app.api import auth, generate, images, prompts, usage, asin, keywords, eval as eval_api, copywriter, campaigns, content
 
 settings = get_settings()
 
@@ -56,6 +56,7 @@ app.include_router(keywords.router, prefix="/api/keywords", tags=["Keywords"])
 app.include_router(eval_api.router, prefix="/api/eval", tags=["Eval"])
 app.include_router(copywriter.router, prefix="/api/copywriter", tags=["Copywriter"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["Campaigns"])
+app.include_router(content.router, prefix="/api/content", tags=["Content"])
 
 
 @app.get("/")

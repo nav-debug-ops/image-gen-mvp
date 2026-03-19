@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
@@ -462,24 +463,39 @@ function BrandStory() {
     }
   }
 
-  // Generate AI text content (mock — headline/body/qa)
+  // Generate AI text content via /api/content/generate
   const generateModuleContent = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
-    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!module) return
 
-    if (module?.type === 'brand-qa') {
-      updateModuleData(instanceId, 'qaItems', [
-        { question: `What makes ${CREATIVE_CAMPAIGN_DATA.brandName} different?`, answer: `We combine ${CREATIVE_CAMPAIGN_DATA.brandValues[0].toLowerCase()} with ${CREATIVE_CAMPAIGN_DATA.brandValues[1].toLowerCase()} to deliver exceptional products.` },
-        { question: `What is ${CREATIVE_CAMPAIGN_DATA.brandName}'s mission?`, answer: CREATIVE_CAMPAIGN_DATA.brandMission },
-        { question: `Who are ${CREATIVE_CAMPAIGN_DATA.brandName} products for?`, answer: CREATIVE_CAMPAIGN_DATA.targetAudience }
-      ])
-    } else {
-      updateModuleData(instanceId, 'headline', `${CREATIVE_CAMPAIGN_DATA.brandName} — ${CREATIVE_CAMPAIGN_DATA.brandValues[0]}`)
-      updateModuleData(instanceId, 'body', CREATIVE_CAMPAIGN_DATA.brandStory)
+    if (!isValidASIN(asinValue)) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: 'Enter a valid ASIN first to generate content' }))
+      return
     }
 
-    setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    setModuleErrors(prev => ({ ...prev, [instanceId]: null }))
+
+    try {
+      const result = await generateModuleContentAPI({
+        asin: asinValue,
+        pageType: 'brand_story',
+        moduleType: module.id,
+      })
+      if (module.type === 'brand-qa' && result.qa_pairs?.length) {
+        updateModuleData(instanceId, 'qaItems', result.qa_pairs.map(p => ({
+          question: p.question || '',
+          answer: p.answer || '',
+        })))
+      } else {
+        if (result.headline) updateModuleData(instanceId, 'headline', result.headline)
+        if (result.body)     updateModuleData(instanceId, 'body',     result.body)
+      }
+    } catch (err) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: err.message || 'Content generation failed' }))
+    } finally {
+      setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    }
   }
 
   // Regenerate prompt

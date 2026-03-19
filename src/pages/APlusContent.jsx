@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
@@ -975,31 +976,36 @@ function APlusContent() {
     }
   }
 
-  // Generate AI text content for module (headline, body, highlights, specs)
+  // Generate AI text content for module via /api/content/generate
   const generateModuleContent = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
-    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    if (!module) return
 
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    const sampleContent = {
-      headline: `Premium Quality ${module?.name || 'Product'} Feature`,
-      body: 'Discover the exceptional craftsmanship and attention to detail that sets our product apart. Made with premium materials for lasting durability and performance.',
-      highlights: ['Premium quality materials', 'Ergonomic design for comfort', 'Built to last with durability', 'Satisfaction guaranteed'],
-      specs: [
-        { label: 'Material', value: 'Premium Grade' },
-        { label: 'Dimensions', value: 'Standard Size' },
-        { label: 'Weight', value: 'Lightweight' },
-        { label: 'Warranty', value: '1 Year' }
-      ]
+    if (!isValidASIN(asinValue)) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: 'Enter a valid ASIN first to generate content' }))
+      return
     }
 
-    updateModuleData(instanceId, 'headline', sampleContent.headline)
-    updateModuleData(instanceId, 'body', sampleContent.body)
-    if (module?.textType === 'highlights') updateModuleData(instanceId, 'highlights', sampleContent.highlights)
-    if (module?.textType === 'specs') updateModuleData(instanceId, 'specs', sampleContent.specs)
+    setGeneratingModules(prev => ({ ...prev, [instanceId]: true }))
+    setModuleErrors(prev => ({ ...prev, [instanceId]: null }))
 
-    setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    try {
+      const result = await generateModuleContentAPI({
+        asin: asinValue,
+        pageType: 'aplus',
+        moduleType: module.id,
+      })
+      if (result.headline) updateModuleData(instanceId, 'headline', result.headline)
+      if (result.body)     updateModuleData(instanceId, 'body',     result.body)
+      if (module.textType === 'highlights' && result.highlights?.length)
+        updateModuleData(instanceId, 'highlights', result.highlights)
+      if (module.textType === 'specs' && result.specs?.length)
+        updateModuleData(instanceId, 'specs', result.specs)
+    } catch (err) {
+      setModuleErrors(prev => ({ ...prev, [instanceId]: err.message || 'Content generation failed' }))
+    } finally {
+      setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
+    }
   }
 
   // Regenerate AI prompt for module

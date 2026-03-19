@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import {
   Upload,
@@ -370,6 +371,10 @@ function StorefrontDesigner() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [draggedIndex, setDraggedIndex] = useState(null)
 
+  // ASIN for content generation
+  const [asinValue, setAsinValue] = useState('')
+  const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
+
   // UI state
   const [productCategory, setProductCategory] = useState('')
   const [previewMode, setPreviewMode] = useState(false)
@@ -603,16 +608,32 @@ function StorefrontDesigner() {
     }
   }
 
-  // Generate AI text content (mock)
+  // Generate AI text content via /api/content/generate
   const generateWidgetContent = async (instanceId) => {
     const widget = currentWidgets.find(w => w.instanceId === instanceId)
-    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: true }))
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    if (widget?.hasText) {
-      updateWidgetData(instanceId, 'headline', `${CREATIVE_CAMPAIGN_DATA.brandName} — ${CREATIVE_CAMPAIGN_DATA.keyBenefits[0]}`)
-      updateWidgetData(instanceId, 'body', CREATIVE_CAMPAIGN_DATA.brandStory)
+    if (!widget) return
+
+    if (!isValidASIN(asinValue)) {
+      setWidgetErrors(prev => ({ ...prev, [instanceId]: 'Enter a valid ASIN first to generate content' }))
+      return
     }
-    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: false }))
+
+    setGeneratingWidgets(prev => ({ ...prev, [instanceId]: true }))
+    setWidgetErrors(prev => ({ ...prev, [instanceId]: null }))
+
+    try {
+      const result = await generateModuleContentAPI({
+        asin: asinValue,
+        pageType: 'storefront',
+        moduleType: widget.id,
+      })
+      if (result.headline) updateWidgetData(instanceId, 'headline', result.headline)
+      if (result.body)     updateWidgetData(instanceId, 'body',     result.body)
+    } catch (err) {
+      setWidgetErrors(prev => ({ ...prev, [instanceId]: err.message || 'Content generation failed' }))
+    } finally {
+      setGeneratingWidgets(prev => ({ ...prev, [instanceId]: false }))
+    }
   }
 
   const regeneratePrompt = (instanceId, widgetType) => {
@@ -947,6 +968,16 @@ function StorefrontDesigner() {
             <span className="brand-story-badge">Amazon Store</span>
           </div>
           <div className="toolbar-center">
+            <div className="asin-input-compact">
+              <input
+                type="text"
+                className="asin-input-field"
+                placeholder="ASIN for AI content"
+                value={asinValue}
+                onChange={(e) => setAsinValue(e.target.value.trim().toUpperCase())}
+                maxLength={10}
+              />
+            </div>
             <select
               className="category-dropdown"
               value={productCategory}
