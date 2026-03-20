@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecommerce Image Quality Rubric Scorecard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          background: #F8FAFC; color: #1E293B; font-size: 13px; line-height: 1.5; }
+
+  /* ── Header ── */
+  .page-header { background: #0F172A; color: white; padding: 28px 40px; }
+  .page-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-header p { color: #94A3B8; font-size: 12px; margin-top: 4px; }
+  .header-meta { display:flex; gap:20px; margin-top:12px; }
+  .header-badge { background:#1E293B; border:1px solid #334155; border-radius:6px;
+                   padding:4px 12px; font-size:11px; color:#CBD5E1; }
+
+  /* ── Nav ── */
+  .page-nav { background:white; border-bottom:1px solid #E2E8F0;
+               padding:12px 40px; display:flex; gap:10px; flex-wrap:wrap; position:sticky; top:0; z-index:10; }
+  .nav-link { text-decoration:none; padding:5px 14px; border-radius:20px;
+               border:1.5px solid; font-size:11.5px; font-weight:600;
+               transition: opacity 0.15s; white-space:nowrap; }
+  .nav-link:hover { opacity:0.75; }
+
+  /* ── Content type section ── */
+  .ct-section { margin: 28px 40px; border-radius: 12px; overflow:hidden;
+                  border: 1px solid #E2E8F0; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .ct-header { color:white; padding:20px 24px; display:flex;
+                justify-content:space-between; align-items:flex-start; gap:16px; }
+  .ct-title-block { display:flex; gap:14px; align-items:flex-start; flex:1; }
+  .ct-icon { font-size:28px; line-height:1; margin-top:2px; }
+  .ct-name { font-size:18px; font-weight:700; }
+  .ct-purpose { font-size:11.5px; opacity:0.85; margin-top:4px; max-width:600px; line-height:1.55; }
+  .ct-meta { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .meta-pill { background:rgba(255,255,255,.18); border-radius:6px;
+                padding:4px 10px; font-size:11px; white-space:nowrap; }
+
+  .ct-body { background:white; padding:20px 24px; display:flex; flex-direction:column; gap:18px; }
+
+  /* ── Weight summary ── */
+  .weight-summary-box { padding:12px 16px; border-radius:8px; }
+  .ws-title { font-size:11px; font-weight:700; text-transform:uppercase;
+               letter-spacing:0.5px; margin-bottom:8px; }
+  .ws-row { display:flex; justify-content:space-between; align-items:center;
+             padding:3px 0; border-bottom:1px dashed #E2E8F0; font-size:12px; }
+  .ws-row:last-child { border-bottom:none; }
+  .ws-name { color:#475569; }
+  .ws-pct { font-weight:700; }
+
+  /* ── Eval meta ── */
+  .eval-meta-row { display:flex; gap:16px; flex-wrap:wrap; }
+  .eval-meta-row label { font-size:11.5px; color:#64748B; font-weight:600;
+                           display:flex; flex-direction:column; gap:4px; flex:1; min-width:160px; }
+  .meta-input { border:1px solid #CBD5E1; border-radius:6px; padding:6px 10px;
+                 font-size:12px; color:#1E293B; font-family:inherit; }
+  .meta-input:focus { outline:none; border-color:var(--accent); }
+
+  /* ── Dimension block ── */
+  .dim-block { border:1px solid #E2E8F0; border-radius:10px; overflow:hidden; }
+  .dim-header { background:var(--light); padding:12px 16px;
+                  display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .dim-title-group { flex:1; }
+  .dim-name { font-weight:700; font-size:13px; color:#0F172A; display:block; }
+  .dim-desc { font-size:11.5px; color:#64748B; margin-top:2px; display:block; }
+  .dim-weight { display:flex; flex-direction:column; align-items:flex-end; gap:3px; min-width:70px; }
+  .weight-label { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:#94A3B8; }
+  .weight-pct { font-size:18px; font-weight:800; line-height:1; }
+  .weight-bar-bg { background:#E2E8F0; border-radius:3px; height:4px; width:50px; }
+  .weight-bar-fill { height:4px; border-radius:3px; }
+
+  /* ── Anchor table ── */
+  .anchor-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .anchor-table thead th { padding:6px 8px; font-size:11px; font-weight:700;
+                             border-bottom:1px solid #E2E8F0; text-align:center; }
+  .score-cell { padding:8px; vertical-align:top; border-right:1px solid #F1F5F9; }
+  .score-cell:last-child { border-right:none; }
+  .score-badge { display:flex; flex-direction:column; align-items:center; gap:2px;
+                  padding:4px 6px; border-radius:6px; margin-bottom:6px; }
+  .score-num { font-size:16px; font-weight:800; line-height:1; }
+  .score-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+  .anchor-text { font-size:11px; color:#475569; line-height:1.4; }
+
+  /* ── Score input row ── */
+  .score-input-row { background:#FAFAFA; border-top:1px solid #E2E8F0;
+                       padding:8px 12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .score-input-label { font-size:11px; font-weight:600; color:#64748B; white-space:nowrap; }
+  .radio-label { display:flex; align-items:center; gap:3px; cursor:pointer; }
+  .radio-label input[type=radio] { display:none; }
+  .radio-circle { width:26px; height:26px; border-radius:50%; border:2px solid;
+                   display:flex; align-items:center; justify-content:center;
+                   font-size:12px; font-weight:700; cursor:pointer; }
+  .radio-label input[type=radio]:checked + .radio-circle { background:currentColor !important;
+    filter:brightness(1.1); }
+  .notes-input { flex:1; min-width:120px; border:1px solid #E2E8F0; border-radius:6px;
+                   padding:5px 9px; font-size:11.5px; font-family:inherit; }
+  .notes-input:focus { outline:none; border-color:var(--accent); }
+
+  /* ── Composite row ── */
+  .composite-row { background:var(--light); border:1px solid var(--badge);
+                     border-radius:8px; padding:12px 16px;
+                     display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .composite-label { font-size:13px; font-weight:700; color:#0F172A; }
+  .composite-hint { font-size:11px; color:#94A3B8; }
+  .composite-input { width:80px; border:2px solid var(--accent); border-radius:8px;
+                       padding:6px 10px; font-size:18px; font-weight:700; text-align:center;
+                       color:var(--accent); font-family:inherit; }
+  .composite-input:focus { outline:none; }
+  .pass-fail-label { font-size:12px; font-weight:700; color:#64748B; margin-left:8px; }
+  .pf-label { display:flex; align-items:center; gap:4px; cursor:pointer; font-size:12px; font-weight:600; }
+  .pf-pass { color:#16A34A; }
+  .pf-fail { color:#DC2626; }
+
+  /* ── Feedback ── */
+  .feedback-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .feedback-box { display:flex; flex-direction:column; gap:6px; }
+  .feedback-title { font-size:11.5px; font-weight:700; }
+  .feedback-textarea { border:1px solid #E2E8F0; border-radius:8px; padding:8px 10px;
+                         font-size:12px; font-family:inherit; resize:vertical; color:#1E293B; }
+  .feedback-textarea:focus { outline:none; border-color:var(--accent); }
+
+  /* ── Footer ── */
+  .page-footer { margin:28px 40px; padding:16px 20px; background:white;
+                   border:1px solid #E2E8F0; border-radius:8px;
+                   font-size:11px; color:#94A3B8; text-align:center; }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background:white; font-size:11px; }
+    .page-nav { display:none; }
+    .ct-section { margin:0 0 24px 0; page-break-inside:avoid; }
+    .page-header { padding:16px 24px; }
+    .ct-body { padding:14px; }
+    .notes-input, .meta-input, .feedback-textarea, .composite-input { border-color:#E2E8F0 !important; }
+  }
+
+  @page { margin: 15mm; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>Ecommerce Image Quality Rubric Scorecard</h1>
+  <p>AI-generated image evaluation framework for Amazon listing content</p>
+  <div class="header-meta">
+    <span class="header-badge">Generated: March 13, 2026</span>
+    <span class="header-badge">Pass threshold: composite score &ge; 3.5 / 5.0</span>
+    <span class="header-badge">5 content types &bull; 31 total dimension scorings</span>
+  </div>
+</header>
+
+<nav class="page-nav">
+  <a href="#listing_main" class="nav-link" style="border-color:#2563EB; color:#2563EB">🖼️ Listing Main Image</a>
+<a href="#listing_secondary" class="nav-link" style="border-color:#7C3AED; color:#7C3AED">📊 Listing Secondary Images</a>
+<a href="#aplus_content" class="nav-link" style="border-color:#059669; color:#059669">✨ A+ Content Images</a>
+<a href="#brand_store" class="nav-link" style="border-color:#D97706; color:#D97706">🏪 Brand Store Images</a>
+<a href="#brand_story" class="nav-link" style="border-color:#DB2777; color:#DB2777">📖 Brand Story Images</a>
+</nav>
+
+
+  <section class="ct-section" id="listing_main" style="--accent:#2563EB; --light:#EFF6FF; --badge:#DBEAFE">
+    <div class="ct-header" style="background:#2563EB">
+      <div class="ct-title-block">
+        <span class="ct-icon">🖼️</span>
+        <div>
+          <h2 class="ct-name">Listing Main Image</h2>
+          <p class="ct-purpose">The primary hero image for an Amazon product listing. Must meet strict Amazon technical guidelines: pure white background, product-only (no props/text), product fills ≥85% of frame. This image drives click-through rate directly — technical compliance and commercial clarity are the highest priorities.</p>
+        </div>
+      </div>
+      <div class="ct-meta">
+        <div class="meta-pill">Pass threshold: <strong>≥ 3.5</strong></div>
+        <div class="meta-pill">Dimensions: <strong>6</strong></div>
+      </div>
+    </div>
+
+    <div class="ct-body">
+      <div class="weight-summary-box" style="background:#DBEAFE; border-left:4px solid #2563EB">
+        <p class="ws-title" style="color:#2563EB">Scoring Weight Summary</p>
+        <div class="ws-row"><span class="ws-name">Prompt Relevance</span><span class="ws-pct" style="color:#2563EB">15%</span></div><div class="ws-row"><span class="ws-name">Aesthetic Quality</span><span class="ws-pct" style="color:#2563EB">10%</span></div><div class="ws-row"><span class="ws-name">Commercial Viability</span><span class="ws-pct" style="color:#2563EB">20%</span></div><div class="ws-row"><span class="ws-name">Brand Safety</span><span class="ws-pct" style="color:#2563EB">5%</span></div><div class="ws-row"><span class="ws-name">Technical Quality</span><span class="ws-pct" style="color:#2563EB">25%</span></div><div class="ws-row"><span class="ws-name">Product Isolation</span><span class="ws-pct" style="color:#2563EB">25%</span></div>
+      </div>
+
+      <div class="eval-meta-row">
+        <label>Image URL / ID: <input type="text" class="meta-input" placeholder="https://... or image filename"></label>
+        <label>Evaluator: <input type="text" class="meta-input" placeholder="Name"></label>
+        <label>Date: <input type="date" class="meta-input"></label>
+      </div>
+
+      <div class="dims-container">
+        
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Prompt Relevance</span>
+          <span class="dim-desc">How faithfully does the image reflect the brief/prompt? Covers subject accuracy, specified elements, and intent.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">15%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:30px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Image bears little resemblance to the prompt. Key subjects or context are missing or wrong.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Loosely matches the prompt. Major specified elements absent or incorrectly rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Mostly matches the prompt. Minor elements missing or ambiguous; overall intent conveyed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong match. Nearly all prompt elements present and accurately rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exact match. Every specified element, mood, and context captured with precision.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="prompt_relevance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Aesthetic Quality</span>
+          <span class="dim-desc">Composition, lighting, color harmony, and overall visual appeal. Assessed against professional commercial photography standards.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">10%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:20px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Poor composition, flat/harsh lighting, clashing colors, or amateur look.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Below average visual quality. Noticeable issues with balance, lighting, or color.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable aesthetics. Competent but unremarkable composition and lighting.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Polished and professional. Strong composition, pleasing lighting, cohesive palette.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Studio-quality aesthetics, striking composition, perfect color harmony.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Commercial Viability</span>
+          <span class="dim-desc">Likelihood this image drives purchase intent and conversion. Product is presented attractively, persuasively, and clearly for buyers.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">20%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:40px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Would not convert. Product unclear, unappealing, or confusing to buyers.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Low conversion potential. Product present but not compelling or clearly presented.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate. Functional for commerce but lacks the persuasive impact of strong listings.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High conversion potential. Product is clear, attractive, and motivates purchase intent.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional conversion potential. Best-in-class presentation; clearly drives buyer action.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="commercial_viability_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Safety</span>
+          <span class="dim-desc">Absence of harmful, offensive, misleading, or policy-violating content. Safe for all audiences and compliant with platform guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">5%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:10px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Contains harmful, offensive, or clearly policy-violating content. Cannot be used.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Borderline content — potentially misleading claims or mildly inappropriate elements.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Safe but contains minor ambiguities that could be questioned in certain contexts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Fully safe and appropriate. No issues for standard commercial use.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfectly safe. Universally appropriate; sets a positive brand tone.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_safety_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Technical Quality</span>
+          <span class="dim-desc">Sharpness, resolution, artifact-free rendering, and absence of generation errors (blur, distortion, limb errors, text garbling, inconsistent edges).</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Severe technical issues: heavy blur, major artifacts, visible AI generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Noticeable technical defects. Soft focus, some artifacts, or minor generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable quality. Minor imperfections but generally clean and sharp.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High technical quality. Sharp, clean, no visible artifacts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Flawless. Indistinguishable from professional photography at full resolution.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="technical_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Product Isolation</span>
+          <span class="dim-desc">Product appears on a pure white (#FFFFFF) or clean neutral background. Product is centered, fills 85%+ of frame, no text overlays, no props, no watermarks. Complies with Amazon main image guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#2563EB">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#2563EB"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Background is clearly not white/neutral. Heavy props, text, or lifestyle context present.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Background close to white but off-white/grey. Minor props or shadows detract.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Near-white background with acceptable shadows. Product centered but fill <85%.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Clean white background, product well-centered, minor shadow acceptable.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfect Amazon compliance: pure white bg, product fills 85%+ of frame, zero props or text.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="product_isolation_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="product_isolation_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="product_isolation_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="product_isolation_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="product_isolation_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+      </div>
+
+      <div class="composite-row">
+        <span class="composite-label">Weighted Composite Score</span>
+        <span class="composite-hint">(calculated from dimension scores × weights above)</span>
+        <input type="number" min="1" max="5" step="0.01" class="composite-input" placeholder="—">
+        <span class="pass-fail-label">Result:</span>
+        <label class="pf-label"><input type="radio" name="listing_main_result" value="pass"> <span class="pf-pass">PASS</span></label>
+        <label class="pf-label"><input type="radio" name="listing_main_result" value="fail"> <span class="pf-fail">FAIL</span></label>
+      </div>
+
+      <div class="feedback-row">
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#2563EB">+ Strengths</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="What works well..."></textarea>
+        </div>
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#EF4444">&#8594; Improvements</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="Specific actionable changes..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ct-section" id="listing_secondary" style="--accent:#7C3AED; --light:#F5F3FF; --badge:#EDE9FE">
+    <div class="ct-header" style="background:#7C3AED">
+      <div class="ct-title-block">
+        <span class="ct-icon">📊</span>
+        <div>
+          <h2 class="ct-name">Listing Secondary Images</h2>
+          <p class="ct-purpose">Supporting infographic, lifestyle, and feature images in an Amazon listing carousel. These images educate and persuade — buyers who reach them are already interested. Each image must communicate one clear message quickly. Information clarity and commercial persuasion are the key drivers.</p>
+        </div>
+      </div>
+      <div class="ct-meta">
+        <div class="meta-pill">Pass threshold: <strong>≥ 3.5</strong></div>
+        <div class="meta-pill">Dimensions: <strong>6</strong></div>
+      </div>
+    </div>
+
+    <div class="ct-body">
+      <div class="weight-summary-box" style="background:#EDE9FE; border-left:4px solid #7C3AED">
+        <p class="ws-title" style="color:#7C3AED">Scoring Weight Summary</p>
+        <div class="ws-row"><span class="ws-name">Prompt Relevance</span><span class="ws-pct" style="color:#7C3AED">20%</span></div><div class="ws-row"><span class="ws-name">Aesthetic Quality</span><span class="ws-pct" style="color:#7C3AED">15%</span></div><div class="ws-row"><span class="ws-name">Commercial Viability</span><span class="ws-pct" style="color:#7C3AED">25%</span></div><div class="ws-row"><span class="ws-name">Brand Safety</span><span class="ws-pct" style="color:#7C3AED">5%</span></div><div class="ws-row"><span class="ws-name">Technical Quality</span><span class="ws-pct" style="color:#7C3AED">10%</span></div><div class="ws-row"><span class="ws-name">Information Clarity</span><span class="ws-pct" style="color:#7C3AED">25%</span></div>
+      </div>
+
+      <div class="eval-meta-row">
+        <label>Image URL / ID: <input type="text" class="meta-input" placeholder="https://... or image filename"></label>
+        <label>Evaluator: <input type="text" class="meta-input" placeholder="Name"></label>
+        <label>Date: <input type="date" class="meta-input"></label>
+      </div>
+
+      <div class="dims-container">
+        
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Prompt Relevance</span>
+          <span class="dim-desc">How faithfully does the image reflect the brief/prompt? Covers subject accuracy, specified elements, and intent.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">20%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:40px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Image bears little resemblance to the prompt. Key subjects or context are missing or wrong.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Loosely matches the prompt. Major specified elements absent or incorrectly rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Mostly matches the prompt. Minor elements missing or ambiguous; overall intent conveyed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong match. Nearly all prompt elements present and accurately rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exact match. Every specified element, mood, and context captured with precision.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="prompt_relevance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Aesthetic Quality</span>
+          <span class="dim-desc">Composition, lighting, color harmony, and overall visual appeal. Assessed against professional commercial photography standards.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">15%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:30px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Poor composition, flat/harsh lighting, clashing colors, or amateur look.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Below average visual quality. Noticeable issues with balance, lighting, or color.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable aesthetics. Competent but unremarkable composition and lighting.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Polished and professional. Strong composition, pleasing lighting, cohesive palette.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Studio-quality aesthetics, striking composition, perfect color harmony.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Commercial Viability</span>
+          <span class="dim-desc">Likelihood this image drives purchase intent and conversion. Product is presented attractively, persuasively, and clearly for buyers.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Would not convert. Product unclear, unappealing, or confusing to buyers.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Low conversion potential. Product present but not compelling or clearly presented.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate. Functional for commerce but lacks the persuasive impact of strong listings.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High conversion potential. Product is clear, attractive, and motivates purchase intent.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional conversion potential. Best-in-class presentation; clearly drives buyer action.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="commercial_viability_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Safety</span>
+          <span class="dim-desc">Absence of harmful, offensive, misleading, or policy-violating content. Safe for all audiences and compliant with platform guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">5%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:10px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Contains harmful, offensive, or clearly policy-violating content. Cannot be used.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Borderline content — potentially misleading claims or mildly inappropriate elements.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Safe but contains minor ambiguities that could be questioned in certain contexts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Fully safe and appropriate. No issues for standard commercial use.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfectly safe. Universally appropriate; sets a positive brand tone.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_safety_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Technical Quality</span>
+          <span class="dim-desc">Sharpness, resolution, artifact-free rendering, and absence of generation errors (blur, distortion, limb errors, text garbling, inconsistent edges).</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">10%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:20px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Severe technical issues: heavy blur, major artifacts, visible AI generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Noticeable technical defects. Soft focus, some artifacts, or minor generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable quality. Minor imperfections but generally clean and sharp.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High technical quality. Sharp, clean, no visible artifacts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Flawless. Indistinguishable from professional photography at full resolution.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="technical_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Information Clarity</span>
+          <span class="dim-desc">Text callouts, benefit labels, feature arrows, and infographic elements are legible, scannable, and clearly communicate one focused message.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#7C3AED">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#7C3AED"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">No clear message. Text unreadable or information layout confusing.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Information present but poorly organised or hard to read at thumbnail size.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">One clear message, readable text, but layout or hierarchy could be stronger.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Clear, well-organized information with strong visual hierarchy and legible callouts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional clarity. Instantly scannable message; text crisp at all sizes; perfect hierarchy.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="information_clarity_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="information_clarity_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="information_clarity_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="information_clarity_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="information_clarity_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+      </div>
+
+      <div class="composite-row">
+        <span class="composite-label">Weighted Composite Score</span>
+        <span class="composite-hint">(calculated from dimension scores × weights above)</span>
+        <input type="number" min="1" max="5" step="0.01" class="composite-input" placeholder="—">
+        <span class="pass-fail-label">Result:</span>
+        <label class="pf-label"><input type="radio" name="listing_secondary_result" value="pass"> <span class="pf-pass">PASS</span></label>
+        <label class="pf-label"><input type="radio" name="listing_secondary_result" value="fail"> <span class="pf-fail">FAIL</span></label>
+      </div>
+
+      <div class="feedback-row">
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#7C3AED">+ Strengths</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="What works well..."></textarea>
+        </div>
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#EF4444">&#8594; Improvements</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="Specific actionable changes..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ct-section" id="aplus_content" style="--accent:#059669; --light:#ECFDF5; --badge:#D1FAE5">
+    <div class="ct-header" style="background:#059669">
+      <div class="ct-title-block">
+        <span class="ct-icon">✨</span>
+        <div>
+          <h2 class="ct-name">A+ Content Images</h2>
+          <p class="ct-purpose">Premium brand content modules displayed below the main listing on Amazon. A+ content differentiates premium brands through storytelling and brand identity. Brand visual consistency and strong aesthetics build trust and justify premium pricing. These images must integrate with module layouts and maintain brand cohesion.</p>
+        </div>
+      </div>
+      <div class="ct-meta">
+        <div class="meta-pill">Pass threshold: <strong>≥ 3.5</strong></div>
+        <div class="meta-pill">Dimensions: <strong>6</strong></div>
+      </div>
+    </div>
+
+    <div class="ct-body">
+      <div class="weight-summary-box" style="background:#D1FAE5; border-left:4px solid #059669">
+        <p class="ws-title" style="color:#059669">Scoring Weight Summary</p>
+        <div class="ws-row"><span class="ws-name">Prompt Relevance</span><span class="ws-pct" style="color:#059669">15%</span></div><div class="ws-row"><span class="ws-name">Aesthetic Quality</span><span class="ws-pct" style="color:#059669">25%</span></div><div class="ws-row"><span class="ws-name">Commercial Viability</span><span class="ws-pct" style="color:#059669">20%</span></div><div class="ws-row"><span class="ws-name">Brand Safety</span><span class="ws-pct" style="color:#059669">5%</span></div><div class="ws-row"><span class="ws-name">Technical Quality</span><span class="ws-pct" style="color:#059669">10%</span></div><div class="ws-row"><span class="ws-name">Brand Consistency</span><span class="ws-pct" style="color:#059669">25%</span></div>
+      </div>
+
+      <div class="eval-meta-row">
+        <label>Image URL / ID: <input type="text" class="meta-input" placeholder="https://... or image filename"></label>
+        <label>Evaluator: <input type="text" class="meta-input" placeholder="Name"></label>
+        <label>Date: <input type="date" class="meta-input"></label>
+      </div>
+
+      <div class="dims-container">
+        
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Prompt Relevance</span>
+          <span class="dim-desc">How faithfully does the image reflect the brief/prompt? Covers subject accuracy, specified elements, and intent.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">15%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:30px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Image bears little resemblance to the prompt. Key subjects or context are missing or wrong.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Loosely matches the prompt. Major specified elements absent or incorrectly rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Mostly matches the prompt. Minor elements missing or ambiguous; overall intent conveyed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong match. Nearly all prompt elements present and accurately rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exact match. Every specified element, mood, and context captured with precision.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="prompt_relevance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Aesthetic Quality</span>
+          <span class="dim-desc">Composition, lighting, color harmony, and overall visual appeal. Assessed against professional commercial photography standards.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Poor composition, flat/harsh lighting, clashing colors, or amateur look.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Below average visual quality. Noticeable issues with balance, lighting, or color.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable aesthetics. Competent but unremarkable composition and lighting.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Polished and professional. Strong composition, pleasing lighting, cohesive palette.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Studio-quality aesthetics, striking composition, perfect color harmony.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Commercial Viability</span>
+          <span class="dim-desc">Likelihood this image drives purchase intent and conversion. Product is presented attractively, persuasively, and clearly for buyers.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">20%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:40px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Would not convert. Product unclear, unappealing, or confusing to buyers.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Low conversion potential. Product present but not compelling or clearly presented.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate. Functional for commerce but lacks the persuasive impact of strong listings.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High conversion potential. Product is clear, attractive, and motivates purchase intent.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional conversion potential. Best-in-class presentation; clearly drives buyer action.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="commercial_viability_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Safety</span>
+          <span class="dim-desc">Absence of harmful, offensive, misleading, or policy-violating content. Safe for all audiences and compliant with platform guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">5%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:10px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Contains harmful, offensive, or clearly policy-violating content. Cannot be used.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Borderline content — potentially misleading claims or mildly inappropriate elements.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Safe but contains minor ambiguities that could be questioned in certain contexts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Fully safe and appropriate. No issues for standard commercial use.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfectly safe. Universally appropriate; sets a positive brand tone.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_safety_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Technical Quality</span>
+          <span class="dim-desc">Sharpness, resolution, artifact-free rendering, and absence of generation errors (blur, distortion, limb errors, text garbling, inconsistent edges).</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">10%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:20px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Severe technical issues: heavy blur, major artifacts, visible AI generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Noticeable technical defects. Soft focus, some artifacts, or minor generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable quality. Minor imperfections but generally clean and sharp.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High technical quality. Sharp, clean, no visible artifacts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Flawless. Indistinguishable from professional photography at full resolution.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="technical_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Consistency</span>
+          <span class="dim-desc">Image aligns with the brand's visual language — palette, typography style, tone, and overall aesthetic fit within a coherent brand system.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#059669">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#059669"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Visually disconnected from any brand identity. Generic or off-brand.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Weak brand signals. Some on-brand elements but inconsistent application.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Recognisable brand direction with minor inconsistencies in palette or tone.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong brand alignment. Palette, tone, and visual style cohesive.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exemplary brand expression. Could be a brand guideline reference image.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_consistency_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_consistency_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_consistency_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_consistency_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_consistency_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+      </div>
+
+      <div class="composite-row">
+        <span class="composite-label">Weighted Composite Score</span>
+        <span class="composite-hint">(calculated from dimension scores × weights above)</span>
+        <input type="number" min="1" max="5" step="0.01" class="composite-input" placeholder="—">
+        <span class="pass-fail-label">Result:</span>
+        <label class="pf-label"><input type="radio" name="aplus_content_result" value="pass"> <span class="pf-pass">PASS</span></label>
+        <label class="pf-label"><input type="radio" name="aplus_content_result" value="fail"> <span class="pf-fail">FAIL</span></label>
+      </div>
+
+      <div class="feedback-row">
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#059669">+ Strengths</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="What works well..."></textarea>
+        </div>
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#EF4444">&#8594; Improvements</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="Specific actionable changes..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ct-section" id="brand_store" style="--accent:#D97706; --light:#FFFBEB; --badge:#FEF3C7">
+    <div class="ct-header" style="background:#D97706">
+      <div class="ct-title-block">
+        <span class="ct-icon">🏪</span>
+        <div>
+          <h2 class="ct-name">Brand Store Images</h2>
+          <p class="ct-purpose">Hero and banner images inside an Amazon Brand Store — the brand's dedicated storefront. These images set the store's visual tone and guide shoppers through a curated experience. Strong visual hierarchy drives store navigation, dwell time, and cross-sell. Brand safety is elevated here as the store is entirely associated with the brand.</p>
+        </div>
+      </div>
+      <div class="ct-meta">
+        <div class="meta-pill">Pass threshold: <strong>≥ 3.5</strong></div>
+        <div class="meta-pill">Dimensions: <strong>6</strong></div>
+      </div>
+    </div>
+
+    <div class="ct-body">
+      <div class="weight-summary-box" style="background:#FEF3C7; border-left:4px solid #D97706">
+        <p class="ws-title" style="color:#D97706">Scoring Weight Summary</p>
+        <div class="ws-row"><span class="ws-name">Prompt Relevance</span><span class="ws-pct" style="color:#D97706">5%</span></div><div class="ws-row"><span class="ws-name">Aesthetic Quality</span><span class="ws-pct" style="color:#D97706">25%</span></div><div class="ws-row"><span class="ws-name">Commercial Viability</span><span class="ws-pct" style="color:#D97706">20%</span></div><div class="ws-row"><span class="ws-name">Brand Safety</span><span class="ws-pct" style="color:#D97706">15%</span></div><div class="ws-row"><span class="ws-name">Technical Quality</span><span class="ws-pct" style="color:#D97706">5%</span></div><div class="ws-row"><span class="ws-name">Visual Hierarchy</span><span class="ws-pct" style="color:#D97706">30%</span></div>
+      </div>
+
+      <div class="eval-meta-row">
+        <label>Image URL / ID: <input type="text" class="meta-input" placeholder="https://... or image filename"></label>
+        <label>Evaluator: <input type="text" class="meta-input" placeholder="Name"></label>
+        <label>Date: <input type="date" class="meta-input"></label>
+      </div>
+
+      <div class="dims-container">
+        
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Prompt Relevance</span>
+          <span class="dim-desc">How faithfully does the image reflect the brief/prompt? Covers subject accuracy, specified elements, and intent.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">5%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:10px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Image bears little resemblance to the prompt. Key subjects or context are missing or wrong.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Loosely matches the prompt. Major specified elements absent or incorrectly rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Mostly matches the prompt. Minor elements missing or ambiguous; overall intent conveyed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong match. Nearly all prompt elements present and accurately rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exact match. Every specified element, mood, and context captured with precision.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="prompt_relevance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Aesthetic Quality</span>
+          <span class="dim-desc">Composition, lighting, color harmony, and overall visual appeal. Assessed against professional commercial photography standards.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Poor composition, flat/harsh lighting, clashing colors, or amateur look.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Below average visual quality. Noticeable issues with balance, lighting, or color.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable aesthetics. Competent but unremarkable composition and lighting.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Polished and professional. Strong composition, pleasing lighting, cohesive palette.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Studio-quality aesthetics, striking composition, perfect color harmony.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Commercial Viability</span>
+          <span class="dim-desc">Likelihood this image drives purchase intent and conversion. Product is presented attractively, persuasively, and clearly for buyers.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">20%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:40px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Would not convert. Product unclear, unappealing, or confusing to buyers.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Low conversion potential. Product present but not compelling or clearly presented.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate. Functional for commerce but lacks the persuasive impact of strong listings.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High conversion potential. Product is clear, attractive, and motivates purchase intent.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional conversion potential. Best-in-class presentation; clearly drives buyer action.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="commercial_viability_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Safety</span>
+          <span class="dim-desc">Absence of harmful, offensive, misleading, or policy-violating content. Safe for all audiences and compliant with platform guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">15%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:30px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Contains harmful, offensive, or clearly policy-violating content. Cannot be used.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Borderline content — potentially misleading claims or mildly inappropriate elements.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Safe but contains minor ambiguities that could be questioned in certain contexts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Fully safe and appropriate. No issues for standard commercial use.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfectly safe. Universally appropriate; sets a positive brand tone.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_safety_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Technical Quality</span>
+          <span class="dim-desc">Sharpness, resolution, artifact-free rendering, and absence of generation errors (blur, distortion, limb errors, text garbling, inconsistent edges).</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">5%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:10px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Severe technical issues: heavy blur, major artifacts, visible AI generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Noticeable technical defects. Soft focus, some artifacts, or minor generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable quality. Minor imperfections but generally clean and sharp.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High technical quality. Sharp, clean, no visible artifacts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Flawless. Indistinguishable from professional photography at full resolution.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="technical_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Visual Hierarchy</span>
+          <span class="dim-desc">Clear focal point, logical flow from hero to supporting content. Navigation intent is obvious; the eye moves naturally through the store layout.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#D97706">30%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:60px; background:#D97706"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">No discernible hierarchy. Eye has no natural path; content feels random.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Weak hierarchy. Focal point unclear or competing elements distract.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Some hierarchy present. Primary focus identifiable but flow not optimized.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong hierarchy. Clear hero, supporting content logically ordered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Magazine-quality layout. Effortless visual flow; professional store-front presence.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="visual_hierarchy_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="visual_hierarchy_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="visual_hierarchy_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="visual_hierarchy_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="visual_hierarchy_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+      </div>
+
+      <div class="composite-row">
+        <span class="composite-label">Weighted Composite Score</span>
+        <span class="composite-hint">(calculated from dimension scores × weights above)</span>
+        <input type="number" min="1" max="5" step="0.01" class="composite-input" placeholder="—">
+        <span class="pass-fail-label">Result:</span>
+        <label class="pf-label"><input type="radio" name="brand_store_result" value="pass"> <span class="pf-pass">PASS</span></label>
+        <label class="pf-label"><input type="radio" name="brand_store_result" value="fail"> <span class="pf-fail">FAIL</span></label>
+      </div>
+
+      <div class="feedback-row">
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#D97706">+ Strengths</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="What works well..."></textarea>
+        </div>
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#EF4444">&#8594; Improvements</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="Specific actionable changes..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ct-section" id="brand_story" style="--accent:#DB2777; --light:#FDF2F8; --badge:#FCE7F3">
+    <div class="ct-header" style="background:#DB2777">
+      <div class="ct-title-block">
+        <span class="ct-icon">📖</span>
+        <div>
+          <h2 class="ct-name">Brand Story Images</h2>
+          <p class="ct-purpose">Narrative images for Amazon Brand Story modules — a scrollable storytelling section that communicates the brand's origin, mission, and personality. These images must evoke emotion and weave a coherent narrative arc across the module. Technical perfection is less critical than authentic feeling and storytelling cohesion.</p>
+        </div>
+      </div>
+      <div class="ct-meta">
+        <div class="meta-pill">Pass threshold: <strong>≥ 3.5</strong></div>
+        <div class="meta-pill">Dimensions: <strong>7</strong></div>
+      </div>
+    </div>
+
+    <div class="ct-body">
+      <div class="weight-summary-box" style="background:#FCE7F3; border-left:4px solid #DB2777">
+        <p class="ws-title" style="color:#DB2777">Scoring Weight Summary</p>
+        <div class="ws-row"><span class="ws-name">Prompt Relevance</span><span class="ws-pct" style="color:#DB2777">3%</span></div><div class="ws-row"><span class="ws-name">Aesthetic Quality</span><span class="ws-pct" style="color:#DB2777">20%</span></div><div class="ws-row"><span class="ws-name">Commercial Viability</span><span class="ws-pct" style="color:#DB2777">15%</span></div><div class="ws-row"><span class="ws-name">Brand Safety</span><span class="ws-pct" style="color:#DB2777">10%</span></div><div class="ws-row"><span class="ws-name">Technical Quality</span><span class="ws-pct" style="color:#DB2777">2%</span></div><div class="ws-row"><span class="ws-name">Emotional Resonance</span><span class="ws-pct" style="color:#DB2777">25%</span></div><div class="ws-row"><span class="ws-name">Narrative Cohesion</span><span class="ws-pct" style="color:#DB2777">25%</span></div>
+      </div>
+
+      <div class="eval-meta-row">
+        <label>Image URL / ID: <input type="text" class="meta-input" placeholder="https://... or image filename"></label>
+        <label>Evaluator: <input type="text" class="meta-input" placeholder="Name"></label>
+        <label>Date: <input type="date" class="meta-input"></label>
+      </div>
+
+      <div class="dims-container">
+        
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Prompt Relevance</span>
+          <span class="dim-desc">How faithfully does the image reflect the brief/prompt? Covers subject accuracy, specified elements, and intent.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">3%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:6px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Image bears little resemblance to the prompt. Key subjects or context are missing or wrong.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Loosely matches the prompt. Major specified elements absent or incorrectly rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Mostly matches the prompt. Minor elements missing or ambiguous; overall intent conveyed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong match. Nearly all prompt elements present and accurately rendered.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exact match. Every specified element, mood, and context captured with precision.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="prompt_relevance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="prompt_relevance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Aesthetic Quality</span>
+          <span class="dim-desc">Composition, lighting, color harmony, and overall visual appeal. Assessed against professional commercial photography standards.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">20%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:40px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Poor composition, flat/harsh lighting, clashing colors, or amateur look.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Below average visual quality. Noticeable issues with balance, lighting, or color.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable aesthetics. Competent but unremarkable composition and lighting.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Polished and professional. Strong composition, pleasing lighting, cohesive palette.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Studio-quality aesthetics, striking composition, perfect color harmony.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="aesthetic_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Commercial Viability</span>
+          <span class="dim-desc">Likelihood this image drives purchase intent and conversion. Product is presented attractively, persuasively, and clearly for buyers.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">15%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:30px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Would not convert. Product unclear, unappealing, or confusing to buyers.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Low conversion potential. Product present but not compelling or clearly presented.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate. Functional for commerce but lacks the persuasive impact of strong listings.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High conversion potential. Product is clear, attractive, and motivates purchase intent.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional conversion potential. Best-in-class presentation; clearly drives buyer action.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="commercial_viability_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="commercial_viability_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Brand Safety</span>
+          <span class="dim-desc">Absence of harmful, offensive, misleading, or policy-violating content. Safe for all audiences and compliant with platform guidelines.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">10%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:20px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Contains harmful, offensive, or clearly policy-violating content. Cannot be used.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Borderline content — potentially misleading claims or mildly inappropriate elements.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Safe but contains minor ambiguities that could be questioned in certain contexts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Fully safe and appropriate. No issues for standard commercial use.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Perfectly safe. Universally appropriate; sets a positive brand tone.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="brand_safety_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="brand_safety_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Technical Quality</span>
+          <span class="dim-desc">Sharpness, resolution, artifact-free rendering, and absence of generation errors (blur, distortion, limb errors, text garbling, inconsistent edges).</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">2%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:4px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">Severe technical issues: heavy blur, major artifacts, visible AI generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Noticeable technical defects. Soft focus, some artifacts, or minor generation errors.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Acceptable quality. Minor imperfections but generally clean and sharp.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">High technical quality. Sharp, clean, no visible artifacts.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Flawless. Indistinguishable from professional photography at full resolution.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="technical_quality_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="technical_quality_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Emotional Resonance</span>
+          <span class="dim-desc">The image evokes a clear emotional response aligned with the brand's desired feeling — aspiration, warmth, trust, excitement, authenticity, etc.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">No emotional impact. Flat, generic, or emotionally neutral/negative.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Weak emotional pull. Intended feeling vaguely present but not convincing.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">Moderate resonance. Emotion conveyed but not memorable or deeply felt.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Strong emotional impact. Viewer clearly feels the intended brand emotion.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Exceptional. Immediately evokes a powerful, brand-aligned emotional response.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="emotional_resonance_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="emotional_resonance_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="emotional_resonance_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="emotional_resonance_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="emotional_resonance_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+    <div class="dim-block">
+      <div class="dim-header">
+        <div class="dim-title-group">
+          <span class="dim-name">Narrative Cohesion</span>
+          <span class="dim-desc">The image tells a clear story or contributes meaningfully to a visual narrative arc. Context, characters, and setting work together to convey a unified message.</span>
+        </div>
+        <div class="dim-weight">
+          <span class="weight-label">Weight</span>
+          <span class="weight-pct" style="color:#DB2777">25%</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width:50px; background:#DB2777"></div>
+          </div>
+        </div>
+      </div>
+      <table class="anchor-table">
+        <colgroup>
+          <col style="width:19%"><col style="width:19%"><col style="width:19%">
+          <col style="width:19%"><col style="width:19%">
+        </colgroup>
+        <thead>
+          <tr><th style="color:#EF4444">Score 1</th><th style="color:#F97316">Score 2</th><th style="color:#EAB308">Score 3</th><th style="color:#22C55E">Score 4</th><th style="color:#16A34A">Score 5</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EF444420; border:1.5px solid #EF4444; color:#EF4444">
+          <span class="score-num">1</span>
+          <span class="score-label">Poor</span>
+        </div>
+        <p class="anchor-text">No story. Disparate elements without coherent narrative.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#F9731620; border:1.5px solid #F97316; color:#F97316">
+          <span class="score-num">2</span>
+          <span class="score-label">Below Average</span>
+        </div>
+        <p class="anchor-text">Fragmented narrative. Some story elements present but disconnected.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#EAB30820; border:1.5px solid #EAB308; color:#EAB308">
+          <span class="score-num">3</span>
+          <span class="score-label">Acceptable</span>
+        </div>
+        <p class="anchor-text">A story is readable, but the narrative is predictable or under-developed.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#22C55E20; border:1.5px solid #22C55E; color:#22C55E">
+          <span class="score-num">4</span>
+          <span class="score-label">Good</span>
+        </div>
+        <p class="anchor-text">Clear, engaging narrative. Setting, subject, and mood work in harmony.</p>
+      </td>
+      <td class="score-cell">
+        <div class="score-badge" style="background:#16A34A20; border:1.5px solid #16A34A; color:#16A34A">
+          <span class="score-num">5</span>
+          <span class="score-label">Excellent</span>
+        </div>
+        <p class="anchor-text">Compelling story. Every element intentionally serves the narrative; memorable.</p>
+      </td></tr>
+        </tbody>
+      </table>
+      <div class="score-input-row">
+        <span class="score-input-label">Evaluator Score:</span>
+        <label class="radio-label"><input type="radio" name="narrative_cohesion_score" value="1"><span class="radio-circle" style="border-color:#EF4444">1</span></label><label class="radio-label"><input type="radio" name="narrative_cohesion_score" value="2"><span class="radio-circle" style="border-color:#F97316">2</span></label><label class="radio-label"><input type="radio" name="narrative_cohesion_score" value="3"><span class="radio-circle" style="border-color:#EAB308">3</span></label><label class="radio-label"><input type="radio" name="narrative_cohesion_score" value="4"><span class="radio-circle" style="border-color:#22C55E">4</span></label><label class="radio-label"><input type="radio" name="narrative_cohesion_score" value="5"><span class="radio-circle" style="border-color:#16A34A">5</span></label>
+        <span class="score-input-label" style="margin-left:16px">Notes:</span>
+        <input type="text" class="notes-input" placeholder="Optional rationale...">
+      </div>
+    </div>
+      </div>
+
+      <div class="composite-row">
+        <span class="composite-label">Weighted Composite Score</span>
+        <span class="composite-hint">(calculated from dimension scores × weights above)</span>
+        <input type="number" min="1" max="5" step="0.01" class="composite-input" placeholder="—">
+        <span class="pass-fail-label">Result:</span>
+        <label class="pf-label"><input type="radio" name="brand_story_result" value="pass"> <span class="pf-pass">PASS</span></label>
+        <label class="pf-label"><input type="radio" name="brand_story_result" value="fail"> <span class="pf-fail">FAIL</span></label>
+      </div>
+
+      <div class="feedback-row">
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#DB2777">+ Strengths</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="What works well..."></textarea>
+        </div>
+        <div class="feedback-box">
+          <p class="feedback-title" style="color:#EF4444">&#8594; Improvements</p>
+          <textarea class="feedback-textarea" rows="3" placeholder="Specific actionable changes..."></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<footer class="page-footer">
+  Rubric source: <code>backend/app/eval/rubric.py</code> &bull;
+  Scoring scale: 1 = Poor &nbsp;|&nbsp; 2 = Below Average &nbsp;|&nbsp;
+  3 = Acceptable &nbsp;|&nbsp; 4 = Good &nbsp;|&nbsp; 5 = Excellent &bull;
+  Image Gen MVP &mdash; March 13, 2026
+</footer>
+
+</body>
+</html>
