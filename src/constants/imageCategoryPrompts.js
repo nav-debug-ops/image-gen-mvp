@@ -412,174 +412,226 @@ export const CATEGORY_PROMPTS = {
   },
 }
 
-// ─── Image type detection ────────────────────────────────────────────────────
-function detectImageType(templateName) {
-  const n = templateName.toLowerCase()
-  if (/packag|from.?box|open.?display|bundle/.test(n)) return 'packaging'
-  if (/\btag\b|ribbon|certif|callout|award|sale.?tag|quantity.?ind/.test(n)) return 'tag'
-  if (/in.?use|with.?hand|splash|premium.?light|complementary|before.?after|infographic|comparison|exploded/.test(n)) return 'creative'
-  return 'pure'
-}
-
-// ─── Template-specific angle and shadow hints ────────────────────────────────
-function getTemplateHint(templateName) {
-  const n = templateName.toLowerCase()
-  if (n.includes('shadow'))         return { angle: 'straight frontal view',                                                   shadow: 'a clean soft shadow directly beneath the product grounding it naturally' }
-  if (n.includes('platform'))       return { angle: 'slightly low three-quarter angle looking up slightly',                    shadow: 'a small precise shadow beneath the platform edge' }
-  if (n.includes('floating'))       return { angle: 'straight frontal view',                                                   shadow: 'no shadow — the product appears to float in pure clean space' }
-  if (/angle|multi.?angle/.test(n)) return { angle: 'three-quarter front angle revealing both face and side profile',          shadow: 'a soft grounded shadow beneath the product' }
-  if (n.includes('size'))           return { angle: 'straight frontal view with a neutral scale reference beside the product', shadow: 'very subtle shadow beneath each element' }
-  if (n.includes('accessor'))       return { angle: 'slightly elevated three-quarter view showing product and accessories',    shadow: 'soft shadow beneath the central product' }
-  if (n.includes('ingredient'))     return { angle: 'three-quarter angle with key ingredient elements arranged around',        shadow: 'subtle shadow beneath the hero product' }
-  return null
-}
-
-// ─── Packaging position hint ─────────────────────────────────────────────────
-function getPackagingDesc(templateName) {
-  const n = templateName.toLowerCase()
-  if (n.includes('left'))                    return 'positioned to the left of the product'
-  if (n.includes('right'))                   return 'positioned to the right of the product'
-  if (n.includes('front'))                   return 'facing the camera directly, front panel fully readable'
-  if (n.includes('emerging') || n.includes('from box')) return 'open with the product emerging from it dramatically'
-  if (n.includes('open'))                    return 'open in a display arrangement showing both product and interior'
-  if (n.includes('bundle'))                  return 'and all included items arranged together showing the complete package value'
-  return 'positioned beside the product, front panel clearly visible'
-}
-
-// ─── Tag style hint ──────────────────────────────────────────────────────────
-function getTagDesc(templateName) {
-  const n = templateName.toLowerCase()
-  if (n.includes('ribbon'))  return 'premium elegant ribbon tag in clean white with simple black typography'
-  if (n.includes('corner'))  return 'small refined tag positioned cleanly at a corner of the product'
-  if (n.includes('certif') || n.includes('quality')) return 'professional quality certification badge in clean minimal style'
-  if (n.includes('award'))   return 'clean award-style badge alongside the product'
-  if (n.includes('quantity') || n.includes('sale')) return 'bold modern tag in the brand accent color with clean sans-serif typography'
-  if (n.includes('callout')) return 'thin-line feature callout tag pointing toward the product\'s key feature'
-  return 'clean white hang tag with simple dark typography attached by a short ribbon'
-}
-
-// ─── Creative element hint ───────────────────────────────────────────────────
-function getCreativeElement(templateName, isHighCtr) {
-  const n = templateName.toLowerCase()
-  if (n.includes('splash'))       return 'a dynamic water or liquid splash surrounding the product, suggesting freshness, energy or water-resistance without adding clutter'
-  if (/hand|in.?use/.test(n))     return 'a natural human hand holding or actively using the product — no full person, just the hand and product interaction'
-  if (n.includes('complementary'))return 'one complementary lifestyle object reinforcing the primary use case, kept minimal and clearly secondary to the product'
-  if (/premium.?light|lighting/.test(n)) return isHighCtr
-    ? 'a dramatic directional studio key light creating strong contrast, deep shadows and a cinematic premium presence'
-    : 'a warm soft studio key light with gentle shadows creating depth and an inviting premium feel'
-  if (n.includes('before'))       return 'a clean split-frame before-and-after layout showing the product\'s primary benefit result clearly'
-  if (n.includes('infographic'))  return 'one or two ultra-minimal text callouts pointing to the product\'s single most important feature'
-  if (n.includes('comparison'))   return 'a simple side-by-side visual showing one clear advantage over a generic alternative'
-  if (n.includes('exploded'))     return 'an exploded-view arrangement showing the product\'s main components cleanly separated, demonstrating quality and completeness'
-  return isHighCtr
-    ? 'a dramatic high-contrast lighting effect that makes the product commanding and impossible to ignore at thumbnail size'
-    : 'a warm premium lighting approach with gentle depth that elevates perceived quality and invitingness'
-}
+// ─── Shared base requirements (Amazon-compliant, always appended) ────────────
+const BASE = 'Pure white background #FFFFFF — no texture, gradient, or vignette. Product stays fully within the frame with generous white margin on all four sides — nothing cropped or touching any edge. Entire product in crisp focus front-to-back, resolution sufficient for Amazon zoom. Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art, NOT sketch.'
 
 /**
- * Builds a framework-aligned professional Amazon main image prompt.
- * Follows the commercial product photographer + performance marketer framework.
- * Produces natural-language paragraph prompts (~150 words) per template.
+ * Builds a per-template, category-aware, strategy-sensitive prompt for
+ * Amazon main image generation. Each of the 35 templates gets its own
+ * precise composition instructions layered with category strategy.
  *
- * @param {string} templateName - Selected template name (e.g. "Plain White Background")
+ * @param {string} templateName - Template name from TEMPLATES array
  * @param {string} category     - Product category (must match CATEGORY_PROMPTS keys)
  * @param {string} strategy     - 'top-performing' | 'high-ctr'
- * @param {string} productDesc  - Optional product description
- * @returns {string} Full prompt string for AI image generation
+ * @param {string} productDesc  - Optional product description / ASIN title
+ * @returns {string} Full prompt string ready for image generation
  */
 export function buildImagePrompt(templateName, category, strategy = 'top-performing', productDesc = '') {
-  const imageType  = detectImageType(templateName)
-  const catData    = CATEGORY_PROMPTS[category]
-  const isHighCtr  = strategy === 'high-ctr'
-  const catStrat   = catData ? (isHighCtr ? catData.highCtr : catData.topPerforming) : null
-  const product    = productDesc || 'the product'
+  const n         = templateName.toLowerCase()
+  const catData   = CATEGORY_PROMPTS[category]
+  const isHiCtr   = strategy === 'high-ctr'
+  const cat       = catData ? (isHiCtr ? catData.highCtr : catData.topPerforming) : null
+  const p         = productDesc || 'the product'
 
-  const hint    = getTemplateHint(templateName)
-  const angle   = hint?.angle   || catStrat?.angle   || (isHighCtr
-    ? 'classic three-quarter front angle that reveals depth and premium design details'
-    : 'clean straight frontal angle for maximum product clarity and honesty')
-  const shadow  = hint?.shadow  || (isHighCtr
-    ? 'a slightly stronger studio shadow on one side creating dramatic depth'
-    : 'a small soft shadow directly beneath the product for grounded realism')
-  const lighting = catStrat?.lighting || (isHighCtr
-    ? 'slightly higher contrast studio lighting that creates depth and draws the eye at thumbnail size'
-    : 'bright even diffused studio lighting revealing accurate color and surface texture with no harsh shadows')
-  const ctrNote = isHighCtr
-    ? 'The angle and lighting are chosen to create visual drama and stand out in a crowded search page.'
-    : 'The angle and even lighting ensure immediate product recognition and buyer trust at thumbnail size.'
-  const extras = catStrat?.extras || ''
+  // Category-resolved defaults (fallback when no category selected)
+  const catAngle    = cat?.angle    || (isHiCtr ? 'dynamic three-quarter front angle revealing depth and premium design details' : 'clean straight frontal angle for maximum product clarity')
+  const catLight    = cat?.lighting || (isHiCtr ? 'high-contrast studio lighting with deep shadows on one side creating drama and depth' : 'bright even diffused studio lighting with no harsh shadows, accurate color and texture')
+  const catExtras   = cat?.extras   || ''
+  const catScale    = cat?.scale    || 'product fills 85–90% of the square frame'
 
-  // ── IMAGE 1: Pure product ────────────────────────────────────────────────
-  if (imageType === 'pure') {
-    return [
-      `Amazon main image. Goal: maximize click-through rate while staying fully compliant with Amazon policies.`,
-      `${product} is shown at a ${angle}, filling most of the square frame.`,
-      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
-      `The product stays fully inside the frame with a generous white margin on all four sides — it must not be cropped or touch any edge.`,
-      `No text, tags, packaging or overlays of any kind.`,
-      `${lighting}. ${shadow}.`,
-      `${ctrNote}`,
-      `The entire product is in crisp focus from front to back, resolution must support Amazon zoom.`,
-      extras ? `${extras}.` : '',
-      `Only the product itself and any truly included accessories may appear. No unrelated props or watermarks.`,
-      `The final image must look like high-level commercial Amazon product photography with accurate colors and zero distractions.`,
-      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art, NOT sketch.`,
-    ].filter(Boolean).join(' ')
+  const drama = isHiCtr
+    ? 'Composition and lighting are calibrated to stop the scroll and stand out on a crowded Amazon search page.'
+    : 'Even lighting and honest angle ensure immediate product recognition and buyer trust at thumbnail size.'
+
+  // ─── BASIC ──────────────────────────────────────────────────────────────────
+
+  // Plain White Background
+  if (/plain white|white.?bg|white background/.test(n)) {
+    return `Amazon main product image — pure product shot, fully Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. No shadow, no props, no tags, no packaging, no text of any kind. ${catLight}. Every surface detail, color, and texture is rendered with perfect fidelity. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
   }
 
-  // ── IMAGE 2: Product with packaging ─────────────────────────────────────
-  if (imageType === 'packaging') {
-    const packDesc = getPackagingDesc(templateName)
-    return [
-      `Amazon main image. Goal: maximize click-through rate, prove product value and gift-readiness, fully Amazon-compliant.`,
-      `${product} is shown at a ${angle}, filling most of the square frame.`,
-      `The packaging is ${packDesc}.`,
-      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
-      `Both the product and its packaging remain fully inside the frame with a generous white margin on all sides — nothing may be cropped or touch any edge.`,
-      `${lighting}. ${shadow}.`,
-      `${ctrNote}`,
-      `The entire scene is in crisp focus, resolution supports Amazon zoom.`,
-      `The packaging displays the primary keyword as clearly printed physical text — never a digital overlay — visible and readable without blocking any key product feature.`,
-      `Only the product and its real included packaging may appear. No unrelated props, accessories or text overlays.`,
-      `The final image must look like high-level commercial Amazon product photography with accurate colors and no distractions.`,
-      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
-    ].filter(Boolean).join(' ')
+  // Product with Shadow
+  if (/shadow/.test(n)) {
+    const shadow = isHiCtr
+      ? 'a bold directional shadow cast to one side, adding dramatic depth and three-dimensionality'
+      : 'a soft natural drop shadow directly beneath the product, grounding it on the white surface without distraction'
+    return `Amazon main product image — product with natural shadow, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. ${catLight}. ${shadow}. No text, tags, packaging or overlays of any kind — only the product and its shadow. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
   }
 
-  // ── IMAGE 3: Product with tag ────────────────────────────────────────────
-  if (imageType === 'tag') {
-    const tagDesc = getTagDesc(templateName)
-    return [
-      `Amazon main image. Goal: maximize click-through rate using the keyword tag as a visual hook, fully Amazon-compliant.`,
-      `${product} is shown at a ${angle}, filling most of the square frame.`,
-      `Background is pure white, RGB 255 255 255, no texture or gradient.`,
-      `The product and tag remain fully inside the frame with a generous white margin on all sides — nothing is cropped or touches any edge.`,
-      `${lighting}. ${shadow}.`,
-      `${ctrNote}`,
-      `The entire product is in crisp focus, resolution supports Amazon zoom.`,
-      `A ${tagDesc} is attached to or positioned beside the product, displaying only the primary keyword in a clear readable font. The tag is a real physical object — never a digital overlay — and must not cover any key product feature.`,
-      `Only the product and this single tag may appear. No additional props, accessories or text overlays.`,
-      `The final image must look like high-level commercial Amazon product photography with accurate colors and no distractions.`,
-      `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
-    ].filter(Boolean).join(' ')
+  // On Platform / Pedestal
+  if (/platform|pedestal/.test(n)) {
+    const platform = isHiCtr
+      ? 'a sleek minimal geometric platform or pedestal in matte white or light grey — the platform elevates the product and adds a premium luxury retail feel'
+      : 'a clean simple white platform or block raising the product slightly, creating a subtle sense of elevation and quality'
+    return `Amazon main product image — product on platform, Amazon-compliant. ${p} is displayed on ${platform}, shot from a slightly low three-quarter angle looking up, giving the product a commanding presence. ${catScale}. ${catLight}. Soft shadow beneath the platform base. No text, tags or overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
   }
 
-  // ── IMAGE 4: Creative high-CTR variant ──────────────────────────────────
-  const creativeEl = getCreativeElement(templateName, isHighCtr)
-  return [
-    `Amazon main image designed for maximum click-through rate — higher creative impact, fully Amazon-compliant.`,
-    `${product} dominates the frame at a ${angle}, filling most of the square space.`,
-    `Background is pure white, RGB 255 255 255, no texture or gradient.`,
-    `The product stays fully inside the frame with a generous white margin on all sides — nothing is cropped or touches any edge.`,
-    `${lighting}. ${shadow}.`,
-    `${ctrNote}`,
-    `The entire product is in crisp focus, resolution supports Amazon zoom.`,
-    `One strong creative element dramatizes the main product benefit: ${creativeEl}.`,
-    `A physical tag attached to the product displays the primary keyword in clean readable typography — never a digital overlay.`,
-    `Only the product, this single creative element, and the keyword tag may appear. No unrelated props or accessories.`,
-    `The final image must look like high-level commercial Amazon product photography that stops the scroll, with accurate colors and no distractions.`,
-    `Real photorealistic render — NOT illustration, NOT 3D render, NOT digital art.`,
-  ].filter(Boolean).join(' ')
+  // Different Angles
+  if (/^different angle|angles$/.test(n)) {
+    return `Amazon main product image — three-quarter angle shot, Amazon-compliant. ${p} is shown at a deliberate three-quarter front angle revealing both the primary face and the side profile simultaneously, ${catScale}. This angle communicates depth, construction quality, and premium design in a single frame. ${catLight}. A clean soft shadow beneath the product. No text, tags or overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Floating
+  if (/floating/.test(n)) {
+    const glow = isHiCtr
+      ? 'with a very subtle, barely-there ambient glow around the product suggesting lightness and premium energy'
+      : 'appearing weightless and pristine — no shadow, no ground plane, clean infinite white'
+    return `Amazon main product image — floating product, Amazon-compliant. ${p} floats at mid-height in the center of the frame, ${catScale}, ${glow}. No shadow beneath the product — it hovers in pure clean white space. ${catLight}. No text, tags, packaging or overlays. The weightless float communicates lightness, precision engineering, or premium quality. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // ─── PACKAGING ──────────────────────────────────────────────────────────────
+
+  // Product + Packaging Left
+  if (/pack.*left|packaging.*left/.test(n)) {
+    return `Amazon main product image — product with packaging (packaging left), Amazon-compliant. ${p} is positioned in the right two-thirds of the frame at ${catAngle}. Its retail packaging box or sleeve is positioned to the left, slightly behind, front panel clearly visible and readable. Both elements together fill 85% of the square frame. ${catLight}. Soft grounded shadow beneath each element. The packaging shows the brand name and product keyword as printed physical text — never a digital text overlay. No unrelated props or accessories. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Product + Packaging Right
+  if (/pack.*right|packaging.*right/.test(n)) {
+    return `Amazon main product image — product with packaging (packaging right), Amazon-compliant. ${p} is positioned in the left two-thirds of the frame at ${catAngle}. Its retail packaging is positioned to the right, slightly behind, front panel clearly visible. Both elements together fill 85% of the frame. ${catLight}. Soft grounded shadow beneath each element. Packaging shows brand name and product keyword as printed physical text — never a digital overlay. No unrelated props. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Packaging Front
+  if (/pack.*front|packaging.*front/.test(n)) {
+    return `Amazon main product image — packaging front-facing shot, Amazon-compliant. The retail packaging of ${p} faces the camera directly, front panel fully readable and centered in the frame, filling 85–90% of the square. ${catLight}. Slight depth shadow on sides of the box to give three-dimensionality. Brand logo, product name, and key product benefits are visible as printed physical text on the packaging — never a digital overlay. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Emerging from Box
+  if (/emerg|from.?box/.test(n)) {
+    return `Amazon main product image — product emerging from packaging, Amazon-compliant. The retail box or packaging is shown open, with ${p} in the act of being removed from or rising out of the box — creating a dramatic reveal composition. The product is the clear hero: crisp, fully visible, and occupying the upper two-thirds of the frame. The open packaging is in the lower portion, showing its branded front panel. ${catLight}. The scene communicates premium unboxing quality and gift-readiness. No digital text overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Open Display
+  if (/open.?display|pack.*open/.test(n)) {
+    return `Amazon main product image — open display arrangement, Amazon-compliant. ${p} is shown removed from and displayed alongside its open packaging — the product takes center stage while the open packaging sits beside or behind it, showing interior structure and brand print. All elements fill 85% of the frame. ${catLight}. Clean soft shadows. The arrangement communicates completeness, quality inspection, and gifting readiness. No digital text overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // ─── ELEMENTS ───────────────────────────────────────────────────────────────
+
+  // Product + Ingredients
+  if (/ingredient/.test(n)) {
+    return `Amazon main product image — product with key ingredients or materials, Amazon-compliant. ${p} is centered and occupies 60% of the frame at ${catAngle}. Arranged naturally around it are 3–5 of its key physical ingredients, raw materials, or component elements — each clearly identifiable, real, and three-dimensional. ${isHiCtr ? 'The arrangement is visually bold and abundant, communicating richness of ingredients.' : 'The arrangement is clean and organized, each ingredient clearly separated from the next.'} ${catLight}. Soft shadow beneath the central product. No text overlays, no digital labels. The ingredients exist as real physical objects only. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // With Accessories
+  if (/accessor/.test(n)) {
+    return `Amazon main product image — product with included accessories, Amazon-compliant. ${p} is the clear hero, centered and occupying 55–60% of the frame at a slightly elevated three-quarter view. All accessories and included items that come in the box are laid out cleanly around the product — organized, non-overlapping, and clearly subordinate to the main product. ${isHiCtr ? 'Bold organized grid of items communicates high perceived value.' : 'Clean organized arrangement communicates completeness and value.'} ${catLight}. Soft shadows beneath all elements. Only real included accessories — no lifestyle props or digital overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Element + Tag
+  if (/element.*tag/.test(n)) {
+    return `Amazon main product image — product with element and tag, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. One key visual element (ingredient, material, or defining feature) is placed naturally beside or beneath the product. A single clean physical hang tag is attached to the product, displaying the primary keyword in neat readable typography — this is a real printed tag, never a digital overlay. ${catLight}. Clean soft shadow. No additional props. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Before / After
+  if (/before.?after/.test(n)) {
+    return `Amazon main product image — before and after split composition, Amazon-compliant. The frame is divided into two equal halves by a clean thin vertical line or subtle spatial separation. The left half shows the "before" state: the problem the product solves, rendered with honest neutral photography. The right half shows the "after" state: the clear benefit result delivered by ${p}, shown powerfully. ${p} itself appears prominently in the "after" half. ${isHiCtr ? 'The contrast is dramatic and immediately legible at thumbnail size.' : 'The contrast is clear and honest.'} ${catLight}. No digital text overlays — the visual contrast tells the story. ${BASE}`
+  }
+
+  // Size Comparison
+  if (/size.?comp/.test(n)) {
+    return `Amazon main product image — size comparison shot, Amazon-compliant. ${p} is shown at ${catAngle} in the center of the frame, filling 60% of the square. Beside it sits a universally familiar neutral scale reference object — such as a standard coin, a common household object, or a ruler — that makes the product's true dimensions immediately clear to the buyer. ${isHiCtr ? 'Bold lighting creates strong product presence while the scale reference remains clearly visible.' : 'Even lighting shows both the product and scale reference with equal clarity.'} ${catLight}. Soft shadows beneath all elements. No text or digital overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // ─── TAGS ───────────────────────────────────────────────────────────────────
+
+  // Corner Tag
+  if (/corner.?tag/.test(n)) {
+    return `Amazon main product image — product with corner tag, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. A small refined hang tag is attached at the upper or lower corner of the product — clean white tag with a single short ribbon or string, displaying the primary keyword in a minimal dark sans-serif font. The tag is a real physical object, not a digital overlay, and does not cover any key product feature. ${catLight}. Soft natural shadow beneath the product. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Ribbon Badge
+  if (/ribbon/.test(n)) {
+    return `Amazon main product image — product with ribbon badge, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. An elegant triangular corner ribbon or a classic rosette badge is physically attached to or draped across the upper corner of the product — premium fabric or satin material in white, gold, or black with the primary keyword embossed or printed in clean typography. The ribbon badge is a physical object, not a digital overlay. ${catLight}. Soft natural shadow. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Quantity Indicator
+  if (/quantity/.test(n)) {
+    return `Amazon main product image — product with quantity indicator, Amazon-compliant. ${p} is shown at ${catAngle}, filling 75% of the frame. A bold physical count tag or sticker is attached to or displayed prominently near the product, clearly showing the pack count, quantity, or piece number in large clean bold typography — this is a printed physical label, not a digital overlay. ${isHiCtr ? 'The count indicator is visually prominent and readable at thumbnail size.' : 'The count indicator is clean and clear without dominating the product itself.'} ${catLight}. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Quality Certification
+  if (/quality|certif/.test(n)) {
+    return `Amazon main product image — product with quality certification badge, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. A single professional certification or quality badge is displayed as a physical embossed medallion, seal, or label attached to or positioned directly beside the product — clean, official-looking, with minimal text. This is a physical object, not a digital graphic overlay. ${catLight}. The badge communicates trust, safety, and verified quality. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Feature Callout
+  if (/feature.?callout/.test(n)) {
+    return `Amazon main product image — product with feature callout tag, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. A single thin physical callout tag — clean white card with a fine arrow or line pointing to the product's #1 key feature — is physically attached to the product. The tag displays only the single most important feature benefit in clean readable sans-serif typography. This is a physical tag object, not a digital text overlay. ${catLight}. The callout does not obscure any key product element. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Award Badge
+  if (/award/.test(n)) {
+    return `Amazon main product image — product with award badge, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. A clean award medallion or badge — circular, gold or silver, with a ribbon beneath — is displayed as a physical object attached to or positioned directly beside the product, communicating recognition and achievement. Minimal clean typography on the badge. Physical object only — not a digital overlay. ${catLight}. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Sale Tag
+  if (/sale.?tag/.test(n)) {
+    return `Amazon main product image — product with sale/value tag, Amazon-compliant. ${p} is shown at ${catAngle}, filling 75% of the frame. A bold modern pricing or value tag — clean geometric shape in a bold accent color — is physically attached to the product by a short ribbon, displaying a value statement in clean bold typography. Physical tag only, not a digital overlay, and positioned so it does not cover any key product feature. ${catLight}. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // ─── LIFESTYLE ──────────────────────────────────────────────────────────────
+
+  // With Hand / Avatar
+  if (/with.?hand|hand.*avatar|avatar/.test(n)) {
+    const hand = isHiCtr
+      ? 'a stylish, well-groomed hand — naturally manicured, neither studio-perfect nor casual — gripping or actively using the product with intention and confidence'
+      : 'a clean natural human hand holding or gently using the product in a relaxed, authentic grip'
+    return `Amazon main product image — product in hand, Amazon-compliant. ${p} is held or actively used by ${hand}. Only the hand and wrist are visible — no body, no face, no person beyond the hand. The product is the primary subject, fully visible and sharp. ${catScale}. ${catLight}. Pure white background — no lifestyle environment, no props beyond the hand and product. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // In Use
+  if (/in.?use/.test(n)) {
+    return `Amazon main product image — product in active use, Amazon-compliant. ${p} is shown in the natural act of being used — demonstrating its core function in real time. ${isHiCtr ? 'The use context is bold and visually immediate — the viewer instantly understands what the product does and why they need it.' : 'The use context is clear, clean, and honest — the viewer immediately understands the product\'s primary function.'} Only a hand or minimal body part (no face, no full person) interacts with the product. Pure white background — no lifestyle environment or props beyond the interaction. ${catLight}. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // With Complementary Items
+  if (/complementary/.test(n)) {
+    return `Amazon main product image — product with complementary lifestyle item, Amazon-compliant. ${p} is the clear dominant hero, centered and occupying 65% of the frame. One single complementary lifestyle object — directly relevant to the product's primary use case — is placed naturally and secondarily in the frame. ${isHiCtr ? 'The complementary item is carefully chosen to be visually interesting and reinforce the product\'s value proposition at thumbnail size.' : 'The complementary item is minimal, clearly secondary, and reinforces product use without distracting from it.'} Pure white background. ${catLight}. No text overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Splash Effect
+  if (/splash/.test(n)) {
+    return `Amazon main product image — product with dynamic splash effect, Amazon-compliant. ${p} is shown at the center of a dramatic water or liquid splash — clean, transparent water splashing outward and upward from the product in a high-speed photography style. ${isHiCtr ? 'The splash is large, dynamic, and energetic — communicating water-resistance, freshness, and vitality with maximum visual impact.' : 'The splash is clean and precise — communicating water-resistance or freshness in a controlled, high-quality photography aesthetic.'} The product itself remains perfectly sharp, fully visible, and dominates the frame. Pure white background — the white space and water contrast create a striking clean look. ${catLight}. No text overlays. ${BASE}`
+  }
+
+  // Premium Lighting
+  if (/premium.?light|lighting/.test(n)) {
+    const lightStyle = isHiCtr
+      ? 'a dramatic cinematic key light positioned at 45 degrees, casting a deep rich shadow on one side and an intense highlight on the other — creating high-contrast studio lighting that makes the product look powerful and premium on a search page'
+      : 'a warm, soft premium studio key light with gentle fill creating depth through subtle shadow gradients — the product appears inviting, high-quality, and trustworthy'
+    return `Amazon main product image — premium lighting treatment, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}, under ${lightStyle}. The lighting is the hero of this composition — every surface detail, texture, material finish and color nuance is revealed by the precise light direction. Pure white background. No text, tags, or props. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // ─── ADVANCED ───────────────────────────────────────────────────────────────
+
+  // Multi-angle Composite
+  if (/multi.?angle/.test(n)) {
+    return `Amazon main product image — multi-angle composite, Amazon-compliant. Three or four views of ${p} are arranged cleanly within the square frame — one primary large view (front, 50% of frame) accompanied by two or three smaller satellite views (back, side, top) positioned around it in an organized grid or arc composition. All views share consistent ${catLight} and shadow treatment. Every angle is crisp and equally sharp. The composite communicates the full physical form of the product from every relevant direction. Pure white background with clean spacing between views. No text overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Bundle Display
+  if (/bundle/.test(n)) {
+    return `Amazon main product image — bundle display, Amazon-compliant. All items included in the bundle or set — ${p} and every included accessory, component, or companion product — are arranged together in a clean, organized composition that communicates the total value of the purchase. ${isHiCtr ? 'Items are arranged in a visually abundant grid or arc — the sheer number of included items creates immediate perceived value at thumbnail size.' : 'Items are neatly organized with the main product centered and accessories arranged around it — professional, complete, and trust-building.'} ${catScale} of the combined arrangement. ${catLight}. Soft uniform shadows. No text overlays. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Exploded View
+  if (/exploded/.test(n)) {
+    return `Amazon main product image — exploded component view, Amazon-compliant. ${p} is shown as a clean exploded diagram: each major component or layer is separated from the others in three-dimensional space, floating along the product's central axis in natural build order — top component at the top, base component at the bottom, all aligned and centered. The components are clean, sharp, and evenly spaced to show construction quality and material layers. ${isHiCtr ? 'The explosion offset is dramatic and clearly readable at thumbnail size.' : 'The explosion offset is measured and precise — communicating engineering and build quality.'} ${catLight}. Pure white background. No text labels or digital overlays. ${drama} ${BASE}`
+  }
+
+  // Infographic Style
+  if (/infographic/.test(n)) {
+    return `Amazon main product image — infographic style with minimal callouts, Amazon-compliant. ${p} is shown at ${catAngle}, centered and filling 70% of the frame. Attached to the product via thin physical lines or arrows are one or two ultra-minimal callout tags — real physical printed tags, not digital overlays — each pointing precisely at a key feature and displaying a single short label in clean sans-serif typography. The callouts are subordinate to the product, not decorative. ${catLight}. The composition is clean, editorial, and instantly scannable. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
+  }
+
+  // Comparison Layout
+  if (/comparison/.test(n)) {
+    return `Amazon main product image — comparison layout, Amazon-compliant. The frame is split into two halves by a clean thin dividing line. The left half shows a generic or inferior alternative product in muted, desaturated tones. The right half shows ${p} in full color, sharp, premium — visually superior in presentation. ${p} is the obvious winner: better lit, more vibrant, and more detailed. ${isHiCtr ? 'The contrast is immediately striking at thumbnail size.' : 'The comparison is honest and clear.'} No text labels or digital overlays. Both products remain on pure white. ${drama} ${BASE}`
+  }
+
+  // ─── FALLBACK (unknown template) ────────────────────────────────────────────
+  return `Amazon main product image, fully Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. ${catLight}. A soft natural shadow beneath the product. No text, tags, packaging or overlays of any kind. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
 }
 
 /**
