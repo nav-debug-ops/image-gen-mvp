@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Main Image Generator', href: '/tools/main-image-generator', icon: Image },
   { name: 'Secondary Images', href: '/tools/secondary-images', icon: GalleryHorizontal },
-  { name: 'Archive', href: '/archive', icon: Archive },
+  { name: 'Gallery', href: '/archive', icon: Archive },
   { name: 'A+ Content', href: '/tools/aplus-content', icon: LayoutGrid },
   { name: 'Brand Story', href: '/tools/brand-story', icon: BookOpen },
   { name: 'Storefront', href: '/tools/storefront', icon: Store },

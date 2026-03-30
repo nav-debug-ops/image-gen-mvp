@@ -8,6 +8,8 @@ import {
   Eye,
   EyeOff,
   BarChart2,
+  History,
+  ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { updateProfile, changePassword } from '../api/auth'
@@ -36,13 +38,37 @@ function AccountSettings() {
   const [usage, setUsage] = useState(null)
   const [usageLoading, setUsageLoading] = useState(true)
 
+  // Generation history
+  const [history, setHistory] = useState([])
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const [historyOffset, setHistoryOffset] = useState(0)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const HISTORY_PAGE = 20
+
   useEffect(() => {
     fetchAPI('/api/usage/summary')
       .then(res => safeJson(res))
       .then(data => { if (data) setUsage(data) })
       .catch(() => {})
       .finally(() => setUsageLoading(false))
+
+    loadHistory(0)
   }, [])
+
+  const loadHistory = async (off = 0) => {
+    setHistoryLoading(true)
+    try {
+      const res = await fetchAPI(`/api/usage/history?limit=${HISTORY_PAGE}&offset=${off}`)
+      const data = await safeJson(res)
+      if (data) {
+        if (off === 0) setHistory(data.generations)
+        else setHistory(prev => [...prev, ...data.generations])
+        setHistoryTotal(data.total)
+        setHistoryOffset(off)
+      }
+    } catch { /* silent */ }
+    finally { setHistoryLoading(false) }
+  }
 
   const handleProfileSave = async (e) => {
     e.preventDefault()
@@ -258,6 +284,63 @@ function AccountSettings() {
             </div>
           ) : (
             <p className="settings-empty">Could not load usage data.</p>
+          )}
+        </section>
+
+        {/* Generation History */}
+        <section className="settings-card settings-card-full">
+          <div className="settings-card-header">
+            <History size={20} />
+            <h2>Generation History</h2>
+          </div>
+
+          {history.length === 0 && !historyLoading && (
+            <p className="settings-empty">No generations yet.</p>
+          )}
+
+          {history.length > 0 && (
+            <div className="history-table-wrap">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Prompt</th>
+                    <th>Provider</th>
+                    <th>Model</th>
+                    <th>Status</th>
+                    <th>Cost</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map(g => (
+                    <tr key={g.id}>
+                      <td className="history-prompt-cell" title={g.prompt}>{g.prompt}</td>
+                      <td>{g.provider || '—'}</td>
+                      <td style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{g.model || '—'}</td>
+                      <td>
+                        <span className={`history-status-badge ${g.status}`}>{g.status}</span>
+                      </td>
+                      <td>{g.cost_estimate != null ? `$${Number(g.cost_estimate).toFixed(4)}` : '—'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{new Date(g.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {history.length < historyTotal && (
+            <div className="history-load-more">
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => loadHistory(historyOffset + HISTORY_PAGE)}
+                disabled={historyLoading}
+              >
+                {historyLoading
+                  ? <><Loader2 size={14} className="spin" /> Loading…</>
+                  : <><ChevronDown size={14} /> Load more ({historyTotal - history.length} remaining)</>}
+              </button>
+            </div>
           )}
         </section>
 
