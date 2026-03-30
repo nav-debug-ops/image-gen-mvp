@@ -262,7 +262,18 @@ For each image:
 Write as if you are briefing the best commercial product photographer in the world. Be specific, clear and concise. Focus on describing what Nano Banana Pro should generate in each image so real Amazon sellers can paste the prompts and get main images that drive clicks and sales."""
 
 
-def _build_product_brief(product: dict) -> str:
+_TEMPLATE_PROMPT_SYSTEM = """You are a commercial product photography prompt specialist for Amazon listings.
+Generate a single, highly specific image generation prompt for a specific Amazon product image template.
+
+Rules:
+- Amazon-compliant: pure white background RGB(255,255,255), product fills 80-90% of frame
+- 120-160 words, natural language paragraphs (NOT comma-tag lists)
+- Professional commercial photography style with precise lighting and composition instructions
+- Strictly match the named template style — this is the most important requirement
+- Output ONLY the prompt text. No labels, no preamble, no explanations."""
+
+
+def _build_product_brief(product: dict, template_name: str | None = None) -> str:
     """Build Prompt 1 context from scraped product data."""
     title    = product.get("title") or "Product"
     brand    = product.get("brand") or ""
@@ -281,12 +292,21 @@ def _build_product_brief(product: dict) -> str:
         else "  - No bullet points available"
     )
 
+    template_hint = ""
+    if template_name and template_name not in ("Plain White Background", ""):
+        template_hint = (
+            f"\nSelected template style: {template_name}\n"
+            "IMPORTANT: Image 4 (Creative High-CTR Variant) MUST be designed specifically "
+            f"around the '{template_name}' template concept. The other images should subtly "
+            "complement this direction while remaining safe and compliant."
+        )
+
     return f"""PRODUCT BRIEF (Prompt 1 context)
 
 Product name: {product_name}
 Category: {category}
 Key features:
-{bullets_text}
+{bullets_text}{template_hint}
 
 Based on this product data, derive:
 1. The primary keyword (2–4 words) that best captures the core benefit
@@ -297,7 +317,7 @@ Based on this product data, derive:
 Then generate all 16 image prompts following the OUTPUT STRUCTURE above."""
 
 
-async def generate_hero_prompts(product: dict) -> dict:
+async def generate_hero_prompts(product: dict, template_name: str | None = None) -> dict:
     """
     Uses Gemini Flash (text) to generate 16 professional Amazon image prompts
     following the commercial photography template.
@@ -309,7 +329,7 @@ async def generate_hero_prompts(product: dict) -> dict:
             "image_prompts": list,   # Extracted list of all 16 prompts
         }
     """
-    user_message = _build_product_brief(product)
+    user_message = _build_product_brief(product, template_name=template_name)
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
@@ -384,3 +404,69 @@ def _extract_all_prompts(text: str) -> list[str]:
         prompts = paragraphs[:16]
 
     return prompts[:16]  # Cap at 16
+
+
+async def generate_template_prompt(
+    template_name: str,
+    product_category: str | None = None,
+    strategy: str = "top-performing",
+    product_description: str | None = None,
+) -> str:
+    """
+    Generate a single AI-powered image generation prompt for a specific template.
+    Used in upload/manual mode where we have no ASIN — replaces static buildImagePrompt().
+    """
+    strategy_desc = (
+        "proven safe bestseller approach — reliable, clean, high-converting, used by top-BSR products"
+        if strategy == "top-performing"
+        else "visually distinctive to maximize click-through rate — bold, differentiated, thumb-stopping in search results"
+    )
+
+    user_message = f"""Generate a single professional Amazon product image prompt.
+
+Template style: {template_name}
+Product category: {product_category or "General"}
+Strategy: {strategy_desc}
+Product: {product_description or "a product"}
+
+The prompt must:
+- Describe the "{template_name}" template composition in detail
+- Specify pure white background (RGB 255,255,255), product fills 80-90% of frame
+- Include precise lighting setup, angle, and shadow instructions
+- Be 120-160 words in natural language paragraphs
+- Output ONLY the prompt text, nothing else"""
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
+    )
+
+    request_body = {
+        "system_instruction": {"parts": [{"text": _TEMPLATE_PROMPT_SYSTEM}]},
+        "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 512,
+            "responseMimeType": "text/plain",
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(url, json=request_body)
+        if response.status_code != 200:
+            error = response.json()
+            raise Exception(
+                error.get("error", {}).get("message", f"Gemini error: {response.status_code}")
+            )
+        data = response.json()
+
+    text = ""
+    for candidate in data.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            if "text" in part:
+                text += part["text"]
+
+    if not text.strip():
+        raise Exception("Gemini returned empty prompt")
+
+    return text.strip()

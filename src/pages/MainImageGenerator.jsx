@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { generateImage, generateHeroImage, uploadReferenceImage } from '../api/imageGen'
+import { generateImage, generateHeroImage, generateHeroImageStream, buildAIPrompt, uploadReferenceImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
@@ -405,24 +405,39 @@ function MainImageGenerator() {
 
         let result
         if (inputMode === 'asin' && asinValue) {
-          // AI-powered hero generation: Gemini builds 16 professional prompts → Imagen 4 generates the image
-          result = await generateHeroImage({
+          // AI-powered hero generation with SSE real-time progress
+          result = await generateHeroImageStream({
             asin: asinValue,
             marketplace,
             templateName: template.name,
             aspectRatio,
             promptVariation: 0,
-          }, (p) => {
-            setProgress(prev => ({ ...prev, ...p }))
+          }, (event) => {
+            setProgress(prev => ({
+              ...prev,
+              message: event.message || prev.message,
+              percentage: event.progress
+                ? Math.round(((i / totalImages) + (event.progress / 100) / totalImages) * 100)
+                : prev.percentage,
+            }))
           })
         } else {
-          // Manual prompt or upload mode — use existing flow
-          const prompt = buildImagePrompt(
-            template.name,
-            productCategory,
-            imageStrategy,
-            productDesc
-          )
+          // Upload / manual mode — AI-generated template-specific prompt
+          setProgress(prev => ({ ...prev, message: `Building AI prompt for ${template.name}...` }))
+          let prompt
+          try {
+            prompt = await buildAIPrompt({
+              templateName: template.name,
+              productCategory,
+              strategy: imageStrategy,
+              productDescription: productDesc,
+            })
+          } catch {
+            // Fall back to static prompt if AI call fails
+            prompt = buildImagePrompt(template.name, productCategory, imageStrategy, productDesc)
+          }
+
+          setProgress(prev => ({ ...prev, message: `Generating ${template.name}...` }))
           const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
           const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
           result = await generateImage(prompt, {

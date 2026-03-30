@@ -1,6 +1,8 @@
+import json
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -10,7 +12,7 @@ from app.services.generation_service import generate_image
 from app.services.providers import get_all_providers
 from app.services.asin_lookup import lookup_asin
 from app.services.hero_prompt_builder import build_hero_prompt
-from app.services.prompt_ai_service import generate_hero_prompts
+from app.services.prompt_ai_service import generate_hero_prompts, generate_template_prompt
 
 router = APIRouter()
 
@@ -146,7 +148,7 @@ async def create_hero_generation(
 
     # Generate 16 prompts using the AI photography brief template
     try:
-        prompt_result = await generate_hero_prompts(product)
+        prompt_result = await generate_hero_prompts(product, template_name=request.template_name)
         prompts_list = prompt_result["image_prompts"]
         # Pick the requested variation (default 0 = Image 1, Variation 1)
         variation_idx = max(0, min(request.prompt_variation, len(prompts_list) - 1))
@@ -194,6 +196,124 @@ async def create_hero_generation(
         )
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/hero/stream")
+async def create_hero_generation_stream(
+    request: HeroGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Hero generation with SSE progress streaming.
+    Emits JSON events: step, progress, message — final event has step='done' with full result.
+    """
+    asin = request.asin.strip().upper()
+    if not asin or len(asin) != 10 or not asin.isalnum():
+        raise HTTPException(status_code=422, detail="ASIN must be exactly 10 alphanumeric characters")
+
+    def _sse(payload: dict) -> str:
+        return f"data: {json.dumps(payload)}\n\n"
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        try:
+            # Step 1: ASIN lookup
+            yield _sse({"step": "asin", "progress": 10, "message": "Fetching product data from Amazon..."})
+            try:
+                product = await lookup_asin(asin, request.marketplace)
+            except ValueError as e:
+                yield _sse({"step": "error", "message": str(e)})
+                return
+            except Exception as e:
+                yield _sse({"step": "error", "message": f"Could not fetch product data: {e}"})
+                return
+
+            # Step 2: Generate AI prompts
+            yield _sse({"step": "prompts", "progress": 35, "message": "Generating 16 professional prompts with Gemini..."})
+            try:
+                prompt_result = await generate_hero_prompts(product, template_name=request.template_name)
+                prompts_list = prompt_result["image_prompts"]
+                variation_idx = max(0, min(request.prompt_variation, len(prompts_list) - 1))
+                active_prompt = prompts_list[variation_idx] if prompts_list else prompt_result["primary_prompt"]
+            except Exception:
+                active_prompt = build_hero_prompt(product, request.template_name)
+                prompt_result = {"all_prompts": None, "image_prompts": [], "primary_prompt": active_prompt}
+
+            # Step 3: Generate image
+            product_image_url = product.get("image_url")
+            generation_model = "gemini-2.5-flash-image" if product_image_url else "imagen-4.0-generate-001"
+            model_label = "Gemini Flash (img2img)" if product_image_url else "Imagen 4"
+            yield _sse({"step": "generating", "progress": 65, "message": f"Rendering image with {model_label}..."})
+
+            try:
+                gen = await generate_image(
+                    user_id=current_user.id,
+                    prompt=active_prompt,
+                    provider_name="gemini",
+                    model=generation_model,
+                    aspect_ratio=request.aspect_ratio,
+                    width=1024,
+                    height=1024,
+                    reference_image_url=product_image_url or None,
+                    failover=True,
+                    db=db,
+                )
+            except Exception as e:
+                yield _sse({"step": "error", "message": str(e)})
+                return
+
+            yield _sse({
+                "step": "done",
+                "progress": 100,
+                "message": "Image ready!",
+                "success": True,
+                "generation_id": gen.id,
+                "image_url": gen.image_url,
+                "image_id": gen.image_id,
+                "provider": gen.provider,
+                "model": gen.model,
+                "cost_estimate": gen.cost_estimate,
+                "duration_ms": gen.duration_ms,
+                "all_prompts": prompt_result.get("all_prompts"),
+                "image_prompts": prompt_result.get("image_prompts"),
+                "active_prompt": active_prompt,
+            })
+
+        except Exception as e:
+            yield _sse({"step": "error", "message": str(e)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+class BuildPromptRequest(BaseModel):
+    template_name: str
+    product_category: Optional[str] = None
+    strategy: Optional[str] = "top-performing"
+    product_description: Optional[str] = None
+
+
+@router.post("/build-prompt")
+async def build_ai_prompt(
+    request: BuildPromptRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a single AI-powered image prompt for a template + product combination."""
+    if not request.template_name.strip():
+        raise HTTPException(status_code=400, detail="template_name is required")
+    try:
+        prompt = await generate_template_prompt(
+            template_name=request.template_name,
+            product_category=request.product_category,
+            strategy=request.strategy or "top-performing",
+            product_description=request.product_description,
+        )
+        return {"prompt": prompt}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

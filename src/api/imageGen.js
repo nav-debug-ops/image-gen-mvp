@@ -152,6 +152,102 @@ export async function generateHeroImage({ asin, marketplace = 'US', templateName
 }
 
 /**
+ * Generate an Amazon hero image with real-time SSE progress streaming.
+ * Replaces generateHeroImage() — emits step events before resolving with the final result.
+ */
+export async function generateHeroImageStream({ asin, marketplace = 'US', templateName = 'Plain White Background', aspectRatio = '1:1', promptVariation = 0 }, onProgress = null) {
+  const body = {
+    asin,
+    marketplace,
+    template_name: templateName,
+    aspect_ratio: aspectRatio,
+    prompt_variation: promptVariation,
+  }
+
+  const token = localStorage.getItem('auth_token')
+  const response = await fetch('/api/generate/hero/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (response.status === 401) {
+    localStorage.removeItem('auth_token')
+    window.location.href = '/login'
+    throw new Error('Session expired')
+  }
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err?.detail || `Hero generation failed (${response.status})`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() // keep incomplete line
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      let event
+      try { event = JSON.parse(line.slice(6)) } catch { continue }
+
+      if (event.step === 'error') throw new Error(event.message)
+
+      if (event.step === 'done') {
+        return {
+          url: event.image_url,
+          imageId: event.image_id,
+          provider: event.provider,
+          model: event.model,
+          generationId: event.generation_id,
+          costEstimate: event.cost_estimate,
+          allPrompts: event.all_prompts,
+          imagePrompts: event.image_prompts,
+          activePrompt: event.active_prompt,
+        }
+      }
+
+      onProgress?.(event)
+    }
+  }
+
+  throw new Error('Stream ended without a result')
+}
+
+/**
+ * Generate a single AI-powered image prompt for a template + product combination.
+ * Used in upload/manual mode — replaces static buildImagePrompt().
+ */
+export async function buildAIPrompt({ templateName, productCategory, strategy, productDescription }) {
+  const res = await fetchAPI('/api/generate/build-prompt', {
+    method: 'POST',
+    body: JSON.stringify({
+      template_name: templateName,
+      product_category: productCategory || null,
+      strategy: strategy || 'top-performing',
+      product_description: productDescription || null,
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.detail || 'AI prompt generation failed')
+  }
+  const data = await res.json()
+  return data.prompt
+}
+
+/**
  * Generate image with reference images (convenience wrapper).
  */
 export async function generateImageWithReferences(prompt, referenceImages, options = {}, onProgress = null) {
