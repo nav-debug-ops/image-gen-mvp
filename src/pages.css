@@ -6826,6 +6826,12 @@
   color: var(--text-secondary);
 }
 
+.brief-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Brief cards container */
 .brief-cards-container {
   display: flex;

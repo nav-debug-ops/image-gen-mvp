@@ -31,6 +31,7 @@ import {
   Undo2
 } from 'lucide-react'
 import { generateImage, buildAIPrompt } from '../api/imageGen'
+import { downloadAsZip } from '../utils/downloadZip'
 import { lookupASIN } from '../api/asin'
 import { generateInfographicBrief } from '../api/campaigns'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
@@ -248,6 +249,7 @@ function SecondaryImageGenerator() {
 
   // AI prompt generation state per type
   const [aiPromptLoading, setAiPromptLoading] = useState({}) // { [typeId]: bool }
+  const [zipLoading, setZipLoading] = useState(false)
 
   // Infographic brief state
   const [infographicBrief, setInfographicBrief] = useState(null)
@@ -579,12 +581,33 @@ function SecondaryImageGenerator() {
     }
   }
 
-  // Download selected images
+  // Download selected images as a ZIP
   const downloadSelected = async () => {
     const imagesToDownload = generatedImages.filter(img => selectedImages.includes(img.id))
-    for (const img of imagesToDownload) {
-      await downloadImage(img)
-      await new Promise(resolve => setTimeout(resolve, 500))
+    if (!imagesToDownload.length) return
+    setZipLoading(true)
+    try {
+      const productSlug = campaignData?.productName
+        ? campaignData.productName.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
+        : 'secondary-images'
+      await downloadAsZip(imagesToDownload, productSlug)
+    } finally {
+      setZipLoading(false)
+    }
+  }
+
+  // Download all generated brief images as a ZIP
+  const downloadBriefZip = async () => {
+    const images = Object.values(briefImages)
+    if (!images.length) return
+    setZipLoading(true)
+    try {
+      const productSlug = campaignData?.productName
+        ? campaignData.productName.replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 30)
+        : 'infographic-brief'
+      await downloadAsZip(images, `${productSlug}-infographics`)
+    } finally {
+      setZipLoading(false)
     }
   }
 
@@ -910,15 +933,28 @@ function SecondaryImageGenerator() {
                     ? `Generating ${allBriefsProgress?.current}/${allBriefsProgress?.total}…`
                     : `${Object.keys(briefImages).length}/7 images generated`}
                 </span>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={handleGenerateAllBriefs}
-                  disabled={allBriefsGenerating}
-                >
-                  {allBriefsGenerating
-                    ? <><Loader2 size={13} className="spin" /> Generating All…</>
-                    : <><Zap size={13} /> Generate All 7</>}
-                </button>
+                <div className="brief-batch-actions">
+                  {Object.keys(briefImages).length > 0 && (
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={downloadBriefZip}
+                      disabled={zipLoading}
+                      title="Download all generated brief images as ZIP"
+                    >
+                      {zipLoading ? <Loader2 size={13} className="spin" /> : <Download size={13} />}
+                      {zipLoading ? 'Zipping…' : `ZIP (${Object.keys(briefImages).length})`}
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleGenerateAllBriefs}
+                    disabled={allBriefsGenerating}
+                  >
+                    {allBriefsGenerating
+                      ? <><Loader2 size={13} className="spin" /> Generating All…</>
+                      : <><Zap size={13} /> Generate All 7</>}
+                  </button>
+                </div>
               </div>
 
               {/* Color palette strip */}
@@ -1149,10 +1185,10 @@ function SecondaryImageGenerator() {
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={downloadSelected}
-                  disabled={selectedImages.length === 0}
+                  disabled={selectedImages.length === 0 || zipLoading}
                 >
-                  <Download size={16} />
-                  Download ({selectedImages.length})
+                  {zipLoading ? <Loader2 size={16} className="spin" /> : <Download size={16} />}
+                  {zipLoading ? 'Zipping…' : `Download ZIP (${selectedImages.length})`}
                 </button>
               </div>
             )}
