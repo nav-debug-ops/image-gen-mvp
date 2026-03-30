@@ -357,6 +357,13 @@ Target: ${campaignData.targetAudience}
 Style: Premium, brand-consistent`
 }
 
+const _TEMPLATE_WIDGETS = {
+  'blank': [],
+  'marquee': ['hero-header', 'text-tile', 'gallery', 'product-grid'],
+  'product-highlight': ['hero-header', 'image-text', 'text-tile', 'product-grid'],
+  'product-collection': ['hero-header', 'gallery', 'image-text', 'product-grid'],
+}
+
 function StorefrontDesigner() {
   // Page management
   const [pages, setPages] = useState([
@@ -373,6 +380,7 @@ function StorefrontDesigner() {
 
   // ASIN for content generation
   const [asinValue, setAsinValue] = useState('')
+  const [marketplace, setMarketplace] = useState('US')
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
 
   // UI state
@@ -415,11 +423,16 @@ function StorefrontDesigner() {
     if (!canAddPage) return
     const pageId = `page-${Date.now()}`
     const pageNum = pages.length
+    const templateWidgets = (_TEMPLATE_WIDGETS[template] || []).map(widgetType => {
+      const widgetDef = STORE_WIDGETS.find(w => w.id === widgetType)
+      if (!widgetDef) return null
+      return { instanceId: `${widgetType}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, type: widgetType, ...widgetDef }
+    }).filter(Boolean)
     setPages(prev => [...prev, {
       id: pageId,
       name: `Page ${pageNum}`,
       template,
-      widgets: []
+      widgets: templateWidgets,
     }])
     setActivePage(pageId)
     setShowTemplates(false)
@@ -608,6 +621,37 @@ function StorefrontDesigner() {
     }
   }
 
+  const handleSave = () => {
+    const saveData = { pages, widgetData, savedAt: new Date().toISOString() }
+    localStorage.setItem('storefront_draft', JSON.stringify(saveData))
+    const prev = document.title
+    document.title = '✓ Saved — ' + prev
+    setTimeout(() => { document.title = prev }, 1500)
+  }
+
+  const handleExport = () => {
+    const exportPages = pages.map(p => ({
+      id: p.id,
+      name: p.name,
+      template: p.template,
+      widgets: p.widgets.map(w => ({
+        type: w.type,
+        name: w.name,
+        headline: widgetData[w.instanceId]?.headline || '',
+        body: widgetData[w.instanceId]?.body || '',
+      }))
+    }))
+    const blob = new Blob([JSON.stringify({ storefront: exportPages, asin: asinValue, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `storefront-${asinValue || 'draft'}-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // Generate AI text content via /api/content/generate
   const generateWidgetContent = async (instanceId) => {
     const widget = currentWidgets.find(w => w.instanceId === instanceId)
@@ -626,6 +670,7 @@ function StorefrontDesigner() {
         asin: asinValue,
         pageType: 'storefront',
         moduleType: widget.id,
+        marketplace,
       })
       if (result.headline) updateWidgetData(instanceId, 'headline', result.headline)
       if (result.body)     updateWidgetData(instanceId, 'body',     result.body)
@@ -1018,10 +1063,10 @@ function StorefrontDesigner() {
                 </button>
               </div>
             )}
-            <button className="btn btn-sm btn-secondary" disabled={currentWidgets.length === 0}>
+            <button className="btn btn-sm btn-secondary" disabled={currentWidgets.length === 0} onClick={handleSave}>
               <Save size={16} /> Save
             </button>
-            <button className="btn btn-sm btn-primary" disabled={currentWidgets.length === 0}>
+            <button className="btn btn-sm btn-primary" disabled={currentWidgets.length === 0} onClick={handleExport}>
               <Download size={16} /> Export
             </button>
             <div className="guidelines-dropdown">

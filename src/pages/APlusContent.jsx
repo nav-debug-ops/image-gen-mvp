@@ -732,6 +732,7 @@ function APlusContent() {
 
   // ASIN input
   const [asinValue, setAsinValue] = useState('')
+  const [marketplace, setMarketplace] = useState('US')
   const [productCategory, setProductCategory] = useState('')
 
   // Module management
@@ -977,6 +978,35 @@ function APlusContent() {
   }
 
   // Generate AI text content for module via /api/content/generate
+  const handleSave = () => {
+    const saveData = { asinValue, productCategory, selectedModules, moduleData, savedAt: new Date().toISOString() }
+    localStorage.setItem('aplus_draft', JSON.stringify(saveData))
+    // Brief visual feedback via window title flash
+    const prev = document.title
+    document.title = '✓ Saved — ' + prev
+    setTimeout(() => { document.title = prev }, 1500)
+  }
+
+  const handleExport = () => {
+    const modules = selectedModules.map(m => ({
+      module_type: m.id,
+      module_name: m.name,
+      headline: moduleData[m.instanceId]?.headline || '',
+      body: moduleData[m.instanceId]?.body || '',
+      highlights: moduleData[m.instanceId]?.highlights || [],
+      specs: moduleData[m.instanceId]?.specs || [],
+    }))
+    const blob = new Blob([JSON.stringify({ asin: asinValue, page_type: 'aplus', modules, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `aplus-content-${asinValue || 'draft'}-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const generateModuleContent = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
     if (!module) return
@@ -994,6 +1024,7 @@ function APlusContent() {
         asin: asinValue,
         pageType: 'aplus',
         moduleType: module.id,
+        marketplace,
       })
       if (result.headline) updateModuleData(instanceId, 'headline', result.headline)
       if (result.body)     updateModuleData(instanceId, 'body',     result.body)
@@ -1380,11 +1411,11 @@ function APlusContent() {
               {previewMode ? <EyeOff size={16} /> : <Eye size={16} />}
               {previewMode ? 'Edit' : 'Preview'}
             </button>
-            <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0}>
+            <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0} onClick={handleSave}>
               <Save size={16} />
               Save
             </button>
-            <button className="btn btn-sm btn-primary" disabled={!hasMinModules}>
+            <button className="btn btn-sm btn-primary" disabled={!hasMinModules} onClick={handleExport}>
               <Download size={16} />
               Export
             </button>

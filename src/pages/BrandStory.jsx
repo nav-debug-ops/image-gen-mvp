@@ -233,6 +233,7 @@ function BrandStory() {
   const [generatingModules, setGeneratingModules] = useState({})
   const [moduleErrors, setModuleErrors] = useState({})
   const [asinValue, setAsinValue] = useState('')
+  const [marketplace, setMarketplace] = useState('US')
   const [productCategory, setProductCategory] = useState('')
 
   // Validation
@@ -463,6 +464,33 @@ function BrandStory() {
     }
   }
 
+  const handleSave = () => {
+    const saveData = { asinValue, selectedModules, moduleData, savedAt: new Date().toISOString() }
+    localStorage.setItem('brand_story_draft', JSON.stringify(saveData))
+    const prev = document.title
+    document.title = '✓ Saved — ' + prev
+    setTimeout(() => { document.title = prev }, 1500)
+  }
+
+  const handleExport = () => {
+    const modules = selectedModules.map(m => ({
+      module_type: m.id,
+      module_name: m.name,
+      headline: moduleData[m.instanceId]?.headline || '',
+      body: moduleData[m.instanceId]?.body || '',
+      qa_items: moduleData[m.instanceId]?.qaItems || [],
+    }))
+    const blob = new Blob([JSON.stringify({ asin: asinValue, page_type: 'brand_story', modules, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `brand-story-${asinValue || 'draft'}-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // Generate AI text content via /api/content/generate
   const generateModuleContent = async (instanceId) => {
     const module = selectedModules.find(m => m.instanceId === instanceId)
@@ -481,6 +509,7 @@ function BrandStory() {
         asin: asinValue,
         pageType: 'brand_story',
         moduleType: module.id,
+        marketplace,
       })
       if (module.type === 'brand-qa' && result.qa_pairs?.length) {
         updateModuleData(instanceId, 'qaItems', result.qa_pairs.map(p => ({
@@ -992,11 +1021,11 @@ function BrandStory() {
               {previewMode ? <EyeOff size={16} /> : <Eye size={16} />}
               {previewMode ? 'Edit' : 'Preview'}
             </button>
-            <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0}>
+            <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0} onClick={handleSave}>
               <Save size={16} />
               Save
             </button>
-            <button className="btn btn-sm btn-primary" disabled={!hasMinModules}>
+            <button className="btn btn-sm btn-primary" disabled={!hasMinModules} onClick={handleExport}>
               <Download size={16} />
               Export
             </button>

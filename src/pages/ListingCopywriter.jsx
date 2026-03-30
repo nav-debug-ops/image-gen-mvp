@@ -219,6 +219,25 @@ function ListingCopywriter() {
     setTimeout(() => setCopiedField(null), 2000)
   }
 
+  const handleExport = () => {
+    const content = {
+      titles,
+      bullets,
+      description,
+      search_terms: searchTerms,
+      generated_at: new Date().toISOString(),
+    }
+    const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `listing-copy-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="listing-copywriter">
       <header className="page-header">
@@ -397,7 +416,7 @@ function ListingCopywriter() {
                     {copiedField === 'all' ? <Check size={16} /> : <Copy size={16} />}
                     Copy All
                   </button>
-                  <button className="btn btn-secondary btn-sm">
+                  <button className="btn btn-secondary btn-sm" onClick={handleExport}>
                     <Download size={16} />
                     Export
                   </button>
