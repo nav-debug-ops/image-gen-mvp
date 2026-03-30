@@ -6809,6 +6809,23 @@
   border: 1px solid rgba(255,255,255,0.15);
 }
 
+/* Brief batch header */
+.brief-batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface-2, rgba(255,255,255,0.04));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.brief-batch-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 /* Brief cards container */
 .brief-cards-container {
   display: flex;

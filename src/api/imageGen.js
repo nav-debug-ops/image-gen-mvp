@@ -226,17 +226,21 @@ export async function generateHeroImageStream({ asin, marketplace = 'US', templa
 }
 
 /**
- * Generate a single AI-powered image prompt for a template + product combination.
- * Used in upload/manual mode — replaces static buildImagePrompt().
+ * Generate a single AI-powered image prompt.
+ * Hero/upload mode: pass templateName.
+ * Secondary image mode: pass imageType + productName + keywords.
  */
-export async function buildAIPrompt({ templateName, productCategory, strategy, productDescription }) {
+export async function buildAIPrompt({ templateName, productCategory, strategy, productDescription, imageType, productName, keywords }) {
   const res = await fetchAPI('/api/generate/build-prompt', {
     method: 'POST',
     body: JSON.stringify({
-      template_name: templateName,
+      template_name: templateName || null,
       product_category: productCategory || null,
       strategy: strategy || 'top-performing',
       product_description: productDescription || null,
+      image_type: imageType || null,
+      product_name: productName || null,
+      keywords: keywords || null,
     }),
   })
   if (!res.ok) {

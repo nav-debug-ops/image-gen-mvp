@@ -406,6 +406,85 @@ def _extract_all_prompts(text: str) -> list[str]:
     return prompts[:16]  # Cap at 16
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Secondary image prompt generator
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SECONDARY_PROMPT_SYSTEM = """You are a professional Amazon listing image prompt specialist.
+Generate a single detailed prompt for an Amazon secondary listing image.
+Output ONLY the prompt text (160-200 words), natural language paragraphs. No labels, no preamble, no explanations."""
+
+_SECONDARY_TYPE_BRIEFS = {
+    "benefits": "Mixed photo+graphic infographic showing 3 key product benefits. Product anchored center-left with crisp studio photography (accurate color, real texture). Three floating semi-transparent benefit callout cards with thin-line teal accent icons, bold navy headlines (max 6 words), grey sublines. Soft gradient background warm-white to light-grey with subtle depth layers.",
+    "features": "Technical features infographic with 4 UI-style annotation cards positioned at each quadrant around the product. Each card: rounded semi-transparent panel, teal icon, bold navy label, grey descriptor. Fine connecting lines linking cards to relevant product parts. Premium soft-gradient background. Clean geometric typography.",
+    "comparison": "Split comparison infographic: left side 'Our Product' in crisp studio quality, right side de-emphasized muted competitor representation. Vertical comparison column with 3-4 benefit rows: teal checkmarks (ours) vs muted X (theirs). Bold navy row labels. Background: clean gradient off-white to pale blue-grey. Calm, confident premium tone.",
+    "lifestyle": "Aspirational lifestyle photograph. Real person aged 28-40 naturally using the product in a realistic modern home environment. Natural window light from one side, warm color temperature. Semi-transparent text card lower third: bold navy headline (max 10 words) + one grey subline. No stock photo stiffness. Authentic emotional resonance.",
+    "quality": "Macro close-up quality proof shot. Extreme close range capturing real texture, stitching or structural detail, material surface finish and construction precision. Soft directional studio key light + subtle rim light for 3D depth. Shallow depth-of-field neutral background. 2-3 floating quality callout cards with teal icons. Luxury craftsmanship tone.",
+    "howto": "Step-by-step how-to-use infographic. 3-4 numbered steps in horizontal or vertical flow. Each step: circular teal numbered icon, thin-line illustration, bold navy step headline (max 6 words), one grey supporting subline. Product appears in at least one step with studio photography. Soft gradient warm-white background. Premium instructional design.",
+}
+
+
+async def generate_secondary_prompt(
+    image_type: str,
+    product_name: str,
+    product_category: str | None = None,
+    keywords: list[str] | None = None,
+    product_description: str | None = None,
+) -> str:
+    """
+    Generate a single AI-powered prompt for an Amazon secondary listing image.
+    Used in SecondaryImageGenerator to replace static buildPromptForType().
+    """
+    type_brief = _SECONDARY_TYPE_BRIEFS.get(image_type, "Professional Amazon secondary listing image with studio quality photography.")
+    kw_context = f"Key features/benefits to highlight: {', '.join(keywords[:6])}" if keywords else ""
+
+    user_message = f"""Generate a professional Amazon secondary image prompt.
+
+Image type: {image_type}
+Composition brief: {type_brief}
+Product name: {product_name}
+Category: {product_category or 'General'}
+{kw_context}
+{f'Product context: {product_description}' if product_description else ''}
+
+Requirements:
+- Follow the composition brief structure exactly
+- Inject the product name and specific keywords/benefits naturally
+- 160-200 words, natural language paragraphs (not comma-tag lists)
+- Include specific lighting, composition, and typography instructions
+- Output ONLY the prompt text"""
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
+    )
+
+    request_body = {
+        "system_instruction": {"parts": [{"text": _SECONDARY_PROMPT_SYSTEM}]},
+        "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 600, "responseMimeType": "text/plain"},
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(url, json=request_body)
+        if response.status_code != 200:
+            error = response.json()
+            raise Exception(
+                error.get("error", {}).get("message", f"Gemini error: {response.status_code}")
+            )
+        data = response.json()
+
+    text = ""
+    for candidate in data.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            if "text" in part:
+                text += part["text"]
+
+    if not text.strip():
+        raise Exception("Gemini returned empty prompt")
+    return text.strip()
+
+
 async def generate_template_prompt(
     template_name: str,
     product_category: str | None = None,

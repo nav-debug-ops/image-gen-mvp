@@ -30,7 +30,7 @@ import {
   ExternalLink,
   Undo2
 } from 'lucide-react'
-import { generateImage } from '../api/imageGen'
+import { generateImage, buildAIPrompt } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import { generateInfographicBrief } from '../api/campaigns'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
@@ -246,6 +246,9 @@ function SecondaryImageGenerator() {
   // Keyword panel state: { [typeId]: string[] }
   const [mergedKeywords, setMergedKeywords] = useState({})
 
+  // AI prompt generation state per type
+  const [aiPromptLoading, setAiPromptLoading] = useState({}) // { [typeId]: bool }
+
   // Infographic brief state
   const [infographicBrief, setInfographicBrief] = useState(null)
   const [briefLoading, setBriefLoading] = useState(false)
@@ -253,6 +256,8 @@ function SecondaryImageGenerator() {
   const [briefMode, setBriefMode] = useState(false)
   const [briefGenerating, setBriefGenerating] = useState({}) // { [brief.number]: bool }
   const [briefImages, setBriefImages] = useState({})         // { [brief.number]: imageObj }
+  const [allBriefsGenerating, setAllBriefsGenerating] = useState(false)
+  const [allBriefsProgress, setAllBriefsProgress] = useState(null) // { current, total }
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)
@@ -470,6 +475,21 @@ function SecondaryImageGenerator() {
     }
   }
 
+  // Batch generate all 7 infographic brief images in sequence
+  const handleGenerateAllBriefs = async () => {
+    if (!infographicBrief?.infographics?.length || allBriefsGenerating) return
+    setAllBriefsGenerating(true)
+    setError(null)
+    const briefs = infographicBrief.infographics
+    setAllBriefsProgress({ current: 0, total: briefs.length })
+    for (let i = 0; i < briefs.length; i++) {
+      setAllBriefsProgress({ current: i + 1, total: briefs.length })
+      await handleGenerateBriefImage(briefs[i])
+    }
+    setAllBriefsGenerating(false)
+    setAllBriefsProgress(null)
+  }
+
   // Called when user clicks "Merge & Use Selected" in the keyword panel
   const handleKeywordsMerge = (typeId, keywords) => {
     setMergedKeywords(prev => ({ ...prev, [typeId]: keywords }))
@@ -481,15 +501,34 @@ function SecondaryImageGenerator() {
   // Generate default prompt for a given type based on campaign data
   const getDefaultPrompt = (typeId) => buildPromptForType(typeId, campaignData, mergedKeywords[typeId] || [])
 
-  // Handle image type selection change
-  const handleTypeChange = (typeId) => {
+  // Handle image type selection change — use AI prompt when campaign data is available
+  const handleTypeChange = async (typeId) => {
     setSelectedType(typeId)
-    // Auto-generate prompt if not already set
-    if (typeId && !typePrompts[typeId]) {
-      setTypePrompts(prev => ({
-        ...prev,
-        [typeId]: getDefaultPrompt(typeId)
-      }))
+    if (!typeId) return
+
+    // Already has a prompt (user-edited or previously AI-generated)
+    if (typePrompts[typeId]) return
+
+    if (hasCampaignData && campaignData) {
+      // Generate AI prompt with product context
+      setAiPromptLoading(prev => ({ ...prev, [typeId]: true }))
+      try {
+        const prompt = await buildAIPrompt({
+          imageType: typeId,
+          productName: campaignData.productName,
+          productCategory: productCategory || campaignData.category,
+          keywords: mergedKeywords[typeId] || campaignData.benefits?.slice(0, 5) || [],
+          productDescription: campaignData.benefits?.slice(0, 3).join('. '),
+        })
+        setTypePrompts(prev => ({ ...prev, [typeId]: prompt }))
+      } catch {
+        // Fall back to static prompt
+        setTypePrompts(prev => ({ ...prev, [typeId]: getDefaultPrompt(typeId) }))
+      } finally {
+        setAiPromptLoading(prev => ({ ...prev, [typeId]: false }))
+      }
+    } else {
+      setTypePrompts(prev => ({ ...prev, [typeId]: getDefaultPrompt(typeId) }))
     }
   }
 
@@ -501,12 +540,11 @@ function SecondaryImageGenerator() {
     }))
   }
 
-  // Reset prompt to auto-generated default
-  const resetToDefault = (typeId) => {
-    setTypePrompts(prev => ({
-      ...prev,
-      [typeId]: getDefaultPrompt(typeId)
-    }))
+  // Reset prompt — re-run AI generation if campaign data exists, else use static
+  const resetToDefault = async (typeId) => {
+    // Clear so handleTypeChange will regenerate
+    setTypePrompts(prev => { const n = { ...prev }; delete n[typeId]; return n })
+    await handleTypeChange(typeId)
   }
 
   // Copy prompt to clipboard
@@ -612,7 +650,7 @@ function SecondaryImageGenerator() {
     }
   }
 
-  const canGenerateImages = hasCampaignData && selectedType && typePrompts[selectedType] && !isGenerating
+  const canGenerateImages = hasCampaignData && selectedType && typePrompts[selectedType] && !isGenerating && !aiPromptLoading[selectedType]
 
   return (
     <div className="secondary-image-generator">
@@ -865,6 +903,24 @@ function SecondaryImageGenerator() {
 
           {briefMode && infographicBrief ? (
             <div className="brief-cards-container">
+              {/* Batch generate button */}
+              <div className="brief-batch-header">
+                <span className="brief-batch-label">
+                  {allBriefsGenerating
+                    ? `Generating ${allBriefsProgress?.current}/${allBriefsProgress?.total}…`
+                    : `${Object.keys(briefImages).length}/7 images generated`}
+                </span>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleGenerateAllBriefs}
+                  disabled={allBriefsGenerating}
+                >
+                  {allBriefsGenerating
+                    ? <><Loader2 size={13} className="spin" /> Generating All…</>
+                    : <><Zap size={13} /> Generate All 7</>}
+                </button>
+              </div>
+
               {/* Color palette strip */}
               {infographicBrief.color_palette && (
                 <div className="brief-palette-strip">
@@ -1019,16 +1075,21 @@ function SecondaryImageGenerator() {
 
                         <div className="prompt-edit-area">
                           <label className="prompt-label">
-                            {mergedKeywords[selectedType]?.length > 0
+                            {aiPromptLoading[selectedType]
+                              ? <><Loader2 size={13} className="spin" /> Generating AI prompt…</>
+                              : mergedKeywords[selectedType]?.length > 0
                               ? `Prompt updated with ${mergedKeywords[selectedType].length} keywords (editable):`
-                              : 'Auto-generated prompt from campaign data (editable):'}
+                              : hasCampaignData
+                              ? 'AI-generated prompt for this image type (editable):'
+                              : 'Auto-generated prompt (editable):'}
                           </label>
                           <textarea
                             className="prompt-textarea"
                             value={typePrompts[selectedType] || ''}
                             onChange={(e) => updateTypePrompt(selectedType, e.target.value)}
                             rows={8}
-                            placeholder="Enter your custom prompt or let it auto-generate from campaign data..."
+                            disabled={!!aiPromptLoading[selectedType]}
+                            placeholder={aiPromptLoading[selectedType] ? 'Generating AI prompt…' : 'Enter your custom prompt or let it auto-generate from campaign data...'}
                           />
                           <div className="prompt-char-count">
                             {(typePrompts[selectedType] || '').length} characters

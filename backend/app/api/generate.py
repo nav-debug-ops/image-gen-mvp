@@ -12,7 +12,7 @@ from app.services.generation_service import generate_image
 from app.services.providers import get_all_providers
 from app.services.asin_lookup import lookup_asin
 from app.services.hero_prompt_builder import build_hero_prompt
-from app.services.prompt_ai_service import generate_hero_prompts, generate_template_prompt
+from app.services.prompt_ai_service import generate_hero_prompts, generate_template_prompt, generate_secondary_prompt
 
 router = APIRouter()
 
@@ -292,10 +292,15 @@ async def create_hero_generation_stream(
 
 
 class BuildPromptRequest(BaseModel):
-    template_name: str
+    # Hero / upload mode fields
+    template_name: Optional[str] = None
     product_category: Optional[str] = None
     strategy: Optional[str] = "top-performing"
     product_description: Optional[str] = None
+    # Secondary image mode fields
+    image_type: Optional[str] = None   # benefits | features | comparison | lifestyle | quality | howto
+    product_name: Optional[str] = None
+    keywords: Optional[list[str]] = None
 
 
 @router.post("/build-prompt")
@@ -303,17 +308,34 @@ async def build_ai_prompt(
     request: BuildPromptRequest,
     current_user: User = Depends(get_current_user),
 ):
-    """Generate a single AI-powered image prompt for a template + product combination."""
-    if not request.template_name.strip():
-        raise HTTPException(status_code=400, detail="template_name is required")
+    """
+    Generate a single AI-powered image prompt.
+    - Secondary images: set image_type + product_name
+    - Hero / upload: set template_name
+    """
     try:
-        prompt = await generate_template_prompt(
-            template_name=request.template_name,
-            product_category=request.product_category,
-            strategy=request.strategy or "top-performing",
-            product_description=request.product_description,
-        )
+        if request.image_type:
+            if not request.product_name:
+                raise HTTPException(status_code=400, detail="product_name is required for secondary image prompts")
+            prompt = await generate_secondary_prompt(
+                image_type=request.image_type,
+                product_name=request.product_name,
+                product_category=request.product_category,
+                keywords=request.keywords,
+                product_description=request.product_description,
+            )
+        else:
+            if not request.template_name or not request.template_name.strip():
+                raise HTTPException(status_code=400, detail="template_name or image_type is required")
+            prompt = await generate_template_prompt(
+                template_name=request.template_name,
+                product_category=request.product_category,
+                strategy=request.strategy or "top-performing",
+                product_description=request.product_description,
+            )
         return {"prompt": prompt}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
