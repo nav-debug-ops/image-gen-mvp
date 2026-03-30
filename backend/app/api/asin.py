@@ -1,35 +1,55 @@
+import re
 import traceback
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from app.services.auth import get_current_user
-from app.services.asin_lookup import lookup_asin, build_prompt_from_product
+from app.services.asin_lookup import lookup_asin, build_prompt_from_product, MARKETPLACE_DOMAINS, scrape_raw_debug
 from app.models.user import User
 
 router = APIRouter()
 
+_ASIN_RE = re.compile(r"^[A-Z0-9]{10}$")
 
-@router.get("/{asin}")
-async def get_asin_product(
+
+def _validate_asin(asin: str) -> str:
+    asin = asin.strip().upper()
+    if not _ASIN_RE.match(asin):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid ASIN — must be exactly 10 alphanumeric characters (letters and numbers only).",
+        )
+    return asin
+
+
+def _validate_marketplace(marketplace: str) -> str:
+    mp = marketplace.strip().upper()
+    if mp not in MARKETPLACE_DOMAINS:
+        supported = ", ".join(sorted(MARKETPLACE_DOMAINS.keys()))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported marketplace '{mp}'. Supported: {supported}",
+        )
+    return mp
+
+
+# ── Specific sub-routes MUST come before /{asin} wildcard ──────────────────────
+
+@router.get("/{asin}/debug")
+async def debug_asin_scrape(
     asin: str,
     marketplace: str = Query(default="US"),
     current_user: User = Depends(get_current_user),
 ):
-    """Look up an Amazon product by ASIN and return product data for prompt building."""
-    asin = asin.strip().upper()
-
-    if not asin or len(asin) != 10:
-        raise HTTPException(status_code=400, detail="Invalid ASIN — must be exactly 10 characters.")
-
+    """Return all raw scraped signals for an ASIN — for debugging category detection."""
+    asin = _validate_asin(asin)
+    marketplace = _validate_marketplace(marketplace)
     try:
-        product = await lookup_asin(asin, marketplace)
-        return {"success": True, "product": product}
+        return await scrape_raw_debug(asin, marketplace)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e) or "Product not found.")
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        detail = str(e) or "An unexpected error occurred during ASIN lookup."
-        print(f"[ASIN ERROR] {type(e).__name__}: {detail}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=detail)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{asin}/prompt")
@@ -41,7 +61,8 @@ async def get_asin_prompt(
     current_user: User = Depends(get_current_user),
 ):
     """Look up ASIN and return a ready-to-use AI prompt."""
-    asin = asin.strip().upper()
+    asin = _validate_asin(asin)
+    marketplace = _validate_marketplace(marketplace)
 
     try:
         product = await lookup_asin(asin, marketplace)
@@ -51,4 +72,26 @@ async def get_asin_prompt(
         raise HTTPException(status_code=404, detail=str(e) or "Product not found.")
     except Exception as e:
         detail = str(e) or "An unexpected error occurred during ASIN lookup."
+        raise HTTPException(status_code=500, detail=detail)
+
+
+@router.get("/{asin}")
+async def get_asin_product(
+    asin: str,
+    marketplace: str = Query(default="US"),
+    current_user: User = Depends(get_current_user),
+):
+    """Look up an Amazon product by ASIN and return product data for prompt building."""
+    asin = _validate_asin(asin)
+    marketplace = _validate_marketplace(marketplace)
+
+    try:
+        product = await lookup_asin(asin, marketplace)
+        return {"success": True, "product": product}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e) or "Product not found.")
+    except Exception as e:
+        detail = str(e) or "An unexpected error occurred during ASIN lookup."
+        print(f"[ASIN ERROR] {type(e).__name__}: {detail}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=detail)

@@ -64,6 +64,30 @@ export async function forgotPassword(email) {
   return res.json()
 }
 
+export async function updateProfile(displayName) {
+  const res = await fetchAPI('/api/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify({ display_name: displayName }),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Update failed')
+  }
+  return res.json()
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  const res = await fetchAPI('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail || 'Password change failed')
+  }
+  return res.json()
+}
+
 export async function resetPassword(token, password) {
   const res = await fetch('/api/auth/reset-password', {
     method: 'POST',

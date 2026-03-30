@@ -8,15 +8,17 @@ import {
   LayoutGrid,
   BookOpen,
   Store,
-  Coins,
+  Zap,
   ChevronRight,
   Menu,
   X,
   Archive,
   LogOut,
+  Settings,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { logout } from '../api/auth'
+import { fetchAPI, safeJson } from '../api/client'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -28,12 +30,20 @@ const navigation = [
   { name: 'Storefront', href: '/tools/storefront', icon: Store },
   { name: 'Creative Campaigns', href: '/tools/creative-campaigns', icon: Lightbulb },
   { name: 'Listing Copywriter', href: '/tools/listing-copywriter', icon: FileText },
+  { name: 'Account Settings', href: '/account', icon: Settings },
 ]
 
 function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [credits] = useState(100) // Mock credits
+  const [usage, setUsage] = useState(null)
+
+  useEffect(() => {
+    fetchAPI('/api/usage/summary')
+      .then(res => safeJson(res))
+      .then(data => { if (data) setUsage(data) })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="layout">
@@ -76,8 +86,14 @@ function Layout() {
 
         <div className="sidebar-footer">
           <div className="credits-display">
-            <Coins size={18} />
-            <span>{credits} Credits</span>
+            <Zap size={18} />
+            {usage ? (
+              <span title={`${usage.monthly.used}/${usage.monthly.limit} this month`}>
+                {usage.daily.remaining}/{usage.daily.limit} today
+              </span>
+            ) : (
+              <span>— generations</span>
+            )}
           </div>
           <Link to="/legacy" className="legacy-link">
             Legacy Generator

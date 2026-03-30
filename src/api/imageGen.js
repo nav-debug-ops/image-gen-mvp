@@ -84,6 +84,7 @@ export async function generateImage(prompt, options = {}, onProgress = null) {
     if (!data) throw new Error('Empty response from server')
     return {
       url: data.image_url,
+      imageId: data.image_id,
       provider: data.provider,
       model: data.model,
       generationId: data.generation_id,
@@ -135,6 +136,7 @@ export async function generateHeroImage({ asin, marketplace = 'US', templateName
     if (!data) throw new Error('Empty response from server')
     return {
       url: data.image_url,
+      imageId: data.image_id,
       provider: data.provider,
       model: data.model,
       generationId: data.generation_id,
@@ -154,6 +156,37 @@ export async function generateHeroImage({ asin, marketplace = 'US', templateName
  */
 export async function generateImageWithReferences(prompt, referenceImages, options = {}, onProgress = null) {
   return generateImage(prompt, { ...options, referenceImages }, onProgress)
+}
+
+/**
+ * Upload a reference image for img2img generation.
+ * Returns the backend-hosted URL to pass as reference_image_url.
+ */
+export async function uploadReferenceImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  // Use fetch directly — fetchAPI forces Content-Type: application/json which
+  // would break multipart. Let the browser set the boundary automatically.
+  const token = localStorage.getItem('auth_token')
+  const res = await fetch('/api/images/upload-reference', {
+    method: 'POST',
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token')
+    window.location.href = '/login'
+    throw new Error('Session expired')
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.detail || `Upload failed (${res.status})`)
+  }
+  const data = await res.json()
+  return data.url
 }
 
 /**

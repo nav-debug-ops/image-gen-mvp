@@ -56,6 +56,15 @@ class UserResponse(BaseModel):
     created_at: str
 
 
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 @router.post("/register", response_model=AuthResponse)
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Create a new user account."""
@@ -118,6 +127,47 @@ async def get_me(current_user: User = Depends(get_current_user)):
         "display_name": current_user.display_name,
         "created_at": str(current_user.created_at),
     }
+
+
+@router.patch("/me")
+async def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the current user's display name."""
+    display_name = request.display_name.strip()
+    if not display_name:
+        raise HTTPException(status_code=422, detail="Display name cannot be empty")
+    if len(display_name) > 100:
+        raise HTTPException(status_code=422, detail="Display name must be 100 characters or fewer")
+
+    current_user.display_name = display_name
+    await db.commit()
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "display_name": current_user.display_name,
+    }
+
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change password for an authenticated user."""
+    if not verify_password(request.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=422, detail="New password must be at least 8 characters")
+    if request.current_password == request.new_password:
+        raise HTTPException(status_code=422, detail="New password must differ from current password")
+
+    current_user.hashed_password = hash_password(request.new_password)
+    await db.commit()
+    return {"message": "Password changed successfully"}
 
 
 @router.post("/forgot-password")

@@ -12,6 +12,7 @@ import StorefrontDesigner from './pages/StorefrontDesigner'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
 import Archive from './pages/Archive'
+import AccountSettings from './pages/AccountSettings'
 import App from './App' // Original app as legacy
 
 const DEV_BYPASS_AUTH = import.meta.env.DEV
@@ -60,6 +61,7 @@ function AppRouter() {
           <Route path="tools/brand-story" element={<BrandStory />} />
           <Route path="tools/storefront" element={<StorefrontDesigner />} />
           <Route path="archive" element={<Archive />} />
+          <Route path="account" element={<AccountSettings />} />
           <Route path="legacy" element={<App />} />
         </Route>
       </Routes>

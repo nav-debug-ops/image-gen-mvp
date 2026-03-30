@@ -1,16 +1,41 @@
-from fastapi import APIRouter, HTTPException, Depends
+import uuid
+
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-import os
 
-from app.config import get_settings
 from app.database import get_db
 from app.models.user import User
 from app.models.generation import Generation
 from app.services.auth import get_current_user
+from app.services.storage import storage
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 router = APIRouter()
-settings = get_settings()
+
+
+@router.post("/upload-reference")
+async def upload_reference_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a reference image for img2img generation. Returns a URL usable in generate requests."""
+    content_type = file.content_type or ""
+    if content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="File must be a JPEG, PNG, WebP, or GIF image.")
+
+    content = await file.read()
+    if len(content) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="File size must be less than 10 MB.")
+
+    ref_id = uuid.uuid4().hex[:12]
+    ext = content_type.split("/")[-1].replace("jpeg", "jpg")
+    filename = f"ref_{ref_id}.{ext}"
+
+    url = await storage.save(content, filename=filename, content_type=content_type)
+    return {"url": url, "filename": filename}
 
 
 @router.get("/")
@@ -135,12 +160,9 @@ async def delete_image(
     if not gen:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    # Delete file
-    filepath = os.path.join(settings.storage_path, f"{image_id}.png")
-    if os.path.exists(filepath):
-        os.remove(filepath)
+    # Delete file from active storage backend
+    await storage.delete(f"{image_id}.png")
 
-    # Mark as deleted
     gen.status = "deleted"
     await db.commit()
 

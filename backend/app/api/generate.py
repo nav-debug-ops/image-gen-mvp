@@ -29,6 +29,9 @@ def enhance_prompt_text(prompt: str, style: Optional[str] = None) -> str:
     return f"{prompt}, highly detailed, professional quality, beautiful lighting"
 
 
+_VALID_ASPECT_RATIOS = {"1:1", "4:3", "3:2", "16:9", "9:16", "2:3", "3:4"}
+
+
 class GenerateRequest(BaseModel):
     prompt: str
     provider: Optional[str] = None
@@ -65,6 +68,13 @@ async def create_generation(
     db: AsyncSession = Depends(get_db),
 ):
     """Generate an image from a text prompt."""
+    if not request.prompt or not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
+    if len(request.prompt) > 4000:
+        raise HTTPException(status_code=400, detail="Prompt too long (max 4000 characters).")
+    if request.aspect_ratio and request.aspect_ratio not in _VALID_ASPECT_RATIOS:
+        raise HTTPException(status_code=400, detail=f"Invalid aspect ratio '{request.aspect_ratio}'. Valid: {', '.join(sorted(_VALID_ASPECT_RATIOS))}")
+
     try:
         # Enhance prompt with style if provided
         prompt = request.prompt
@@ -122,8 +132,10 @@ async def create_hero_generation(
     commercial photography brief template, then generates the selected
     variation with Imagen 4.
     """
-    if len(request.asin) != 10:
-        raise HTTPException(status_code=422, detail="ASIN must be exactly 10 characters")
+    asin = request.asin.strip().upper()
+    if not asin or len(asin) != 10 or not asin.isalnum():
+        raise HTTPException(status_code=422, detail="ASIN must be exactly 10 alphanumeric characters")
+    request.asin = asin
 
     try:
         product = await lookup_asin(request.asin, request.marketplace)

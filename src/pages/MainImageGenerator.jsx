@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import { generateImage, generateHeroImage } from '../api/imageGen'
+import { generateImage, generateHeroImage, uploadReferenceImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
@@ -36,6 +36,7 @@ import {
   getCategoryInsight,
   getCtrDifferentiator,
 } from '../constants/imageCategoryPrompts'
+import { detectCategoryFromProduct } from '../constants/detectCategory'
 
 // Template categories and items
 const TEMPLATE_CATEGORIES = ['All', 'Basic', 'Packaging', 'Elements', 'Tags', 'Lifestyle', 'Advanced']
@@ -112,12 +113,21 @@ const MARKETPLACES = [
   { code: 'FR', flag: '🇫🇷', name: 'France' },
   { code: 'JP', flag: '🇯🇵', name: 'Japan' },
   { code: 'CA', flag: '🇨🇦', name: 'Canada' },
-  { code: 'CN', flag: '🇨🇳', name: 'China' },
   { code: 'IT', flag: '🇮🇹', name: 'Italy' },
   { code: 'ES', flag: '🇪🇸', name: 'Spain' },
   { code: 'MX', flag: '🇲🇽', name: 'Mexico' },
   { code: 'AU', flag: '🇦🇺', name: 'Australia' },
   { code: 'IN', flag: '🇮🇳', name: 'India' },
+  { code: 'CN', flag: '🇨🇳', name: 'China' },
+  { code: 'NL', flag: '🇳🇱', name: 'Netherlands' },
+  { code: 'SE', flag: '🇸🇪', name: 'Sweden' },
+  { code: 'PL', flag: '🇵🇱', name: 'Poland' },
+  { code: 'BE', flag: '🇧🇪', name: 'Belgium' },
+  { code: 'SG', flag: '🇸🇬', name: 'Singapore' },
+  { code: 'AE', flag: '🇦🇪', name: 'UAE' },
+  { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia' },
+  { code: 'BR', flag: '🇧🇷', name: 'Brazil' },
+  { code: 'TR', flag: '🇹🇷', name: 'Turkey' },
 ]
 
 // Amazon-compliant aspect ratios only
@@ -133,6 +143,7 @@ function MainImageGenerator() {
   const [asinValue, setAsinValue] = useState('')
   const [uploadedImage, setUploadedImage] = useState(null)
   const [dragActive, setDragActive] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Confirmed product image for img2img
   const [referenceImageUrl, setReferenceImageUrl] = useState(null)
@@ -183,6 +194,7 @@ function MainImageGenerator() {
       })
       const newImage = {
         id: Date.now(),
+        imageId: result.imageId,
         url: result.url,
         prompt: result.activePrompt || promptsModal.prompts[variationIdx] || '',
         template: img.template,
@@ -202,7 +214,7 @@ function MainImageGenerator() {
       setGeneratedImages(prev => [newImage, ...prev])
       setPromptsModal(null)
     } catch (err) {
-      alert(`Generation failed: ${err.message}`)
+      setError(`Variation generation failed: ${err.message}`)
     } finally {
       setVariationGenerating(null)
     }
@@ -235,13 +247,11 @@ function MainImageGenerator() {
       ? `${asinProduct.brand} ${asinProduct.title}`.slice(0, 120)
       : asinProduct.title.slice(0, 120)
     setProductDesc(desc)
-    // Auto-select category if we can match it
-    if (asinProduct.category) {
-      const matched = PRODUCT_CATEGORIES.find(c =>
-        c.toLowerCase().includes(asinProduct.category.toLowerCase()) ||
-        asinProduct.category.toLowerCase().includes(c.toLowerCase())
-      )
-      if (matched) setProductCategory(matched)
+    // Auto-detect category from product data (backend result + client-side fallback)
+    const autoCategory = detectCategoryFromProduct(asinProduct)
+    if (autoCategory) {
+      setProductCategory(autoCategory)
+      setCategoryFilter('Recommended')
     }
   }
 
@@ -263,15 +273,20 @@ function MainImageGenerator() {
         setError('File size must be less than 10MB')
         return
       }
+      // Show local preview immediately
       const reader = new FileReader()
-      reader.onload = (e) => {
-        setUploadedImage({
-          file,
-          preview: e.target.result,
-          name: file.name
-        })
+      reader.onload = (ev) => {
+        setUploadedImage({ file, preview: ev.target.result, name: file.name })
       }
       reader.readAsDataURL(file)
+
+      // Upload to backend so we get a real URL for img2img
+      setUploadingImage(true)
+      setReferenceImageUrl(null)
+      uploadReferenceImage(file)
+        .then(url => { setReferenceImageUrl(url) })
+        .catch(err => { setError(`Image upload failed: ${err.message}`) })
+        .finally(() => { setUploadingImage(false) })
     }
   }, [])
 
@@ -424,6 +439,7 @@ function MainImageGenerator() {
 
         const newImage = {
           id: Date.now() + i,
+          imageId: result.imageId,
           url: result.url,
           prompt: result.activePrompt || result.prompt || `${template.name} — ${asinValue || productDesc}`,
           template: template.name,
@@ -550,7 +566,8 @@ function MainImageGenerator() {
     try {
       const prompt = buildImagePrompt(img.template, img.category, img.strategy, productDesc)
       const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
-      const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
+      // Use the original image's model so the regeneration is consistent
+      const modelOption = AI_MODELS.find(m => m.model === img.model) || AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
       const result = await generateImage(prompt, {
         provider: modelOption.provider,
         model: modelOption.model,
@@ -613,7 +630,7 @@ function MainImageGenerator() {
   }
 
   const canGenerate = (inputMode === 'asin' ? isValidASIN(asinValue) : !!uploadedImage) &&
-    selectedTemplates.length > 0 && !isGenerating
+    selectedTemplates.length > 0 && !isGenerating && !uploadingImage
 
   return (
     <div className="main-image-generator">
@@ -749,9 +766,14 @@ function MainImageGenerator() {
                   <div className="uploaded-preview">
                     <img src={uploadedImage.preview} alt="Uploaded" />
                     <span>{uploadedImage.name}</span>
+                    {uploadingImage ? (
+                      <span className="upload-status"><Loader2 size={14} className="spin" /> Uploading…</span>
+                    ) : referenceImageUrl ? (
+                      <span className="upload-status upload-ready"><Check size={14} /> Ready</span>
+                    ) : null}
                     <button
                       className="remove-upload"
-                      onClick={(e) => { e.stopPropagation(); setUploadedImage(null) }}
+                      onClick={(e) => { e.stopPropagation(); setUploadedImage(null); setReferenceImageUrl(null) }}
                     >
                       <X size={16} />
                     </button>

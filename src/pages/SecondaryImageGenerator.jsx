@@ -34,6 +34,7 @@ import { generateImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
 import { generateInfographicBrief } from '../api/campaigns'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
+import { detectCategoryFromProduct } from '../constants/detectCategory'
 import KeywordInputPanel from '../components/KeywordInputPanel'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 
@@ -374,9 +375,13 @@ function SecondaryImageGenerator() {
 
   const handleConfirmProduct = () => {
     const bullets = asinProduct.bullets || []
+    // Auto-detect category
+    const autoCategory = detectCategoryFromProduct(asinProduct)
+    if (autoCategory) setProductCategory(autoCategory)
+
     const newData = {
       productName: asinProduct.title,
-      category: asinProduct.category || '',
+      category: autoCategory || asinProduct.category || '',
       asin: asin.trim().toUpperCase(),
       benefits: bullets,
       features: bullets,
