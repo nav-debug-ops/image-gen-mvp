@@ -1013,10 +1013,15 @@ function APlusContent() {
     const modules = selectedModules.map(m => ({
       module_type: m.id,
       module_name: m.name,
+      dimensions: m.dimensions,
       headline: moduleData[m.instanceId]?.headline || '',
       body: moduleData[m.instanceId]?.body || '',
       highlights: moduleData[m.instanceId]?.highlights || [],
       specs: moduleData[m.instanceId]?.specs || [],
+      image_urls: (moduleData[m.instanceId]?.images || [])
+        .filter(Boolean)
+        .map(img => img.url || img.preview || null)
+        .filter(Boolean),
     }))
     const blob = new Blob([JSON.stringify({ asin: asinValue, page_type: 'aplus', modules, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)

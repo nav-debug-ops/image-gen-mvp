@@ -2286,23 +2286,100 @@
 /* Bulk Mode */
 .bulk-mode {
   display: flex;
-  justify-content: center;
-  padding: 60px 20px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.bulk-upload .upload-zone {
-  width: 500px;
-  padding: 60px;
+.bulk-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
-.bulk-upload .upload-zone h3 {
-  margin-top: 16px;
-  font-size: 1.25rem;
+.bulk-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.bulk-upload .upload-zone p {
+.bulk-file-label:hover {
+  opacity: 0.85;
+}
+
+.bulk-progress-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
-  margin-bottom: 20px;
+  font-family: monospace;
+}
+
+.bulk-results-table-wrap,
+.bulk-preview-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.bulk-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.bulk-results-table th {
+  background: var(--bg-secondary);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.bulk-results-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+  vertical-align: top;
+}
+
+.bulk-results-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bulk-results-table tr.bulk-row-error td {
+  background: rgba(231, 76, 60, 0.06);
+}
+
+.bulk-title-cell {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.bulk-preview-label {
+  padding: 10px 14px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  margin: 0;
 }
 
 /* ============================================

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { generateCopy } from '../api/copywriter'
 import {
   FileText,
@@ -14,7 +14,9 @@ import {
   Loader2,
   GripVertical,
   AlertCircle,
-  Save
+  Save,
+  Sparkles,
+  X
 } from 'lucide-react'
 
 const MARKETPLACES = [
@@ -82,6 +84,14 @@ function ListingCopywriter() {
   const [copiedField, setCopiedField] = useState(null)
   const [savedFlash, setSavedFlash] = useState(false)
 
+  // Bulk mode state
+  const [bulkRows, setBulkRows] = useState([])          // parsed CSV rows
+  const [bulkResults, setBulkResults] = useState([])    // completed results
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState(null) // { current, total }
+  const [bulkError, setBulkError] = useState(null)
+  const bulkCancelRef = useRef(false)
+
   // Restore draft on mount
   useEffect(() => {
     try {
@@ -99,6 +109,95 @@ function ListingCopywriter() {
       if (d.searchTerms)        setSearchTerms(d.searchTerms)
     } catch { /* corrupt draft — ignore */ }
   }, [])
+
+  const downloadCSVTemplate = () => {
+    const header = 'asin,marketplace,language,tone,keywords'
+    const example = 'B08N5WRWNW,US,English,professional,"premium wireless earbuds"'
+    const csv = [header, example].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'listing-bulk-template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split('\n').filter(Boolean)
+    if (lines.length < 2) return []
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+    return lines.slice(1).map(line => {
+      // handle quoted fields
+      const fields = []
+      let cur = '', inQ = false
+      for (const ch of line) {
+        if (ch === '"') { inQ = !inQ }
+        else if (ch === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
+        else cur += ch
+      }
+      fields.push(cur.trim())
+      return Object.fromEntries(headers.map((h, i) => [h, fields[i] || '']))
+    }).filter(r => r.asin && r.asin.length === 10)
+  }
+
+  const handleBulkFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const rows = parseCSV(ev.target.result)
+      setBulkRows(rows)
+      setBulkResults([])
+      setBulkError(rows.length === 0 ? 'No valid rows found. Check ASIN column (must be 10 chars).' : null)
+    }
+    reader.readAsText(file)
+  }
+
+  const handleBulkRun = async () => {
+    if (!bulkRows.length || bulkRunning) return
+    setBulkRunning(true)
+    setBulkResults([])
+    setBulkError(null)
+    bulkCancelRef.current = false
+    const results = []
+    for (let i = 0; i < bulkRows.length; i++) {
+      if (bulkCancelRef.current) break
+      const row = bulkRows[i]
+      setBulkProgress({ current: i + 1, total: bulkRows.length, asin: row.asin })
+      try {
+        const data = await generateCopy({
+          asin: row.asin,
+          marketplace: row.marketplace || 'US',
+          language: row.language || 'English',
+          tone: row.tone || 'professional',
+          keywords: row.keywords || '',
+          manualTitle: '',
+          manualBullets: [],
+        })
+        results.push({ ...row, status: 'done', titles: data.titles, bullets: data.bullets, description: data.description, search_terms: data.search_terms })
+      } catch (err) {
+        results.push({ ...row, status: 'error', error: err.message })
+      }
+      setBulkResults([...results])
+    }
+    setBulkRunning(false)
+    setBulkProgress(null)
+  }
+
+  const exportBulkResults = () => {
+    const blob = new Blob([JSON.stringify(bulkResults, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bulk-listing-results-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const handleSave = () => {
     const draft = { asinValue, marketplace, language, tone, additionalKeywords, titles, bullets, description, searchTerms }
@@ -617,16 +716,99 @@ function ListingCopywriter() {
       ) : (
         /* Bulk Mode */
         <div className="bulk-mode">
-          <div className="bulk-upload">
-            <div className="upload-zone">
-              <Upload size={48} />
-              <h3>Upload CSV File</h3>
-              <p>Drag and drop your CSV file or click to browse</p>
-              <button className="btn btn-secondary">
-                Download Template
+          {/* Upload + controls */}
+          <div className="bulk-upload-row">
+            <label className="bulk-file-label">
+              <input type="file" accept=".csv" onChange={handleBulkFileUpload} style={{ display: 'none' }} />
+              <Upload size={16} />
+              {bulkRows.length > 0 ? `${bulkRows.length} rows loaded` : 'Upload CSV'}
+            </label>
+            <button className="btn btn-ghost btn-sm" onClick={downloadCSVTemplate}>
+              <Download size={15} /> Template
+            </button>
+            {bulkRows.length > 0 && !bulkRunning && (
+              <button className="btn btn-primary btn-sm" onClick={handleBulkRun}>
+                <Sparkles size={15} /> Run {bulkRows.length} ASINs
               </button>
-            </div>
+            )}
+            {bulkRunning && (
+              <>
+                <span className="bulk-progress-text">
+                  <Loader2 size={14} className="spin" />
+                  {bulkProgress?.asin} ({bulkProgress?.current}/{bulkProgress?.total})
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => { bulkCancelRef.current = true }}>
+                  <X size={14} /> Cancel
+                </button>
+              </>
+            )}
+            {bulkResults.length > 0 && !bulkRunning && (
+              <button className="btn btn-secondary btn-sm" onClick={exportBulkResults}>
+                <Download size={15} /> Export JSON
+              </button>
+            )}
           </div>
+
+          {bulkError && <div className="error-message" style={{ marginTop: 12 }}><AlertCircle size={15} /> {bulkError}</div>}
+
+          {/* Results table */}
+          {bulkResults.length > 0 && (
+            <div className="bulk-results-table-wrap">
+              <table className="bulk-results-table">
+                <thead>
+                  <tr>
+                    <th>ASIN</th>
+                    <th>Status</th>
+                    <th>Best Title</th>
+                    <th>Bullets</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkResults.map((row, i) => (
+                    <tr key={i} className={row.status === 'error' ? 'bulk-row-error' : ''}>
+                      <td><code>{row.asin}</code></td>
+                      <td>
+                        <span className={`history-status-badge ${row.status === 'done' ? 'completed' : 'failed'}`}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="bulk-title-cell">{row.titles?.[0] || row.error || '—'}</td>
+                      <td style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {row.bullets?.length ? `${row.bullets.length} bullets` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pending rows preview */}
+          {bulkRows.length > 0 && bulkResults.length === 0 && !bulkRunning && (
+            <div className="bulk-preview-table-wrap">
+              <p className="bulk-preview-label">{bulkRows.length} rows ready to process:</p>
+              <table className="bulk-results-table">
+                <thead>
+                  <tr><th>ASIN</th><th>Marketplace</th><th>Language</th><th>Tone</th></tr>
+                </thead>
+                <tbody>
+                  {bulkRows.slice(0, 10).map((row, i) => (
+                    <tr key={i}>
+                      <td><code>{row.asin}</code></td>
+                      <td>{row.marketplace || 'US'}</td>
+                      <td>{row.language || 'English'}</td>
+                      <td>{row.tone || 'professional'}</td>
+                    </tr>
+                  ))}
+                  {bulkRows.length > 10 && (
+                    <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                      …and {bulkRows.length - 10} more
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

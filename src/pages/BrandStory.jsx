@@ -501,6 +501,10 @@ function BrandStory() {
       headline: moduleData[m.instanceId]?.headline || '',
       body: moduleData[m.instanceId]?.body || '',
       qa_items: moduleData[m.instanceId]?.qaItems || [],
+      image_urls: (moduleData[m.instanceId]?.images || [])
+        .filter(Boolean)
+        .map(img => img.url || img.preview || null)
+        .filter(Boolean),
     }))
     const blob = new Blob([JSON.stringify({ asin: asinValue, page_type: 'brand_story', modules, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)

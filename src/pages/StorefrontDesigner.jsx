@@ -659,8 +659,13 @@ function StorefrontDesigner() {
       widgets: p.widgets.map(w => ({
         type: w.type,
         name: w.name,
+        dimensions: w.dimensions,
         headline: widgetData[w.instanceId]?.headline || '',
         body: widgetData[w.instanceId]?.body || '',
+        image_urls: (widgetData[w.instanceId]?.images || [])
+          .filter(Boolean)
+          .map(img => img.url || img.preview || null)
+          .filter(Boolean),
       }))
     }))
     const blob = new Blob([JSON.stringify({ storefront: exportPages, asin: asinValue, exported_at: new Date().toISOString() }, null, 2)], { type: 'application/json' })
