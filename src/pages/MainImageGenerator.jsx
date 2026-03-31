@@ -162,6 +162,7 @@ function MainImageGenerator() {
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(null)
+  const cancelledRef = useRef(false)
   const [generatedImages, setGeneratedImages] = useState([])
   const [selectedImages, setSelectedImages] = useState([])
   const [error, setError] = useState(null)
@@ -383,6 +384,7 @@ function MainImageGenerator() {
     }
 
     setIsGenerating(true)
+    cancelledRef.current = false
     setError(null)
     setGeneratedImages([])
     setSelectedImages([])
@@ -477,6 +479,7 @@ function MainImageGenerator() {
 
         // Update results in real-time so user can see progress
         setGeneratedImages([...results])
+        if (cancelledRef.current) break
       }
 
       setGeneratedImages(results)
@@ -1039,6 +1042,7 @@ function MainImageGenerator() {
           {/* Generate Button */}
           <div className="generate-action">
             {error && <div className="error-message">{error}</div>}
+            <div className="generate-btn-row">
             <button
               className="btn btn-primary btn-large"
               onClick={handleGenerate}
@@ -1056,6 +1060,15 @@ function MainImageGenerator() {
                 </>
               )}
             </button>
+            {isGenerating && (
+              <button
+                className="btn btn-ghost btn-sm cancel-gen-btn"
+                onClick={() => { cancelledRef.current = true }}
+              >
+                <X size={15} /> Cancel
+              </button>
+            )}
+            </div>
           </div>
         </div>
 

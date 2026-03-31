@@ -91,6 +91,14 @@ const SECONDARY_IMAGE_TYPES = [
   }
 ]
 
+const AI_MODELS = [
+  { id: 'imagen-4',       provider: 'gemini', model: 'imagen-4.0-generate-001',       name: 'Imagen 4',               badge: 'Recommended' },
+  { id: 'imagen-4-ultra', provider: 'gemini', model: 'imagen-4.0-ultra-generate-001',  name: 'Imagen 4 Ultra',         badge: 'Ultra' },
+  { id: 'imagen-4-fast',  provider: 'gemini', model: 'imagen-4.0-fast-generate-001',   name: 'Imagen 4 Fast',          badge: 'Fast' },
+  { id: 'gemini-flash',   provider: 'gemini', model: 'gemini-2.5-flash-image',         name: 'Gemini 2.5 Flash Image', badge: null },
+  { id: 'gemini-3-flash', provider: 'gemini', model: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', badge: 'New' },
+]
+
 // Aspect ratios for secondary images
 const ASPECT_RATIOS = [
   { id: '1:1', name: 'Square', width: 2000, height: 2000, recommended: true },
@@ -233,6 +241,7 @@ function SecondaryImageGenerator() {
   const [selectedType, setSelectedType] = useState('')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [quantity, setQuantity] = useState(1)
+  const [selectedModel, setSelectedModel] = useState('imagen-4')
 
   // Prompts for each image type (user can edit these)
   const [typePrompts, setTypePrompts] = useState({})
@@ -260,6 +269,7 @@ function SecondaryImageGenerator() {
   const [briefImages, setBriefImages] = useState({})         // { [brief.number]: imageObj }
   const [allBriefsGenerating, setAllBriefsGenerating] = useState(false)
   const [allBriefsProgress, setAllBriefsProgress] = useState(null) // { current, total }
+  const cancelledRef = useRef(false)
 
   // Lightbox state
   const [lightboxImg, setLightboxImg] = useState(null)
@@ -324,7 +334,10 @@ function SecondaryImageGenerator() {
     setRegeneratingIds(prev => new Set(prev).add(img.id))
     try {
       const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
+      const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
       const result = await generateImage(img.prompt, {
+        provider: modelOption.provider,
+        model: modelOption.model,
         width: selectedRatio.width,
         height: selectedRatio.height,
         aspectRatio: img.aspectRatio,
@@ -448,8 +461,11 @@ function SecondaryImageGenerator() {
     setBriefGenerating(prev => ({ ...prev, [num]: true }))
     const prompt = buildPromptFromBrief(brief, campaignData?.productName || infographicBrief?.product_title || '')
     const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
+    const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
     try {
       const result = await generateImage(prompt, {
+        provider: modelOption.provider,
+        model: modelOption.model,
         width: selectedRatio?.width || 2000,
         height: selectedRatio?.height || 2000,
         aspectRatio,
@@ -481,12 +497,14 @@ function SecondaryImageGenerator() {
   const handleGenerateAllBriefs = async () => {
     if (!infographicBrief?.infographics?.length || allBriefsGenerating) return
     setAllBriefsGenerating(true)
+    cancelledRef.current = false
     setError(null)
     const briefs = infographicBrief.infographics
     setAllBriefsProgress({ current: 0, total: briefs.length })
     for (let i = 0; i < briefs.length; i++) {
       setAllBriefsProgress({ current: i + 1, total: briefs.length })
       await handleGenerateBriefImage(briefs[i])
+      if (cancelledRef.current) break
     }
     setAllBriefsGenerating(false)
     setAllBriefsProgress(null)
@@ -619,6 +637,7 @@ function SecondaryImageGenerator() {
     }
 
     setIsGenerating(true)
+    cancelledRef.current = false
     setError(null)
     setGeneratedImages([])
     setSelectedImages([])
@@ -638,7 +657,10 @@ function SecondaryImageGenerator() {
         })
 
         const selectedRatio = ASPECT_RATIOS.find(r => r.id === aspectRatio)
+        const modelOption = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
         const result = await generateImage(typePrompts[selectedType], {
+          provider: modelOption.provider,
+          model: modelOption.model,
           width: selectedRatio?.width || 2000,
           height: selectedRatio?.height || 2000,
           aspectRatio: aspectRatio,
@@ -662,6 +684,7 @@ function SecondaryImageGenerator() {
 
         results.push(newImage)
         setGeneratedImages([...results])
+        if (cancelledRef.current) break
       }
 
       setGeneratedImages(results)
@@ -876,6 +899,21 @@ function SecondaryImageGenerator() {
               </select>
             </div>
 
+            <div className="config-group">
+              <label>AI Model</label>
+              <select
+                className="config-select"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+              >
+                {AI_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.badge ? ` — ${m.badge}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {selectedType && (
               <div className="total-images">
                 Total: <strong>{quantity}</strong> image{quantity > 1 ? 's' : ''} to generate
@@ -884,23 +922,33 @@ function SecondaryImageGenerator() {
           </div>
 
           {/* Generate Button */}
-          <button
-            className="btn btn-primary btn-large"
-            onClick={handleGenerate}
-            disabled={!canGenerateImages}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 size={18} className="spin" />
-                Generating {progress?.current}/{progress?.total}...
-              </>
-            ) : (
-              <>
-                <Image size={18} />
-                Generate {quantity} Image{quantity > 1 ? 's' : ''}
-              </>
+          <div className="generate-btn-row">
+            <button
+              className="btn btn-primary btn-large"
+              onClick={handleGenerate}
+              disabled={!canGenerateImages}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 size={18} className="spin" />
+                  Generating {progress?.current}/{progress?.total}...
+                </>
+              ) : (
+                <>
+                  <Image size={18} />
+                  Generate {quantity} Image{quantity > 1 ? 's' : ''}
+                </>
+              )}
+            </button>
+            {isGenerating && (
+              <button
+                className="btn btn-ghost btn-sm cancel-gen-btn"
+                onClick={() => { cancelledRef.current = true }}
+              >
+                <X size={15} /> Cancel
+              </button>
             )}
-          </button>
+          </div>
         </div>
 
         {/* Center Panel - Prompt Editor / AI Brief */}
@@ -954,6 +1002,14 @@ function SecondaryImageGenerator() {
                       ? <><Loader2 size={13} className="spin" /> Generating All…</>
                       : <><Zap size={13} /> Generate All 7</>}
                   </button>
+                  {allBriefsGenerating && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => { cancelledRef.current = true }}
+                    >
+                      <X size={13} /> Cancel
+                    </button>
+                  )}
                 </div>
               </div>
 

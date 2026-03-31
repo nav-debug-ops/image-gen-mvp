@@ -47,29 +47,6 @@ const TONES = [
   { id: 'eco-conscious', name: 'Eco-conscious', desc: 'Sustainable, green, responsible' }
 ]
 
-// Mock generated content
-const MOCK_RESULTS = {
-  titles: [
-    "Premium Wireless Earbuds with Active Noise Cancellation - 40H Battery Life, IPX7 Waterproof, Touch Control - Perfect for Sports & Work",
-    "Pro Wireless Earbuds - Crystal Clear Sound, 40 Hour Playtime, Water Resistant IPX7 - Bluetooth 5.3 with Charging Case",
-    "Ultra Wireless Earbuds ANC - Premium Sound Quality, 40H Battery, Waterproof IPX7 - Sports & Office Ready with Touch Controls"
-  ],
-  bullets: [
-    "SUPERIOR SOUND QUALITY - Experience rich, immersive audio with 10mm drivers and active noise cancellation that blocks out 95% of ambient noise, perfect for commuting, working out, or focusing on work",
-    "40-HOUR BATTERY LIFE - Never run out of power with 8 hours of playtime per charge plus 32 additional hours from the compact charging case. Quick charge gives you 2 hours of listening in just 10 minutes",
-    "IPX7 WATERPROOF RATING - Workout without worry. These earbuds can withstand sweat, rain, and even accidental submersion, making them ideal for intense gym sessions or outdoor activities",
-    "ERGONOMIC COMFORT FIT - Designed with 3 sizes of silicone ear tips for a secure, comfortable fit that stays in place during any activity. Lightweight at just 5g per earbud for all-day wear",
-    "INTUITIVE TOUCH CONTROLS - Easily manage music, calls, and voice assistant with simple tap gestures. Seamless Bluetooth 5.3 connectivity for stable connection up to 33ft range"
-  ],
-  description: `Introducing our Premium Wireless Earbuds - the perfect companion for your active lifestyle. Whether you're commuting to work, hitting the gym, or simply relaxing at home, these earbuds deliver an exceptional audio experience that adapts to your environment.
-
-Engineered with advanced 10mm drivers and active noise cancellation technology, you'll enjoy crystal-clear sound quality with deep bass and crisp highs. The ANC feature reduces ambient noise by up to 95%, allowing you to fully immerse yourself in your music or focus on important calls.
-
-With an impressive 40-hour total battery life and convenient quick-charge capability, you'll never miss a beat. The sleek charging case fits easily in your pocket and provides multiple full charges on the go.
-
-Built to withstand your toughest workouts, the IPX7 waterproof rating ensures these earbuds can handle sweat, rain, and even accidental drops in water. The ergonomic design with multiple ear tip sizes guarantees a secure, comfortable fit for any ear shape.`,
-  searchTerms: "wireless earbuds, bluetooth earbuds, noise cancelling earphones, waterproof earbuds, sports earbuds, workout earphones, true wireless earbuds, anc earbuds, long battery earbuds, touch control earbuds"
-}
 
 function ListingCopywriter() {
   // Mode state

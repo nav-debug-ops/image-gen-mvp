@@ -7509,3 +7509,25 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* =====================
+   Cancel generation row
+   ===================== */
+
+.generate-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.cancel-gen-btn {
+  align-self: center;
+  font-size: 0.78rem;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.cancel-gen-btn:hover {
+  opacity: 1;
+}
