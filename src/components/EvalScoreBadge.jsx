@@ -12,35 +12,47 @@ function scoreColor(s) {
  * Shows a compact score badge, expandable to a full dimension breakdown.
  *
  * Props:
- *   imageUrl      - URL of the generated image
- *   prompt        - The prompt used to generate the image
- *   contentType   - listing_main | listing_secondary | aplus_content | brand_store | brand_story
+ *   imageUrl        - URL of the generated image
+ *   prompt          - The prompt used to generate the image
+ *   contentType     - listing_main | listing_secondary | aplus_content | brand_store | brand_story
  *   defaultExpanded - if true, open the panel immediately on score arrival (use in lightbox)
+ *   imageId         - optional image_id to persist the score to the generation record
+ *   cachedScore     - optional pre-fetched score object (skips API call entirely)
  */
 export default function EvalScoreBadge({
   imageUrl,
   prompt,
   contentType = 'listing_main',
   defaultExpanded = false,
+  imageId = null,
+  cachedScore = null,
 }) {
-  const [status, setStatus] = useState('idle')   // idle | loading | scored | error
-  const [result, setResult] = useState(null)
-  const [expanded, setExpanded] = useState(false)
+  const [status, setStatus] = useState(() => cachedScore ? 'scored' : 'idle')
+  const [result, setResult] = useState(cachedScore || null)
+  const [expanded, setExpanded] = useState(defaultExpanded && !!cachedScore)
   const fired = useRef(false)
 
   useEffect(() => {
-    // Reset when a new image arrives (e.g. after regeneration)
-    fired.current = false
-    setStatus('idle')
-    setResult(null)
-    setExpanded(false)
-  }, [imageUrl])
+    // Reset when a new image arrives (e.g. after regeneration), unless we have a fresh cachedScore
+    if (!cachedScore) {
+      fired.current = false
+      setStatus('idle')
+      setResult(null)
+      setExpanded(false)
+    }
+  }, [imageUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (cachedScore) {
+      setResult(cachedScore)
+      setStatus('scored')
+      if (defaultExpanded) setExpanded(true)
+      return
+    }
     if (!imageUrl || !prompt || fired.current) return
     fired.current = true
     setStatus('loading')
-    scoreImage(imageUrl, prompt, contentType)
+    scoreImage(imageUrl, prompt, contentType, imageId)
       .then(data => {
         if (!data) { setStatus('error'); return }
         setResult(data)
@@ -48,7 +60,7 @@ export default function EvalScoreBadge({
         if (defaultExpanded) setExpanded(true)
       })
       .catch(() => setStatus('error'))
-  }, [imageUrl, prompt, contentType, defaultExpanded])
+  }, [imageUrl, prompt, contentType, defaultExpanded, imageId, cachedScore])
 
   if (status === 'idle') return null
 

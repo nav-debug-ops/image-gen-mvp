@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
@@ -91,6 +92,7 @@ async def list_images(
             "aspect_ratio": g.aspect_ratio,
             "cost_estimate": g.cost_estimate,
             "is_archived": g.is_archived,
+            "eval_score": json.loads(g.eval_score) if g.eval_score else None,
             "created_at": str(g.created_at),
         }
         for g in generations
@@ -127,6 +129,7 @@ async def get_image(
         "aspect_ratio": gen.aspect_ratio,
         "cost_estimate": gen.cost_estimate,
         "duration_ms": gen.duration_ms,
+        "eval_score": json.loads(gen.eval_score) if gen.eval_score else None,
         "created_at": str(gen.created_at),
     }
 

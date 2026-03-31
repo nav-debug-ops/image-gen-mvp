@@ -3,6 +3,7 @@ import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
+import { useDrafts } from '../hooks/useDrafts'
 import {
   Upload,
   Search,
@@ -643,9 +644,13 @@ function StorefrontDesigner() {
     setGenerateAllProgress(null)
   }
 
+  const cloudDrafts = useDrafts('storefront_designer')
+
   const handleSave = () => {
     const saveData = { pages, widgetData, savedAt: new Date().toISOString() }
     localStorage.setItem('storefront_draft', JSON.stringify(saveData))
+    const name = `Storefront ${new Date().toLocaleDateString()}`
+    cloudDrafts.save({ name, data: { pages, widgetData } })
     const prev = document.title
     document.title = '✓ Saved — ' + prev
     setTimeout(() => { document.title = prev }, 1500)

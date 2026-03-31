@@ -3,6 +3,7 @@ import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
+import { useDrafts } from '../hooks/useDrafts'
 import {
   Upload,
   Search,
@@ -999,11 +1000,14 @@ function APlusContent() {
     setGenerateAllProgress(null)
   }
 
+  const cloudDrafts = useDrafts('aplus_content')
+
   // Generate AI text content for module via /api/content/generate
   const handleSave = () => {
     const saveData = { asinValue, productCategory, selectedModules, moduleData, savedAt: new Date().toISOString() }
     localStorage.setItem('aplus_draft', JSON.stringify(saveData))
-    // Brief visual feedback via window title flash
+    const name = asinValue || `A+ Content ${new Date().toLocaleDateString()}`
+    cloudDrafts.save({ name, data: { asinValue, productCategory, selectedModules, moduleData } })
     const prev = document.title
     document.title = '✓ Saved — ' + prev
     setTimeout(() => { document.title = prev }, 1500)

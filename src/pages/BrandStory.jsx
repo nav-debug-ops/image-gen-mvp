@@ -3,6 +3,7 @@ import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
+import { useDrafts } from '../hooks/useDrafts'
 import {
   Upload,
   Search,
@@ -486,9 +487,13 @@ function BrandStory() {
     setGenerateAllProgress(null)
   }
 
+  const cloudDrafts = useDrafts('brand_story')
+
   const handleSave = () => {
     const saveData = { asinValue, selectedModules, moduleData, savedAt: new Date().toISOString() }
     localStorage.setItem('brand_story_draft', JSON.stringify(saveData))
+    const name = asinValue || `Brand Story ${new Date().toLocaleDateString()}`
+    cloudDrafts.save({ name, data: { asinValue, selectedModules, moduleData } })
     const prev = document.title
     document.title = '✓ Saved — ' + prev
     setTimeout(() => { document.title = prev }, 1500)

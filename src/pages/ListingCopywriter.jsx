@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { generateCopy } from '../api/copywriter'
+import { useDrafts } from '../hooks/useDrafts'
 import {
   FileText,
   Search,
@@ -83,6 +84,8 @@ function ListingCopywriter() {
   const [activeTitle, setActiveTitle] = useState(0)
   const [copiedField, setCopiedField] = useState(null)
   const [savedFlash, setSavedFlash] = useState(false)
+
+  const drafts = useDrafts('listing_copywriter')
 
   // Bulk mode state
   const [bulkRows, setBulkRows] = useState([])          // parsed CSV rows
@@ -204,6 +207,23 @@ function ListingCopywriter() {
     localStorage.setItem('listing_draft', JSON.stringify(draft))
     setSavedFlash(true)
     setTimeout(() => setSavedFlash(false), 2000)
+    // Also save to cloud
+    const name = asinValue || titles[0]?.slice(0, 40) || 'Listing Draft'
+    drafts.save({ name, data: draft })
+  }
+
+  const handleLoadDraft = (draft) => {
+    const d = draft.data
+    if (d.asinValue) setAsinValue(d.asinValue)
+    if (d.marketplace) setMarketplace(d.marketplace)
+    if (d.language) setLanguage(d.language)
+    if (d.tone) setTone(d.tone)
+    if (d.additionalKeywords) setAdditionalKeywords(d.additionalKeywords)
+    if (d.titles?.length) { setTitles(d.titles); setHasResults(true) }
+    if (d.bullets?.length) setBullets(d.bullets)
+    if (d.description) setDescription(d.description)
+    if (d.searchTerms) setSearchTerms(d.searchTerms)
+    drafts.togglePanel()
   }
 
   const _buildManualBullets = () =>
@@ -520,9 +540,26 @@ function ListingCopywriter() {
                     Copy All
                   </button>
                   <button className="btn btn-secondary btn-sm" onClick={handleSave}>
-                    {savedFlash ? <Check size={16} /> : <Save size={16} />}
-                    {savedFlash ? 'Saved!' : 'Save Draft'}
+                    {drafts.saving ? <Loader2 size={16} className="spin" /> : drafts.saved || savedFlash ? <Check size={16} /> : <Save size={16} />}
+                    {drafts.saved || savedFlash ? 'Saved!' : 'Save Draft'}
                   </button>
+                  <div style={{ position: 'relative' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={drafts.togglePanel}>
+                      <ChevronDown size={15} /> Drafts {drafts.drafts.length > 0 ? `(${drafts.drafts.length})` : ''}
+                    </button>
+                    {drafts.panelOpen && (
+                      <div className="drafts-dropdown">
+                        {drafts.loading && <div className="drafts-loading">Loading…</div>}
+                        {!drafts.loading && drafts.drafts.length === 0 && <div className="drafts-empty">No saved drafts</div>}
+                        {drafts.drafts.map(d => (
+                          <div key={d.id} className="drafts-item">
+                            <button className="drafts-item-name" onClick={() => handleLoadDraft(d)}>{d.name}</button>
+                            <button className="drafts-item-delete" onClick={() => drafts.remove(d.id)}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button className="btn btn-secondary btn-sm" onClick={handleExport}>
                     <Download size={16} />
                     Export

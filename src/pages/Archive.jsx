@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { fetchAPI, safeJson } from '../api/client'
 import { downloadAsZip } from '../utils/downloadZip'
+import EvalScoreBadge from '../components/EvalScoreBadge'
 
 const PAGE_SIZE = 24
 
@@ -401,6 +402,16 @@ function Archive() {
               <span className="lightbox-template">{lightboxImg.provider} · {lightboxImg.model}</span>
               <span className="lightbox-meta">{new Date(lightboxImg.created_at).toLocaleString()}</span>
             </div>
+            {lightboxImg.prompt && (
+              <EvalScoreBadge
+                imageUrl={lightboxImg.image_url}
+                prompt={lightboxImg.prompt}
+                contentType="listing_main"
+                imageId={lightboxImg.id}
+                cachedScore={lightboxImg.eval_score || null}
+                defaultExpanded
+              />
+            )}
             <div className="lightbox-actions">
               <button className="lightbox-btn lightbox-btn-download" onClick={() => handleDownload(lightboxImg)}>
                 <Download size={17} /> Download

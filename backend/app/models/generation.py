@@ -25,4 +25,5 @@ class Generation(Base):
     failover_from = Column(String(50), nullable=True)
     metadata_json = Column(Text, nullable=True)
     is_archived = Column(Boolean, default=False)
+    eval_score = Column(Text, nullable=True)  # JSON: { composite, passed, dimensions, strengths, improvements }
     created_at = Column(DateTime, server_default=func.now())
