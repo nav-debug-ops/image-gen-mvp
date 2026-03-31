@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { analyzeCampaign, generateInfographicBrief } from '../api/campaigns'
+import { analyzeCampaign, generateInfographicBrief, chatWithCampaign } from '../api/campaigns'
 import {
   Search,
   FileText,
@@ -65,6 +65,7 @@ function CreativeCampaigns() {
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
 
   // Save flash state
   const [savedFlash, setSavedFlash] = useState(false)
@@ -166,7 +167,12 @@ function CreativeCampaigns() {
     }, 1500)
 
     try {
-      const data = await analyzeCampaign({ asin: asinValue, marketplace })
+      const data = await analyzeCampaign({
+        asin: inputMode === 'asin' ? asinValue : '',
+        marketplace,
+        keyword: inputMode === 'keyword' ? keyword : '',
+        processingMode,
+      })
       clearInterval(interval)
       setMarketIntel(data)
       setHasResults(true)
@@ -180,20 +186,51 @@ function CreativeCampaigns() {
     }
   }
 
-  const sendChatMessage = () => {
-    if (!chatInput.trim()) return
+  const _buildContextSummary = () => {
+    const parts = []
+    if (marketIntel) {
+      parts.push(`Product: ${marketIntel.product_title || asinValue || keyword}`)
+      parts.push(`Marketplace: Amazon ${marketplace}`)
+      const pos = marketIntel.sentiment?.find(s => s.name === 'Positive')
+      if (pos) parts.push(`Sentiment: ${pos.value}% positive`)
+      if (marketIntel.positiveThemes?.length)
+        parts.push(`Top themes: ${marketIntel.positiveThemes.slice(0, 3).map(t => t.theme).join(', ')}`)
+      if (marketIntel.painPoints?.length)
+        parts.push(`Pain points: ${marketIntel.painPoints.slice(0, 3).map(p => p.point).join(', ')}`)
+      if (marketIntel.recommendations)
+        parts.push(`Marketing recs: ${(marketIntel.recommendations.marketing || []).join('; ')}`)
+    }
+    if (infoBrief) {
+      parts.push(`Infographic brief: ${infoBrief.total_infographics} infographics generated`)
+      if (infoBrief.competitor_gap)
+        parts.push(`Whitespace: ${infoBrief.competitor_gap.whitespace_opportunity}`)
+    }
+    return parts.join('\n')
+  }
 
-    setChatMessages(prev => [...prev, { role: 'user', content: chatInput }])
+  const sendChatMessage = async (messageOverride = null) => {
+    const msg = messageOverride ?? chatInput
+    if (!msg.trim() || chatLoading) return
 
-    // Simulate AI response
-    setTimeout(() => {
+    setChatMessages(prev => [...prev, { role: 'user', content: msg }])
+    setChatInput('')
+    setChatLoading(true)
+
+    try {
+      const reply = await chatWithCampaign({
+        message: msg,
+        contextSummary: _buildContextSummary(),
+        marketplace,
+      })
+      setChatMessages(prev => [...prev, { role: 'assistant', content: reply }])
+    } catch {
       setChatMessages(prev => [...prev, {
         role: 'assistant',
-        content: `Based on the market intelligence, I can see that "${chatInput}" relates to your competitive positioning. The data shows strong opportunities in the health-conscious parent segment.`
+        content: 'Sorry, I could not get a response. Please try again.',
       }])
-    }, 1000)
-
-    setChatInput('')
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   return (
@@ -382,28 +419,28 @@ function CreativeCampaigns() {
                   <div className="stat-box">
                     <FileText size={24} />
                     <div>
-                      <span className="stat-number">{marketIntel.overview.reviewsAnalyzed.toLocaleString()}</span>
+                      <span className="stat-number">{(marketIntel.overview?.reviewsAnalyzed ?? 0).toLocaleString()}</span>
                       <span className="stat-label">Reviews Analyzed</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <Users size={24} />
                     <div>
-                      <span className="stat-number">{marketIntel.overview.competitorsStudied}</span>
+                      <span className="stat-number">{marketIntel.overview?.competitorsStudied ?? 0}</span>
                       <span className="stat-label">Competitors Studied</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <Target size={24} />
                     <div>
-                      <span className="stat-number">{marketIntel.overview.customerAvatars}</span>
+                      <span className="stat-number">{marketIntel.overview?.customerAvatars ?? 0}</span>
                       <span className="stat-label">Customer Avatars</span>
                     </div>
                   </div>
                   <div className="stat-box">
                     <TrendingUp size={24} />
                     <div>
-                      <span className="stat-number">{marketIntel.overview.dataPoints.toLocaleString()}</span>
+                      <span className="stat-number">{(marketIntel.overview?.dataPoints ?? 0).toLocaleString()}</span>
                       <span className="stat-label">Data Points</span>
                     </div>
                   </div>
@@ -419,7 +456,7 @@ function CreativeCampaigns() {
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
                         <Pie
-                          data={marketIntel.sentiment}
+                          data={marketIntel.sentiment ?? []}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -427,7 +464,7 @@ function CreativeCampaigns() {
                           outerRadius={70}
                           label={({ name, value }) => `${name}: ${value}%`}
                         >
-                          {marketIntel.sentiment.map((entry, index) => (
+                          {(marketIntel.sentiment ?? []).map((entry, index) => (
                             <Cell key={index} fill={entry.color} />
                           ))}
                         </Pie>
@@ -438,7 +475,7 @@ function CreativeCampaigns() {
                   <div className="chart-box">
                     <h4>Customer Demographics</h4>
                     <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={marketIntel.demographics}>
+                      <BarChart data={marketIntel.demographics ?? []}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="age" />
                         <YAxis />
@@ -457,7 +494,7 @@ function CreativeCampaigns() {
                   <div className="theme-column positive">
                     <h4><ThumbsUp size={18} /> Top Positive Themes</h4>
                     <ul>
-                      {marketIntel.positiveThemes.map((item) => (
+                      {(marketIntel.positiveThemes ?? []).map((item) => (
                         <li key={item.theme}>
                           <Check size={16} />
                           {item.theme}
@@ -469,7 +506,7 @@ function CreativeCampaigns() {
                   <div className="theme-column pain">
                     <h4><AlertTriangle size={18} /> Pain Points</h4>
                     <ul>
-                      {marketIntel.painPoints.map((item) => (
+                      {(marketIntel.painPoints ?? []).map((item) => (
                         <li key={item.point}>
                           <ThumbsDown size={16} />
                           {item.point}
@@ -481,7 +518,7 @@ function CreativeCampaigns() {
                   <div className="theme-column requests">
                     <h4><Lightbulb size={18} /> Feature Requests</h4>
                     <ul>
-                      {marketIntel.featureRequests.map((item) => (
+                      {(marketIntel.featureRequests ?? []).map((item) => (
                         <li key={item.request}>
                           <Star size={16} />
                           {item.request}
@@ -497,7 +534,7 @@ function CreativeCampaigns() {
               <section className="intel-section">
                 <h3>Customer Avatars</h3>
                 <div className="avatars-grid">
-                  {marketIntel.customerAvatars.map((avatar) => (
+                  {(marketIntel.customerAvatars ?? []).map((avatar) => (
                     <div key={avatar.name} className="avatar-card">
                       <div className="avatar-header">
                         <div className="avatar-icon">
@@ -536,7 +573,7 @@ function CreativeCampaigns() {
               <section className="intel-section">
                 <h3>Strategic Recommendations</h3>
                 <div className="recommendations-grid">
-                  {Object.entries(marketIntel.recommendations).map(([key, items]) => (
+                  {Object.entries(marketIntel.recommendations ?? {}).map(([key, items]) => (
                     <div key={key} className="recommendation-card">
                       <h4>{key.charAt(0).toUpperCase() + key.slice(1)} Strategy</h4>
                       <ul>
@@ -831,20 +868,28 @@ function CreativeCampaigns() {
                 <h4>AI Assistant</h4>
                 <button onClick={() => setChatOpen(false)}>&times;</button>
               </div>
+              <div className="chat-suggestions">
+                <button onClick={() => sendChatMessage('Top 3 competitor weaknesses?')}>
+                  Top 3 competitor weaknesses?
+                </button>
+                <button onClick={() => sendChatMessage('Best headlines for main image?')}>
+                  Best headlines for main image?
+                </button>
+                <button onClick={() => sendChatMessage('What is the #1 pain point to address?')}>
+                  #1 pain point to address?
+                </button>
+              </div>
               <div className="chat-messages">
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`chat-message ${msg.role}`}>
                     {msg.content}
                   </div>
                 ))}
-              </div>
-              <div className="chat-suggestions">
-                <button onClick={() => setChatInput('Top 3 competitor weaknesses?')}>
-                  Top 3 competitor weaknesses?
-                </button>
-                <button onClick={() => setChatInput('Best headlines for main image?')}>
-                  Best headlines for main image?
-                </button>
+                {chatLoading && (
+                  <div className="chat-message assistant chat-message-loading">
+                    <Loader2 size={14} className="spin" /> Thinking…
+                  </div>
+                )}
               </div>
               <div className="chat-input">
                 <input
@@ -852,9 +897,12 @@ function CreativeCampaigns() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Ask about market insights..."
-                  onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                  disabled={chatLoading}
                 />
-                <button onClick={sendChatMessage}>Send</button>
+                <button onClick={() => sendChatMessage()} disabled={chatLoading}>
+                  {chatLoading ? <Loader2 size={14} className="spin" /> : 'Send'}
+                </button>
               </div>
             </div>
           )}

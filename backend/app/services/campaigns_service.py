@@ -33,9 +33,14 @@ _SENTIMENT_COLORS = {
 }
 
 
-async def analyze_campaign(asin: str, marketplace: str) -> dict:
+async def analyze_campaign(
+    asin: str,
+    marketplace: str,
+    keyword: str = "",
+    processing_mode: str = "fast",
+) -> dict:
     """
-    Generate a market intelligence brief for a given ASIN.
+    Generate a market intelligence brief for a given ASIN or keyword.
 
     Returns a dict matching the CreativeCampaigns UI schema:
         overview, sentiment, demographics, positiveThemes, painPoints,
@@ -43,31 +48,66 @@ async def analyze_campaign(asin: str, marketplace: str) -> dict:
         product_title, product_brand
     """
     product: dict = {}
-    try:
-        product = await lookup_asin(asin, marketplace)
-    except Exception as e:
-        print(f"[CAMPAIGNS] ASIN lookup failed for {asin}: {e} — generating with minimal data")
+    if asin and len(asin) == 10:
+        try:
+            product = await lookup_asin(asin, marketplace)
+        except Exception as e:
+            print(f"[CAMPAIGNS] ASIN lookup failed for {asin}: {e} — falling back to keyword/minimal data")
 
-    prompt = _build_prompt(product, marketplace)
+    prompt = _build_prompt(product, marketplace, keyword=keyword, processing_mode=processing_mode)
     result = await _call_gemini(prompt)
 
     # Inject hardcoded colors into sentiment so Recharts Cell fills work
     for item in result.get("sentiment", []):
         item["color"] = _SENTIMENT_COLORS.get(item.get("name", ""), "#6B7280")
 
-    result["product_title"] = product.get("title", "")
+    result["product_title"] = product.get("title", keyword or "")
     result["product_brand"] = product.get("brand", "")
     return result
 
 
-def _build_prompt(product: dict, marketplace: str) -> str:
-    title = product.get("title", "Unknown product")
-    brand = product.get("brand", "")
-    category = product.get("category", "")
-    bullets = product.get("bullets", [])
+async def chat_with_campaign(message: str, context_summary: str, marketplace: str = "US") -> str:
+    """Answer a user question grounded in existing campaign market intelligence."""
+    if not settings.gemini_api_key:
+        raise ValueError("GEMINI_API_KEY not configured")
+
+    prompt = f"""You are an expert Amazon brand strategist with deep knowledge of market intelligence and creative campaigns.
+
+The user has generated market intelligence for an Amazon product. Here is the campaign context:
+
+{context_summary}
+
+---
+
+Answer the following question from the brand manager. Be specific, concise, and actionable. 2-4 sentences max.
+
+Question: {message}"""
+
+    return await _call_gemini_text(prompt)
+
+
+def _build_prompt(product: dict, marketplace: str, keyword: str = "", processing_mode: str = "fast") -> str:
+    # Use keyword as product context when ASIN lookup yielded nothing
+    if product:
+        title = product.get("title", keyword or "Unknown product")
+        brand = product.get("brand", "")
+        category = product.get("category", "")
+        bullets = product.get("bullets", [])
+    else:
+        title = keyword or "Unknown product"
+        brand = ""
+        category = ""
+        bullets = []
+
     bullets_text = (
         "\n".join(f"• {b}" for b in bullets[:6])
-        if bullets else "No bullet points available."
+        if bullets else f"No bullet points available. Use your knowledge of '{title}' in the {marketplace} marketplace."
+    )
+
+    depth_note = (
+        "Provide a comprehensive deep-dive analysis with richer insights, more nuanced customer avatars, and detailed competitive dynamics."
+        if processing_mode == "deep"
+        else "Provide a focused, high-signal analysis."
     )
 
     return f"""You are an expert Amazon market intelligence analyst and brand strategist.
@@ -80,7 +120,7 @@ Product Features:
 {bullets_text}
 Marketplace: Amazon {marketplace}
 
-TASK: Generate a comprehensive market intelligence brief for this product.
+TASK: Generate a comprehensive market intelligence brief for this product. {depth_note}
 Base your analysis on:
 1. The product's specific features, category, and likely target audience
 2. Common buyer patterns and demographics for this type of product on Amazon
@@ -228,3 +268,33 @@ async def _call_gemini(prompt: str) -> dict:
         return json.loads(clean)
     except json.JSONDecodeError as e:
         raise ValueError(f"Campaign analysis returned invalid JSON: {e}")
+
+
+async def _call_gemini_text(prompt: str) -> str:
+    """Call Gemini and return raw text (for chat responses)."""
+    if not settings.gemini_api_key:
+        raise ValueError("GEMINI_API_KEY not configured in .env")
+
+    url = _GEMINI_URL.format(key=settings.gemini_api_key)
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 512,
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(url, json=body)
+
+    if resp.status_code != 200:
+        err = resp.json().get("error", {}).get("message", f"HTTP {resp.status_code}")
+        raise ValueError(f"Gemini error: {err}")
+
+    data = resp.json()
+    for candidate in data.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            if "text" in part:
+                return part["text"].strip()
+    raise ValueError("Empty response from Gemini")
