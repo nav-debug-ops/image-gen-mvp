@@ -43,17 +43,28 @@ async def list_images(
     limit: int = 20,
     offset: int = 0,
     archived: bool = False,
+    search: str = None,
+    sort_by: str = "newest",
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List user's generated images with pagination. Pass archived=true for archive view."""
-    from sqlalchemy import func
+    """List user's generated images with pagination, optional prompt search and sort."""
+    from sqlalchemy import func, asc
 
     base_filter = [
         Generation.user_id == current_user.id,
         Generation.status == "completed",
         Generation.is_archived == archived,
     ]
+
+    if search:
+        base_filter.append(Generation.prompt.ilike(f"%{search}%"))
+
+    order_clause = {
+        "newest": desc(Generation.created_at),
+        "oldest": asc(Generation.created_at),
+        "provider": asc(Generation.provider),
+    }.get(sort_by, desc(Generation.created_at))
 
     count_result = await db.execute(
         select(func.count(Generation.id)).where(*base_filter)
@@ -63,7 +74,7 @@ async def list_images(
     result = await db.execute(
         select(Generation)
         .where(*base_filter)
-        .order_by(desc(Generation.created_at))
+        .order_by(order_clause)
         .offset(offset)
         .limit(limit)
     )

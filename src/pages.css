@@ -7664,3 +7664,120 @@
   padding: 20px 0;
   font-style: italic;
 }
+
+/* =====================
+   Gallery search + sort
+   ===================== */
+
+.gallery-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.gallery-search-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.gallery-search-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  padding: 5px 28px 5px 28px;
+  width: 200px;
+  transition: border-color 0.15s;
+}
+
+.gallery-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.gallery-search-clear {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.gallery-search-clear:hover { color: var(--text-primary); }
+
+.gallery-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* =====================
+   Lightbox prompt editor
+   ===================== */
+
+.lightbox-prompt-section {
+  margin: 8px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lightbox-prompt-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.lightbox-prompt-toggle:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.lightbox-prompt-editor {
+  padding: 10px 12px 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.lightbox-prompt-editor textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 8px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.lightbox-prompt-editor textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.lightbox-prompt-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}

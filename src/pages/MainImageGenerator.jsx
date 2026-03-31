@@ -500,6 +500,8 @@ function MainImageGenerator() {
   const [saveStatus, setSaveStatus] = useState({})      // { [imageId]: 'saving'|'saved'|'error' }
   const [showEditorMenu, setShowEditorMenu] = useState(false)
   const [regeneratingIds, setRegeneratingIds] = useState(new Set())
+  const [showPromptEditor, setShowPromptEditor] = useState(false)
+  const [editedPrompt, setEditedPrompt] = useState('')
   const [previousImages, setPreviousImages] = useState({}) // newImg.id → oldImg
 
   const EDITORS = [
@@ -518,6 +520,8 @@ function MainImageGenerator() {
   const handleCloseLightbox = () => {
     setLightboxImg(null)
     setShowEditorMenu(false)
+    setShowPromptEditor(false)
+    setEditedPrompt('')
     setZoomLevel(1)
     setPan({ x: 0, y: 0 })
   }
@@ -579,10 +583,10 @@ function MainImageGenerator() {
     setShowEditorMenu(false)
   }
 
-  const handleRegenerateImage = async (img) => {
+  const handleRegenerateImage = async (img, customPrompt = null) => {
     setRegeneratingIds(prev => new Set(prev).add(img.id))
     try {
-      const prompt = buildImagePrompt(img.template, img.category, img.strategy, productDesc)
+      const prompt = customPrompt || buildImagePrompt(img.template, img.category, img.strategy, productDesc)
       const selectedRatio = ASPECT_RATIOS.find(r => r.id === img.aspectRatio) || ASPECT_RATIOS[0]
       // Use the original image's model so the regeneration is consistent
       const modelOption = AI_MODELS.find(m => m.model === img.model) || AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0]
@@ -1345,6 +1349,42 @@ function MainImageGenerator() {
             {/* Eval score */}
             <EvalScoreBadge imageUrl={lightboxImg.url} prompt={lightboxImg.prompt} contentType="listing_main" defaultExpanded />
 
+            {/* Prompt editor */}
+            <div className="lightbox-prompt-section">
+              <button
+                className="lightbox-prompt-toggle"
+                onClick={() => {
+                  if (!showPromptEditor) setEditedPrompt(lightboxImg.prompt || '')
+                  setShowPromptEditor(v => !v)
+                }}
+              >
+                <FileText size={14} />
+                {showPromptEditor ? 'Hide Prompt' : 'Edit Prompt'}
+                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', opacity: 0.6 }}>
+                  {showPromptEditor ? '▲' : '▼'}
+                </span>
+              </button>
+              {showPromptEditor && (
+                <div className="lightbox-prompt-editor">
+                  <textarea
+                    value={editedPrompt}
+                    onChange={e => setEditedPrompt(e.target.value)}
+                    rows={4}
+                    placeholder="Edit the prompt, then click Regenerate…"
+                  />
+                  <div className="lightbox-prompt-footer">
+                    <span className="char-count">{editedPrompt.length} chars</span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setEditedPrompt(lightboxImg.prompt || '')}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Action bar */}
             <div className="lightbox-actions">
 
@@ -1374,7 +1414,7 @@ function MainImageGenerator() {
               {/* Regenerate */}
               <button
                 className="lightbox-btn lightbox-btn-regen"
-                onClick={() => handleRegenerateImage(lightboxImg)}
+                onClick={() => handleRegenerateImage(lightboxImg, showPromptEditor && editedPrompt ? editedPrompt : null)}
                 disabled={regeneratingIds.has(lightboxImg.id)}
               >
                 {regeneratingIds.has(lightboxImg.id)

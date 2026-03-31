@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Archive as ArchiveIcon,
   Download,
@@ -14,6 +14,8 @@ import {
   CheckSquare,
   Square,
   PackageOpen,
+  Search,
+  ArrowUpDown,
 } from 'lucide-react'
 import { fetchAPI, safeJson } from '../api/client'
 import { downloadAsZip } from '../utils/downloadZip'
@@ -21,27 +23,37 @@ import { downloadAsZip } from '../utils/downloadZip'
 const PAGE_SIZE = 24
 
 function Archive() {
-  const [tab, setTab] = useState('all')           // 'all' | 'saved'
+  const [tab, setTab] = useState('all')
   const [images, setImages] = useState([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lightboxImg, setLightboxImg] = useState(null)
-  const [toggling, setToggling] = useState({})   // { [imageId]: true }
-  const [deleting, setDeleting] = useState({})   // { [imageId]: true }
+  const [toggling, setToggling] = useState({})
+  const [deleting, setDeleting] = useState({})
   const [selected, setSelected] = useState(new Set())
   const [zipLoading, setZipLoading] = useState(false)
   const [providerFilter, setProviderFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
+  const searchDebounceRef = useRef(null)
 
-  const fetchImages = useCallback(async (off = 0, currentTab = tab, provider = providerFilter) => {
+  const fetchImages = useCallback(async (
+    off = 0,
+    currentTab = tab,
+    provider = providerFilter,
+    search = searchQuery,
+    sort = sortBy,
+  ) => {
     setLoading(true)
     setError(null)
     setSelected(new Set())
     try {
       const archived = currentTab === 'saved'
-      let url = `/api/images/?archived=${archived}&limit=${PAGE_SIZE}&offset=${off}`
+      let url = `/api/images/?archived=${archived}&limit=${PAGE_SIZE}&offset=${off}&sort_by=${sort}`
       if (provider) url += `&provider=${encodeURIComponent(provider)}`
+      if (search.trim()) url += `&search=${encodeURIComponent(search.trim())}`
       const res = await fetchAPI(url)
       if (!res.ok) throw new Error('Failed to load images')
       const data = await safeJson(res)
@@ -54,18 +66,37 @@ function Archive() {
     } finally {
       setLoading(false)
     }
-  }, [tab, providerFilter])
+  }, [tab, providerFilter, searchQuery, sortBy])
 
   useEffect(() => { fetchImages(0) }, [fetchImages])
 
   const handleTabChange = (newTab) => {
     setTab(newTab)
-    fetchImages(0, newTab, providerFilter)
+    fetchImages(0, newTab, providerFilter, searchQuery, sortBy)
   }
 
   const handleProviderChange = (p) => {
     setProviderFilter(p)
-    fetchImages(0, tab, p)
+    fetchImages(0, tab, p, searchQuery, sortBy)
+  }
+
+  const handleSortChange = (s) => {
+    setSortBy(s)
+    fetchImages(0, tab, providerFilter, searchQuery, s)
+  }
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value
+    setSearchQuery(val)
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => {
+      fetchImages(0, tab, providerFilter, val, sortBy)
+    }, 400)
+  }
+
+  const handleSearchClear = () => {
+    setSearchQuery('')
+    fetchImages(0, tab, providerFilter, '', sortBy)
   }
 
   const handleDownload = async (img) => {
@@ -183,6 +214,24 @@ function Archive() {
         </div>
 
         <div className="gallery-filter-row">
+          {/* Search */}
+          <div className="gallery-search-wrap">
+            <Search size={14} className="gallery-search-icon" />
+            <input
+              className="gallery-search-input"
+              type="text"
+              placeholder="Search prompts…"
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+            {searchQuery && (
+              <button className="gallery-search-clear" onClick={handleSearchClear}>
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Provider filter */}
           <select
             className="gallery-filter-select"
             value={providerFilter}
@@ -193,6 +242,20 @@ function Archive() {
             <option value="replicate">Replicate</option>
             <option value="openai">OpenAI</option>
           </select>
+
+          {/* Sort */}
+          <div className="gallery-sort-wrap">
+            <ArrowUpDown size={13} />
+            <select
+              className="gallery-filter-select"
+              value={sortBy}
+              onChange={e => handleSortChange(e.target.value)}
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="provider">By provider</option>
+            </select>
+          </div>
 
           {selected.size > 0 && (
             <button
