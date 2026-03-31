@@ -25,6 +25,8 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Trophy,
+  SplitSquareHorizontal,
 } from 'lucide-react'
 import { generateImage, generateHeroImage, generateHeroImageStream, buildAIPrompt, uploadReferenceImage } from '../api/imageGen'
 import { lookupASIN } from '../api/asin'
@@ -553,6 +555,15 @@ function MainImageGenerator() {
   const [showPromptEditor, setShowPromptEditor] = useState(false)
   const [editedPrompt, setEditedPrompt] = useState('')
   const [previousImages, setPreviousImages] = useState({}) // newImg.id → oldImg
+
+  // A/B compare state
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [compareWinner, setCompareWinner] = useState(null) // image id of chosen winner
+
+  const handleOpenCompare = () => {
+    setCompareWinner(null)
+    setCompareOpen(true)
+  }
 
   const EDITORS = [
     { id: 'photopea', name: 'Photopea', desc: 'Free Photoshop alternative', url: 'https://www.photopea.com' },
@@ -1152,6 +1163,15 @@ function MainImageGenerator() {
                   <Check size={16} />
                   {selectedImages.length === generatedImages.length ? 'Deselect All' : 'Select All'}
                 </button>
+                {selectedImages.length === 2 && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleOpenCompare}
+                  >
+                    <SplitSquareHorizontal size={16} />
+                    Compare A/B
+                  </button>
+                )}
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={downloadSelected}
@@ -1513,6 +1533,76 @@ function MainImageGenerator() {
           </div>
         </div>
       )}
+
+      {/* ── A/B Compare Modal ── */}
+      {compareOpen && selectedImages.length === 2 && (() => {
+        const [imgA, imgB] = selectedImages.map(id => generatedImages.find(g => g.id === id)).filter(Boolean)
+        if (!imgA || !imgB) return null
+        return (
+          <div className="compare-overlay" onClick={() => setCompareOpen(false)}>
+            <div className="compare-modal" onClick={e => e.stopPropagation()}>
+              <div className="compare-header">
+                <span className="compare-title">
+                  <SplitSquareHorizontal size={18} /> A/B Comparison
+                </span>
+                <button className="compare-close" onClick={() => setCompareOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="compare-sides">
+                {[imgA, imgB].map((img, idx) => {
+                  const label = idx === 0 ? 'A' : 'B'
+                  const isWinner = compareWinner === img.id
+                  return (
+                    <div key={img.id} className={`compare-side ${isWinner ? 'compare-side-winner' : ''}`}>
+                      <div className="compare-side-label">{label}</div>
+                      <div className="compare-image-wrap">
+                        <img src={img.url} alt={`Option ${label}`} />
+                        {isWinner && (
+                          <div className="compare-winner-badge">
+                            <Trophy size={14} /> Winner
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="compare-meta">
+                        <div className="compare-meta-row">
+                          <span className="compare-meta-label">Template</span>
+                          <span>{img.template}</span>
+                        </div>
+                        <div className="compare-meta-row">
+                          <span className="compare-meta-label">Model</span>
+                          <span>{img.model || img.provider || '—'}</span>
+                        </div>
+                        {img.prompt && (
+                          <div className="compare-prompt">{img.prompt.slice(0, 140)}{img.prompt.length > 140 ? '…' : ''}</div>
+                        )}
+                      </div>
+
+                      <div className="compare-eval">
+                        <EvalScoreBadge
+                          imageUrl={img.url}
+                          prompt={img.prompt}
+                          contentType="listing_main"
+                          defaultExpanded
+                        />
+                      </div>
+
+                      <button
+                        className={`compare-pick-btn ${isWinner ? 'compare-pick-btn-active' : ''}`}
+                        onClick={() => setCompareWinner(isWinner ? null : img.id)}
+                      >
+                        {isWinner ? <><Trophy size={15} /> Chosen Winner</> : 'Pick as Winner'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )

@@ -5864,6 +5864,187 @@
 }
 .asin-change-btn:hover { color: var(--text-primary); }
 
+/* ── A/B Compare Modal ── */
+.compare-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.compare-modal {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compare-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.compare-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.compare-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.compare-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.compare-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.compare-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-right: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.compare-side:last-child {
+  border-right: none;
+}
+
+.compare-side-winner {
+  background: rgba(46, 213, 115, 0.05);
+}
+
+.compare-side-label {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.compare-image-wrap {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  aspect-ratio: 1;
+}
+
+.compare-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.compare-winner-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #2ed573;
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.compare-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compare-meta-row {
+  display: flex;
+  gap: 8px;
+  font-size: 0.8125rem;
+  align-items: baseline;
+}
+
+.compare-meta-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.compare-prompt {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 8px 10px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.compare-eval {
+  flex: 1;
+}
+
+.compare-pick-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.compare-pick-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.compare-pick-btn-active {
+  border-color: #2ed573;
+  background: rgba(46, 213, 115, 0.1);
+  color: #2ed573;
+}
+
 /* ── Lightbox Modal ── */
 .lightbox-overlay {
   position: fixed;
