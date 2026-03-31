@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { analyzeCampaign, generateInfographicBrief } from '../api/campaigns'
 import {
   Search,
@@ -25,7 +25,8 @@ import {
   Copy,
   Eye,
   ShieldCheck,
-  Palette
+  Palette,
+  Save,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -64,6 +65,49 @@ function CreativeCampaigns() {
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
+
+  // Save flash state
+  const [savedFlash, setSavedFlash] = useState(false)
+
+  // Restore last campaign from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('campaign_draft')
+      if (!raw) return
+      const d = JSON.parse(raw)
+      if (d.asinValue) setAsinValue(d.asinValue)
+      if (d.marketplace) setMarketplace(d.marketplace)
+      if (d.marketIntel) { setMarketIntel(d.marketIntel); setHasResults(true) }
+      if (d.infoBrief) setInfoBrief(d.infoBrief)
+    } catch { /* corrupt draft — ignore */ }
+  }, [])
+
+  const handleSave = () => {
+    localStorage.setItem('campaign_draft', JSON.stringify({
+      asinValue, marketplace, marketIntel, infoBrief,
+    }))
+    setSavedFlash(true)
+    setTimeout(() => setSavedFlash(false), 2000)
+  }
+
+  const handleExport = () => {
+    const payload = {
+      asin: asinValue,
+      marketplace,
+      exported_at: new Date().toISOString(),
+      market_intel: marketIntel || null,
+      infographic_brief: infoBrief || null,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `campaign-${asinValue || 'export'}-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const toggleSection = (section) => {
     setExpandedSections(prev =>
@@ -318,10 +362,16 @@ function CreativeCampaigns() {
               Infographic Brief
               {infoBrief && <span className="tab-badge">7</span>}
             </button>
-            <button className="btn btn-secondary btn-sm export-btn" style={{ marginLeft: 'auto' }}>
-              <Download size={16} />
-              Export PDF
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={handleSave}>
+                {savedFlash ? <Check size={16} /> : <Save size={16} />}
+                {savedFlash ? 'Saved!' : 'Save Draft'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={handleExport}>
+                <Download size={16} />
+                Export JSON
+              </button>
+            </div>
           </div>
 
           {activeTab === 'intel' ? (
