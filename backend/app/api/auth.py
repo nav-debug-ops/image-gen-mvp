@@ -1,8 +1,30 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+
+# Simple in-memory rate limiter: max 10 failed attempts per IP per 15 minutes
+_failed_attempts: dict[str, list[datetime]] = defaultdict(list)
+_WINDOW = timedelta(minutes=15)
+_MAX_FAILURES = 10
+
+def _check_login_rate(ip: str) -> None:
+    now = datetime.utcnow()
+    attempts = [t for t in _failed_attempts[ip] if now - t < _WINDOW]
+    _failed_attempts[ip] = attempts
+    if len(attempts) >= _MAX_FAILURES:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many failed login attempts. Try again in 15 minutes.",
+        )
+
+def _record_failure(ip: str) -> None:
+    _failed_attempts[ip].append(datetime.utcnow())
+
+def _clear_failures(ip: str) -> None:
+    _failed_attempts.pop(ip, None)
 
 from app.config import get_settings
 from app.database import get_db
@@ -97,16 +119,21 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(request: LoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
     """Authenticate and return JWT."""
+    ip = http_request.client.host if http_request.client else "unknown"
+    _check_login_rate(ip)
+
     result = await db.execute(
         select(User).where(User.email == request.email, User.is_active == True)
     )
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(request.password, user.hashed_password):
+        _record_failure(ip)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    _clear_failures(ip)
     token = create_access_token(user.id, user.email)
     return AuthResponse(
         access_token=token,

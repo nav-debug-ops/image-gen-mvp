@@ -41,45 +41,95 @@ import { detectCategoryFromProduct } from '../constants/detectCategory'
 // Template categories and items
 const TEMPLATE_CATEGORIES = ['All', 'Basic', 'Packaging', 'Elements', 'Tags', 'Lifestyle', 'Advanced']
 
+// SVG wireframe layout patterns for template thumbnails
+const TEMPLATE_SVG = {
+  // Basic
+  'white-bg':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="14" y="10" width="20" height="28" rx="2" fill="#bbb"/></svg>,
+  'shadow':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><ellipse cx="24" cy="38" rx="12" ry="3" fill="#ddd"/><rect x="14" y="10" width="20" height="24" rx="2" fill="#bbb"/></svg>,
+  'platform':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="14" y="12" width="20" height="22" rx="2" fill="#bbb"/><rect x="8" y="34" width="32" height="5" rx="2" fill="#ccc"/></svg>,
+  'angles':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="6" y="14" width="16" height="20" rx="2" fill="#bbb"/><rect x="26" y="14" width="16" height="20" rx="2" fill="#ccc"/></svg>,
+  'floating':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f0f4ff"/><rect x="14" y="8" width="20" height="26" rx="2" fill="#8b9cf0"/><line x1="14" y1="38" x2="34" y2="38" stroke="#c0c0c0" strokeWidth="1.5" strokeDasharray="3 2"/></svg>,
+  // Packaging
+  'pack-left':       <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="4" y="12" width="16" height="24" rx="2" fill="#ccc"/><rect x="24" y="10" width="20" height="28" rx="2" fill="#bbb"/></svg>,
+  'pack-right':      <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="4" y="10" width="20" height="28" rx="2" fill="#bbb"/><rect x="28" y="12" width="16" height="24" rx="2" fill="#ccc"/></svg>,
+  'pack-front':      <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="8" width="28" height="32" rx="2" fill="#bbb"/><rect x="16" y="14" width="16" height="8" rx="1" fill="#fff" opacity="0.6"/></svg>,
+  'pack-emerging':   <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="24" width="28" height="18" rx="2" fill="#ccc"/><rect x="14" y="10" width="20" height="24" rx="2" fill="#bbb"/></svg>,
+  'pack-open':       <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="8" y="20" width="32" height="22" rx="2" fill="#ccc"/><path d="M8 20 L24 10 L40 20" fill="#bbb" stroke="#aaa" strokeWidth="1"/></svg>,
+  // Elements
+  'ingredients':     <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><circle cx="24" cy="22" r="10" fill="#bbb"/><circle cx="8" cy="36" r="5" fill="#ddd"/><circle cx="38" cy="10" r="4" fill="#ddd"/><circle cx="40" cy="34" r="4" fill="#ddd"/></svg>,
+  'accessories':     <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="12" y="12" width="18" height="24" rx="2" fill="#bbb"/><rect x="32" y="16" width="10" height="6" rx="1" fill="#ddd"/><rect x="32" y="26" width="10" height="6" rx="1" fill="#ddd"/></svg>,
+  'element-tag':     <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="8" y="12" width="22" height="28" rx="2" fill="#bbb"/><rect x="28" y="8" width="14" height="12" rx="2" fill="#7c9ef0"/></svg>,
+  'before-after':    <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="2" y="8" width="20" height="32" rx="2" fill="#ddd"/><rect x="26" y="8" width="20" height="32" rx="2" fill="#bbb"/><line x1="24" y1="4" x2="24" y2="44" stroke="#999" strokeWidth="2"/><text x="6" y="26" fontSize="6" fill="#999">BEFORE</text><text x="28" y="26" fontSize="6" fill="#888">AFTER</text></svg>,
+  'size-compare':    <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="6" y="18" width="14" height="20" rx="2" fill="#ccc"/><rect x="26" y="10" width="18" height="28" rx="2" fill="#bbb"/><line x1="4" y1="42" x2="44" y2="42" stroke="#999" strokeWidth="1"/></svg>,
+  // Tags
+  'corner-tag':      <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="10" width="28" height="30" rx="2" fill="#bbb"/><polygon points="26,8 40,8 40,22" fill="#7c9ef0"/></svg>,
+  'ribbon':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="12" y="12" width="24" height="28" rx="2" fill="#bbb"/><rect x="6" y="18" width="36" height="10" fill="#f0a070" opacity="0.9"/></svg>,
+  'quantity':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="12" width="20" height="28" rx="2" fill="#bbb"/><circle cx="36" cy="14" r="8" fill="#7c9ef0"/><text x="33" y="17" fontSize="8" fill="#fff" fontWeight="bold">3</text></svg>,
+  'quality-cert':    <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="12" width="20" height="28" rx="2" fill="#bbb"/><circle cx="35" cy="34" r="8" fill="#4ade80"/><text x="31" y="38" fontSize="10" fill="#fff">✓</text></svg>,
+  'feature-callout': <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="6" y="14" width="20" height="22" rx="2" fill="#bbb"/><rect x="28" y="12" width="16" height="6" rx="2" fill="#7c9ef0"/><rect x="28" y="22" width="16" height="4" rx="1" fill="#ddd"/><rect x="28" y="30" width="12" height="4" rx="1" fill="#ddd"/></svg>,
+  'award':           <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="10" y="12" width="20" height="28" rx="2" fill="#bbb"/><polygon points="36,6 38,14 46,14 40,19 42,27 36,22 30,27 32,19 26,14 34,14" fill="#f0c040" transform="scale(0.5) translate(36,8)"/></svg>,
+  'sale-tag':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="8" y="12" width="22" height="28" rx="2" fill="#bbb"/><rect x="28" y="10" width="16" height="14" rx="2" fill="#ef4444"/><text x="30" y="21" fontSize="7" fill="#fff" fontWeight="bold">SALE</text></svg>,
+  // Lifestyle
+  'with-hand':       <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#e8f4e8"/><rect x="16" y="10" width="16" height="22" rx="2" fill="#bbb"/><path d="M8 44 Q12 28 20 32 Q24 32 24 32 Q28 32 32 28 L36 44 Z" fill="#d4a888"/></svg>,
+  'in-use':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#e8f0f8"/><circle cx="24" cy="16" r="8" fill="#d4a888"/><rect x="14" y="24" width="20" height="18" rx="4" fill="#d4a888"/><rect x="18" y="20" width="12" height="8" rx="2" fill="#bbb"/></svg>,
+  'complementary':   <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="14" y="10" width="20" height="24" rx="2" fill="#bbb"/><rect x="6" y="32" width="10" height="10" rx="1" fill="#ccc"/><rect x="32" y="32" width="10" height="10" rx="1" fill="#ccc"/></svg>,
+  'splash':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#e0f0ff"/><ellipse cx="24" cy="28" rx="18" ry="8" fill="#90d0ff" opacity="0.6"/><rect x="16" y="10" width="16" height="24" rx="2" fill="#bbb"/><circle cx="8" cy="16" r="3" fill="#90d0ff"/><circle cx="40" cy="20" r="4" fill="#90d0ff" opacity="0.7"/></svg>,
+  'premium-lighting': <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#1a1a2e"/><rect x="14" y="10" width="20" height="28" rx="2" fill="#888"/><ellipse cx="24" cy="24" rx="14" ry="18" fill="url(#gl)" opacity="0.4"/><defs><radialGradient id="gl" cx="0.4" cy="0.3"><stop offset="0" stopColor="#fff"/><stop offset="1" stopColor="transparent"/></radialGradient></defs></svg>,
+  // Advanced
+  'multi-angle':     <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="2" y="14" width="14" height="18" rx="1" fill="#ccc"/><rect x="18" y="8" width="18" height="28" rx="2" fill="#bbb"/><rect x="38" y="16" width="8" height="14" rx="1" fill="#ddd"/></svg>,
+  'bundle':          <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="18" y="12" width="20" height="26" rx="2" fill="#bbb"/><rect x="10" y="16" width="16" height="22" rx="2" fill="#ccc"/><rect x="4" y="20" width="14" height="18" rx="2" fill="#ddd"/></svg>,
+  'exploded':        <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="16" y="16" width="16" height="16" rx="2" fill="#bbb"/><rect x="2" y="4" width="10" height="10" rx="1" fill="#ccc"/><rect x="36" y="6" width="10" height="10" rx="1" fill="#ccc"/><rect x="4" y="34" width="10" height="10" rx="1" fill="#ccc"/><rect x="34" y="34" width="10" height="10" rx="1" fill="#ccc"/></svg>,
+  'infographic':     <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="4" y="10" width="18" height="28" rx="2" fill="#bbb"/><rect x="26" y="14" width="18" height="4" rx="1" fill="#7c9ef0"/><rect x="26" y="22" width="14" height="4" rx="1" fill="#bbb"/><rect x="26" y="30" width="16" height="4" rx="1" fill="#bbb"/></svg>,
+  'comparison':      <svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#f5f5f5"/><rect x="2" y="10" width="20" height="28" rx="2" fill="#bbb"/><rect x="26" y="10" width="20" height="28" rx="2" fill="#ccc"/><line x1="24" y1="8" x2="24" y2="40" stroke="#999" strokeWidth="1.5"/></svg>,
+}
+
+function TemplateThumbnail({ templateId }) {
+  return (
+    <div className="template-svg-thumb">
+      {TEMPLATE_SVG[templateId] || <div className="template-svg-fallback">?</div>}
+    </div>
+  )
+}
+
 const TEMPLATES = [
   // Basic
-  { id: 'white-bg', name: 'Plain White Background', category: 'Basic', thumbnail: '⬜' },
-  { id: 'shadow', name: 'Product with Shadow', category: 'Basic', thumbnail: '🌓' },
-  { id: 'platform', name: 'On Platform', category: 'Basic', thumbnail: '📦' },
-  { id: 'angles', name: 'Different Angles', category: 'Basic', thumbnail: '🔄' },
-  { id: 'floating', name: 'Floating', category: 'Basic', thumbnail: '🎈' },
+  { id: 'white-bg', name: 'Plain White Background', category: 'Basic' },
+  { id: 'shadow', name: 'Product with Shadow', category: 'Basic' },
+  { id: 'platform', name: 'On Platform', category: 'Basic' },
+  { id: 'angles', name: 'Different Angles', category: 'Basic' },
+  { id: 'floating', name: 'Floating', category: 'Basic' },
   // Packaging
-  { id: 'pack-left', name: 'Product + Packaging Left', category: 'Packaging', thumbnail: '📦' },
-  { id: 'pack-right', name: 'Product + Packaging Right', category: 'Packaging', thumbnail: '📦' },
-  { id: 'pack-front', name: 'Packaging Front', category: 'Packaging', thumbnail: '🎁' },
-  { id: 'pack-emerging', name: 'Emerging from Box', category: 'Packaging', thumbnail: '📤' },
-  { id: 'pack-open', name: 'Open Display', category: 'Packaging', thumbnail: '📬' },
+  { id: 'pack-left', name: 'Product + Packaging Left', category: 'Packaging' },
+  { id: 'pack-right', name: 'Product + Packaging Right', category: 'Packaging' },
+  { id: 'pack-front', name: 'Packaging Front', category: 'Packaging' },
+  { id: 'pack-emerging', name: 'Emerging from Box', category: 'Packaging' },
+  { id: 'pack-open', name: 'Open Display', category: 'Packaging' },
   // Elements
-  { id: 'ingredients', name: 'Product + Ingredients', category: 'Elements', thumbnail: '🧪' },
-  { id: 'accessories', name: 'With Accessories', category: 'Elements', thumbnail: '🔧' },
-  { id: 'element-tag', name: 'Element + Tag', category: 'Elements', thumbnail: '🏷️' },
-  { id: 'before-after', name: 'Before/After', category: 'Elements', thumbnail: '↔️' },
-  { id: 'size-compare', name: 'Size Comparison', category: 'Elements', thumbnail: '📏' },
+  { id: 'ingredients', name: 'Product + Ingredients', category: 'Elements' },
+  { id: 'accessories', name: 'With Accessories', category: 'Elements' },
+  { id: 'element-tag', name: 'Element + Tag', category: 'Elements' },
+  { id: 'before-after', name: 'Before/After', category: 'Elements' },
+  { id: 'size-compare', name: 'Size Comparison', category: 'Elements' },
   // Tags
-  { id: 'corner-tag', name: 'Corner Tag', category: 'Tags', thumbnail: '📐' },
-  { id: 'ribbon', name: 'Ribbon Badge', category: 'Tags', thumbnail: '🎀' },
-  { id: 'quantity', name: 'Quantity Indicator', category: 'Tags', thumbnail: '🔢' },
-  { id: 'quality-cert', name: 'Quality Certification', category: 'Tags', thumbnail: '✅' },
-  { id: 'feature-callout', name: 'Feature Callout', category: 'Tags', thumbnail: '💬' },
-  { id: 'award', name: 'Award Badge', category: 'Tags', thumbnail: '🏆' },
-  { id: 'sale-tag', name: 'Sale Tag', category: 'Tags', thumbnail: '💰' },
+  { id: 'corner-tag', name: 'Corner Tag', category: 'Tags' },
+  { id: 'ribbon', name: 'Ribbon Badge', category: 'Tags' },
+  { id: 'quantity', name: 'Quantity Indicator', category: 'Tags' },
+  { id: 'quality-cert', name: 'Quality Certification', category: 'Tags' },
+  { id: 'feature-callout', name: 'Feature Callout', category: 'Tags' },
+  { id: 'award', name: 'Award Badge', category: 'Tags' },
+  { id: 'sale-tag', name: 'Sale Tag', category: 'Tags' },
   // Lifestyle
-  { id: 'with-hand', name: 'With Hand/Avatar', category: 'Lifestyle', thumbnail: '🤚' },
-  { id: 'in-use', name: 'In Use', category: 'Lifestyle', thumbnail: '👤' },
-  { id: 'complementary', name: 'With Complementary Items', category: 'Lifestyle', thumbnail: '🎯' },
-  { id: 'splash', name: 'Splash Effect', category: 'Lifestyle', thumbnail: '💦' },
-  { id: 'premium-lighting', name: 'Premium Lighting', category: 'Lifestyle', thumbnail: '✨' },
+  { id: 'with-hand', name: 'With Hand/Avatar', category: 'Lifestyle' },
+  { id: 'in-use', name: 'In Use', category: 'Lifestyle' },
+  { id: 'complementary', name: 'With Complementary Items', category: 'Lifestyle' },
+  { id: 'splash', name: 'Splash Effect', category: 'Lifestyle' },
+  { id: 'premium-lighting', name: 'Premium Lighting', category: 'Lifestyle' },
   // Advanced
-  { id: 'multi-angle', name: 'Multi-angle Composite', category: 'Advanced', thumbnail: '🔲' },
-  { id: 'bundle', name: 'Bundle Display', category: 'Advanced', thumbnail: '📦' },
-  { id: 'exploded', name: 'Exploded View', category: 'Advanced', thumbnail: '💥' },
-  { id: 'infographic', name: 'Infographic Style', category: 'Advanced', thumbnail: '📊' },
-  { id: 'comparison', name: 'Comparison Layout', category: 'Advanced', thumbnail: '⚖️' },
+  { id: 'multi-angle', name: 'Multi-angle Composite', category: 'Advanced' },
+  { id: 'bundle', name: 'Bundle Display', category: 'Advanced' },
+  { id: 'exploded', name: 'Exploded View', category: 'Advanced' },
+  { id: 'infographic', name: 'Infographic Style', category: 'Advanced' },
+  { id: 'comparison', name: 'Comparison Layout', category: 'Advanced' },
 ]
 
 const IMAGE_STRATEGIES = [
@@ -1033,7 +1083,7 @@ function MainImageGenerator() {
                       <Zap size={10} />
                     </div>
                   )}
-                  <div className="template-thumbnail">{template.thumbnail}</div>
+                  <TemplateThumbnail templateId={template.id} />
                   <span className="template-name">{template.name}</span>
                   <div className="template-check">
                     {selectedTemplates.includes(template.id) && <Check size={16} />}

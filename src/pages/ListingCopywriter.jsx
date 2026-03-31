@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { generateCopy } from '../api/copywriter'
 import {
   FileText,
@@ -13,7 +13,8 @@ import {
   ChevronDown,
   Loader2,
   GripVertical,
-  AlertCircle
+  AlertCircle,
+  Save
 } from 'lucide-react'
 
 const MARKETPLACES = [
@@ -79,6 +80,32 @@ function ListingCopywriter() {
   // UI state
   const [activeTitle, setActiveTitle] = useState(0)
   const [copiedField, setCopiedField] = useState(null)
+  const [savedFlash, setSavedFlash] = useState(false)
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('listing_draft')
+      if (!raw) return
+      const d = JSON.parse(raw)
+      if (d.asinValue)          setAsinValue(d.asinValue)
+      if (d.marketplace)        setMarketplace(d.marketplace)
+      if (d.language)           setLanguage(d.language)
+      if (d.tone)               setTone(d.tone)
+      if (d.additionalKeywords) setAdditionalKeywords(d.additionalKeywords)
+      if (d.titles?.length)     { setTitles(d.titles); setHasResults(true) }
+      if (d.bullets?.length)    setBullets(d.bullets)
+      if (d.description)        setDescription(d.description)
+      if (d.searchTerms)        setSearchTerms(d.searchTerms)
+    } catch { /* corrupt draft — ignore */ }
+  }, [])
+
+  const handleSave = () => {
+    const draft = { asinValue, marketplace, language, tone, additionalKeywords, titles, bullets, description, searchTerms }
+    localStorage.setItem('listing_draft', JSON.stringify(draft))
+    setSavedFlash(true)
+    setTimeout(() => setSavedFlash(false), 2000)
+  }
 
   const _buildManualBullets = () =>
     manualBullets.split('\n').map(b => b.trim()).filter(Boolean)
@@ -392,6 +419,10 @@ function ListingCopywriter() {
                   >
                     {copiedField === 'all' ? <Check size={16} /> : <Copy size={16} />}
                     Copy All
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={handleSave}>
+                    {savedFlash ? <Check size={16} /> : <Save size={16} />}
+                    {savedFlash ? 'Saved!' : 'Save Draft'}
                   </button>
                   <button className="btn btn-secondary btn-sm" onClick={handleExport}>
                     <Download size={16} />
