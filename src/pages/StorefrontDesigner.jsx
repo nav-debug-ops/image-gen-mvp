@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
@@ -621,6 +621,28 @@ function StorefrontDesigner() {
     }
   }
 
+  // Generate All
+  const [generatingAll, setGeneratingAll] = useState(false)
+  const [generateAllProgress, setGenerateAllProgress] = useState(null)
+  const cancelAllRef = useRef(false)
+
+  const handleGenerateAll = async () => {
+    if (!currentWidgets.length || generatingAll) return
+    setGeneratingAll(true)
+    cancelAllRef.current = false
+    setGenerateAllProgress({ current: 0, total: currentWidgets.length })
+    for (let i = 0; i < currentWidgets.length; i++) {
+      if (cancelAllRef.current) break
+      const widget = currentWidgets[i]
+      setGenerateAllProgress({ current: i + 1, total: currentWidgets.length })
+      if (!widget.textOnly && !widget.isProductGrid) await generateWidgetImage(widget.instanceId)
+      if (cancelAllRef.current) break
+      if (isValidASIN(asinValue) && (widget.hasText || widget.textOnly)) await generateWidgetContent(widget.instanceId)
+    }
+    setGeneratingAll(false)
+    setGenerateAllProgress(null)
+  }
+
   const handleSave = () => {
     const saveData = { pages, widgetData, savedAt: new Date().toISOString() }
     localStorage.setItem('storefront_draft', JSON.stringify(saveData))
@@ -1061,6 +1083,24 @@ function StorefrontDesigner() {
                 >
                   <Smartphone size={16} />
                 </button>
+              </div>
+            )}
+            {currentWidgets.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleGenerateAll}
+                  disabled={generatingAll}
+                >
+                  {generatingAll
+                    ? <><Loader2 size={14} className="spin" /> {generateAllProgress?.current}/{generateAllProgress?.total}</>
+                    : <><Sparkles size={14} /> Generate All</>}
+                </button>
+                {generatingAll && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => { cancelAllRef.current = true }}>
+                    <X size={13} /> Cancel
+                  </button>
+                )}
               </div>
             )}
             <button className="btn btn-sm btn-secondary" disabled={currentWidgets.length === 0} onClick={handleSave}>

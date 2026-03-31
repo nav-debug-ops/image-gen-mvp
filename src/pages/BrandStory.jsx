@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
@@ -462,6 +462,28 @@ function BrandStory() {
     } finally {
       setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
     }
+  }
+
+  // Generate All
+  const [generatingAll, setGeneratingAll] = useState(false)
+  const [generateAllProgress, setGenerateAllProgress] = useState(null)
+  const cancelAllRef = useRef(false)
+
+  const handleGenerateAll = async () => {
+    if (!selectedModules.length || generatingAll) return
+    setGeneratingAll(true)
+    cancelAllRef.current = false
+    setGenerateAllProgress({ current: 0, total: selectedModules.length })
+    for (let i = 0; i < selectedModules.length; i++) {
+      if (cancelAllRef.current) break
+      const module = selectedModules[i]
+      setGenerateAllProgress({ current: i + 1, total: selectedModules.length })
+      if (!module.textOnly) await generateModuleImage(module.instanceId)
+      if (cancelAllRef.current) break
+      if (isValidASIN(asinValue) && module.hasText) await generateModuleContent(module.instanceId)
+    }
+    setGeneratingAll(false)
+    setGenerateAllProgress(null)
   }
 
   const handleSave = () => {
@@ -1021,6 +1043,24 @@ function BrandStory() {
               {previewMode ? <EyeOff size={16} /> : <Eye size={16} />}
               {previewMode ? 'Edit' : 'Preview'}
             </button>
+            {selectedModules.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleGenerateAll}
+                  disabled={generatingAll}
+                >
+                  {generatingAll
+                    ? <><Loader2 size={14} className="spin" /> {generateAllProgress?.current}/{generateAllProgress?.total}</>
+                    : <><Sparkles size={14} /> Generate All</>}
+                </button>
+                {generatingAll && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => { cancelAllRef.current = true }}>
+                    <X size={13} /> Cancel
+                  </button>
+                )}
+              </div>
+            )}
             <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0} onClick={handleSave}>
               <Save size={16} />
               Save

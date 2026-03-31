@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
@@ -750,6 +750,11 @@ function APlusContent() {
   const [moduleErrors, setModuleErrors] = useState({})           // instanceId → string|null
   const [showGuidelines, setShowGuidelines] = useState(true)
 
+  // Generate All state
+  const [generatingAll, setGeneratingAll] = useState(false)
+  const [generateAllProgress, setGenerateAllProgress] = useState(null)
+  const cancelAllRef = useRef(false)
+
   // Validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
   const canAddModule = selectedModules.length < 7
@@ -975,6 +980,23 @@ function APlusContent() {
     } finally {
       setGeneratingModules(prev => ({ ...prev, [instanceId]: false }))
     }
+  }
+
+  const handleGenerateAll = async () => {
+    if (!selectedModules.length || generatingAll) return
+    setGeneratingAll(true)
+    cancelAllRef.current = false
+    setGenerateAllProgress({ current: 0, total: selectedModules.length })
+    for (let i = 0; i < selectedModules.length; i++) {
+      if (cancelAllRef.current) break
+      const module = selectedModules[i]
+      setGenerateAllProgress({ current: i + 1, total: selectedModules.length })
+      if (!module.textOnly) await generateModuleImage(module.instanceId)
+      if (cancelAllRef.current) break
+      if (isValidASIN(asinValue) && module.hasText) await generateModuleContent(module.instanceId)
+    }
+    setGeneratingAll(false)
+    setGenerateAllProgress(null)
   }
 
   // Generate AI text content for module via /api/content/generate
@@ -1320,30 +1342,58 @@ function APlusContent() {
   // Render module preview
   const renderModulePreview = (module) => {
     const data = moduleData[module.instanceId] || {}
+    const imageCount = module.imageCount || 1
+    const images = data.images || []
 
     return (
       <div className={`module-preview preview-${module.id}`}>
-        {module.textOnly ? (
-          <div className="preview-text-only">
-            <h4>{data.headline || 'Headline'}</h4>
-            <p>{data.body || 'Body text will appear here...'}</p>
-          </div>
-        ) : (
-          <div className="preview-with-image">
-            {data.images?.[0] ? (
-              <img src={data.images[0].preview} alt="Preview" />
-            ) : (
-              <div className="preview-placeholder">
-                <Image size={24} />
-                <span>{module.dimensions}</span>
-              </div>
+        <div className="preview-module-label">{module.preview} {module.name} <span className="preview-dims">{module.dimensions}</span></div>
+
+        {/* Images */}
+        {!module.textOnly && (
+          imageCount > 1 ? (
+            <div className="preview-image-grid" style={{ gridTemplateColumns: `repeat(${Math.min(imageCount, 4)}, 1fr)` }}>
+              {Array.from({ length: imageCount }).map((_, idx) => (
+                <div key={idx} className="preview-image-slot">
+                  {images[idx]?.preview
+                    ? <img src={images[idx].preview} alt={`img-${idx + 1}`} />
+                    : <div className="preview-placeholder-sm"><Image size={16} /><span>{idx + 1}</span></div>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="preview-image-single">
+              {images[0]?.preview
+                ? <img src={images[0].preview} alt="Module image" />
+                : <div className="preview-placeholder"><Image size={24} /><span>{module.dimensions}</span></div>}
+            </div>
+          )
+        )}
+
+        {/* Text content */}
+        {(data.headline || data.body || data.highlights?.length || data.specs?.length) && (
+          <div className="preview-text-block">
+            {data.headline && <h4 className="preview-headline">{data.headline}</h4>}
+            {data.body && <p className="preview-body">{data.body}</p>}
+            {data.highlights?.filter(Boolean).length > 0 && (
+              <ul className="preview-highlights">
+                {data.highlights.filter(Boolean).map((h, i) => <li key={i}>{h}</li>)}
+              </ul>
             )}
-            {module.hasText && (
-              <div className="preview-text">
-                <h4>{data.headline || 'Headline'}</h4>
-              </div>
+            {data.specs?.filter(s => s?.label).length > 0 && (
+              <table className="preview-specs-table">
+                <tbody>
+                  {data.specs.filter(s => s?.label).map((s, i) => (
+                    <tr key={i}><td className="spec-label">{s.label}</td><td>{s.value}</td></tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
+        )}
+
+        {!data.headline && !data.body && !images[0]?.preview && (
+          <div className="preview-empty-hint">No content yet — expand module to generate</div>
         )}
       </div>
     )
@@ -1404,6 +1454,24 @@ function APlusContent() {
             </span>
           </div>
           <div className="toolbar-right">
+            {selectedModules.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleGenerateAll}
+                  disabled={generatingAll}
+                >
+                  {generatingAll
+                    ? <><Loader2 size={14} className="spin" /> {generateAllProgress?.current}/{generateAllProgress?.total}</>
+                    : <><Sparkles size={14} /> Generate All</>}
+                </button>
+                {generatingAll && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => { cancelAllRef.current = true }}>
+                    <X size={13} /> Cancel
+                  </button>
+                )}
+              </div>
+            )}
             <button
               className={`btn btn-sm ${previewMode ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setPreviewMode(!previewMode)}
