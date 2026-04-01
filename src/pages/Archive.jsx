@@ -35,6 +35,7 @@ function Archive() {
   const [deleting, setDeleting] = useState({})
   const [selected, setSelected] = useState(new Set())
   const [zipLoading, setZipLoading] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [providerFilter, setProviderFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('newest')
@@ -161,6 +162,23 @@ function Archive() {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Permanently delete ${selected.size} image${selected.size !== 1 ? 's' : ''}? This cannot be undone.`)) return
+    setBulkDeleting(true)
+    try {
+      const res = await fetchAPI('/api/images/bulk', {
+        method: 'DELETE',
+        body: JSON.stringify({ image_ids: [...selected] }),
+      })
+      if (res.ok) {
+        setImages(prev => prev.filter(i => !selected.has(i.id)))
+        setTotal(prev => prev - selected.size)
+        setSelected(new Set())
+      }
+    } catch { /* silent */ }
+    finally { setBulkDeleting(false) }
+  }
+
   const handleBulkDownload = async () => {
     const toDownload = images.filter(i => selected.has(i.id)).map(i => ({
       url: i.image_url,
@@ -259,15 +277,27 @@ function Archive() {
           </div>
 
           {selected.size > 0 && (
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleBulkDownload}
-              disabled={zipLoading}
-            >
-              {zipLoading
-                ? <><Loader2 size={14} className="spin" /> Zipping…</>
-                : <><Download size={14} /> ZIP ({selected.size})</>}
-            </button>
+            <>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleBulkDownload}
+                disabled={zipLoading}
+              >
+                {zipLoading
+                  ? <><Loader2 size={14} className="spin" /> Zipping…</>
+                  : <><Download size={14} /> ZIP ({selected.size})</>}
+              </button>
+              <button
+                className="btn btn-sm"
+                style={{ background: '#c0392b', color: '#fff' }}
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting
+                  ? <><Loader2 size={14} className="spin" /> Deleting…</>
+                  : <><Trash2 size={14} /> Delete ({selected.size})</>}
+              </button>
+            </>
           )}
         </div>
       </div>

@@ -103,6 +103,17 @@ async def list_images(
     return {"images": images, "total": total, "limit": limit, "offset": offset}
 
 
+@router.get("/storage-health")
+async def storage_health(
+    current_user: User = Depends(get_current_user),
+):
+    """Test that the configured storage backend is reachable and writable."""
+    result = await storage.health_check()
+    status_code = 200 if result.get("ok") else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=result, status_code=status_code)
+
+
 @router.get("/storage-stats")
 async def get_storage_stats(
     current_user: User = Depends(get_current_user),

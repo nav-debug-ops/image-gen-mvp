@@ -50,6 +50,8 @@ function AccountSettings() {
   // Storage stats
   const [storageStats, setStorageStats] = useState(null)
   const [storageLoading, setStorageLoading] = useState(true)
+  const [healthResult, setHealthResult] = useState(null)
+  const [healthChecking, setHealthChecking] = useState(false)
 
   useEffect(() => {
     fetchAPI('/api/usage/summary')
@@ -66,6 +68,20 @@ function AccountSettings() {
 
     loadHistory(0)
   }, [])
+
+  const runHealthCheck = async () => {
+    setHealthChecking(true)
+    setHealthResult(null)
+    try {
+      const res = await fetchAPI('/api/images/storage-health')
+      const data = await safeJson(res)
+      setHealthResult({ ok: res.ok && data?.ok, ...data })
+    } catch {
+      setHealthResult({ ok: false, error: 'Request failed' })
+    } finally {
+      setHealthChecking(false)
+    }
+  }
 
   const loadHistory = async (off = 0) => {
     setHistoryLoading(true)
@@ -310,10 +326,37 @@ function AccountSettings() {
             <div className="settings-loading"><Loader2 size={20} className="spin" /></div>
           ) : storageStats ? (
             <div className="storage-stats-wrap">
-              <div className="storage-backend-badge">
-                <HardDrive size={14} />
-                <span>Backend: <strong>{storageStats.backend.toUpperCase()}</strong></span>
+              <div className="storage-backend-row">
+                <div className="storage-backend-badge">
+                  <HardDrive size={14} />
+                  <span>Backend: <strong>{storageStats.backend.toUpperCase()}</strong></span>
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={runHealthCheck}
+                  disabled={healthChecking}
+                  title="Test storage connectivity"
+                >
+                  {healthChecking
+                    ? <><Loader2 size={14} className="spin" /> Testing…</>
+                    : <><Zap size={14} /> Test Connection</>}
+                </button>
               </div>
+
+              {storageStats.backend === 'local' && (
+                <div className="storage-warning">
+                  <strong>Local storage is active.</strong> Images are stored on the server disk and will be lost if the server is redeployed (e.g. Railway, Render). Set <code>STORAGE_BACKEND=r2</code> or <code>s3</code> for production.
+                </div>
+              )}
+
+              {healthResult && (
+                <div className={`storage-health-result ${healthResult.ok ? 'ok' : 'fail'}`}>
+                  {healthResult.ok
+                    ? `Storage OK — ${healthResult.backend?.toUpperCase()} is reachable and writable.`
+                    : `Storage ERROR — ${healthResult.error || 'Unknown error'}`}
+                </div>
+              )}
+
               <div className="storage-stats-grid">
                 <div className="storage-stat-item">
                   <Image size={16} />

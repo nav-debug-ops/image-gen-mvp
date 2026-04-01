@@ -41,6 +41,15 @@ class LocalStorage:
     async def exists(self, filename: str) -> bool:
         return (self.base_path / filename).exists()
 
+    async def health_check(self) -> dict:
+        try:
+            test_file = self.base_path / "_healthcheck.tmp"
+            test_file.write_bytes(b"ok")
+            test_file.unlink()
+            return {"ok": True, "backend": "local", "path": str(self.base_path)}
+        except Exception as e:
+            return {"ok": False, "backend": "local", "error": str(e)}
+
 
 class R2Storage:
     """Cloudflare R2 storage via boto3-compatible S3 API."""
@@ -49,6 +58,12 @@ class R2Storage:
         try:
             import boto3
             from botocore.config import Config
+            if not settings.r2_account_id:
+                raise RuntimeError("R2_ACCOUNT_ID is not set. Check your .env file.")
+            if not settings.r2_access_key_id or not settings.r2_secret_access_key:
+                raise RuntimeError("R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY is not set.")
+            if not settings.r2_public_url:
+                raise RuntimeError("R2_PUBLIC_URL is not set — images won't be publicly accessible.")
             self._s3 = boto3.client(
                 "s3",
                 endpoint_url=f"https://{settings.r2_account_id}.r2.cloudflarestorage.com",
@@ -93,6 +108,19 @@ class R2Storage:
         except Exception:
             return False
 
+    async def health_check(self) -> dict:
+        import asyncio
+        test_key = "_healthcheck.tmp"
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: self._s3.put_object(
+                Bucket=self._bucket, Key=test_key, Body=b"ok", ContentType="text/plain"
+            ))
+            await loop.run_in_executor(None, lambda: self._s3.delete_object(Bucket=self._bucket, Key=test_key))
+            return {"ok": True, "backend": "r2", "bucket": self._bucket, "public_url": self._public_url}
+        except Exception as e:
+            return {"ok": False, "backend": "r2", "error": str(e)}
+
 
 class S3Storage:
     """AWS S3 storage."""
@@ -100,6 +128,10 @@ class S3Storage:
     def __init__(self):
         try:
             import boto3
+            if not settings.aws_access_key_id or not settings.aws_secret_access_key:
+                raise RuntimeError("AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY is not set.")
+            if not settings.s3_public_url:
+                raise RuntimeError("S3_PUBLIC_URL is not set — images won't be publicly accessible.")
             self._s3 = boto3.client(
                 "s3",
                 aws_access_key_id=settings.aws_access_key_id,
@@ -141,6 +173,19 @@ class S3Storage:
             return True
         except Exception:
             return False
+
+    async def health_check(self) -> dict:
+        import asyncio
+        test_key = "_healthcheck.tmp"
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: self._s3.put_object(
+                Bucket=self._bucket, Key=test_key, Body=b"ok", ContentType="text/plain"
+            ))
+            await loop.run_in_executor(None, lambda: self._s3.delete_object(Bucket=self._bucket, Key=test_key))
+            return {"ok": True, "backend": "s3", "bucket": self._bucket, "region": settings.aws_region}
+        except Exception as e:
+            return {"ok": False, "backend": "s3", "error": str(e)}
 
 
 def _create_storage():

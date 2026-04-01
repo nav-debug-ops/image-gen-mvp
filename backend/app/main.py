@@ -22,7 +22,21 @@ async def lifespan(app: FastAPI):
     await create_tables()
     init_providers()
     print(f"[startup] Database tables created")
-    print(f"[startup] Storage path: {settings.storage_path}")
+    print(f"[startup] Storage backend: {settings.storage_backend}")
+    if settings.storage_backend == "local":
+        print(f"[startup] Storage path: {settings.storage_path}")
+        if settings.app_env == "production":
+            print("[startup] WARNING: STORAGE_BACKEND=local in production. Images will be lost on redeploy. Set STORAGE_BACKEND=r2 or s3.")
+    elif settings.storage_backend == "r2":
+        if not settings.r2_public_url:
+            print("[startup] WARNING: R2_PUBLIC_URL is not set. Generated image URLs will be broken.")
+        else:
+            print(f"[startup] R2 bucket: {settings.r2_bucket_name} → {settings.r2_public_url}")
+    elif settings.storage_backend == "s3":
+        if not settings.s3_public_url:
+            print("[startup] WARNING: S3_PUBLIC_URL is not set. Generated image URLs will be broken.")
+        else:
+            print(f"[startup] S3 bucket: {settings.s3_bucket_name} ({settings.aws_region}) → {settings.s3_public_url}")
     yield
     # Shutdown
 
