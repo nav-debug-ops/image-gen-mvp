@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import get_settings
-from app.database import create_tables
+from app.database import create_tables, engine
 from app.services.providers import init_providers
 from app.api import auth, generate, images, prompts, usage, asin, keywords, eval as eval_api, copywriter, campaigns, content, drafts
 from app.api import calibration as calibration_api
@@ -18,12 +18,32 @@ settings = get_settings()
 os.makedirs(settings.storage_path, exist_ok=True)
 
 
+async def run_migrations():
+    """
+    Apply column-level migrations that CREATE TABLE IF NOT EXISTS won't handle.
+    Each ALTER TABLE is wrapped in a try/except so it's safe to run on every startup.
+    """
+    migrations = [
+        # Added after initial schema — eval score JSON stored on the generation record
+        "ALTER TABLE generations ADD COLUMN eval_score TEXT",
+        # Added for content draft persistence
+        "ALTER TABLE generations ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0",
+    ]
+    async with engine.begin() as conn:
+        for sql in migrations:
+            try:
+                await conn.execute(__import__('sqlalchemy').text(sql))
+            except Exception:
+                pass  # column already exists — safe to ignore
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await create_tables()
+    await run_migrations()
     init_providers()
-    print(f"[startup] Database tables created")
+    print(f"[startup] Database tables created + migrations applied")
     print(f"[startup] Storage backend: {settings.storage_backend}")
     if settings.storage_backend == "local":
         print(f"[startup] Storage path: {settings.storage_path}")
