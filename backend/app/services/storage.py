@@ -124,7 +124,6 @@ class S3Storage:
                 Key=filename,
                 Body=data,
                 ContentType=content_type,
-                ACL="public-read",
             )
         )
         return f"{self._public_url}/{filename}"

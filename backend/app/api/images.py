@@ -1,7 +1,9 @@
 import json
 import uuid
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -101,6 +103,75 @@ async def list_images(
     return {"images": images, "total": total, "limit": limit, "offset": offset}
 
 
+@router.get("/storage-stats")
+async def get_storage_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return storage backend info and image count stats for the current user."""
+    from sqlalchemy import func
+    from app.config import get_settings
+    settings = get_settings()
+
+    count_result = await db.execute(
+        select(func.count(Generation.id)).where(
+            Generation.user_id == current_user.id,
+            Generation.status == "completed",
+        )
+    )
+    total = count_result.scalar() or 0
+
+    provider_rows = await db.execute(
+        select(Generation.provider, func.count(Generation.id))
+        .where(
+            Generation.user_id == current_user.id,
+            Generation.status == "completed",
+        )
+        .group_by(Generation.provider)
+    )
+    by_provider = {row[0]: row[1] for row in provider_rows}
+
+    return {
+        "backend": settings.storage_backend,
+        "total_images": total,
+        "by_provider": by_provider,
+    }
+
+
+class BulkDeleteRequest(BaseModel):
+    image_ids: List[str]
+
+
+@router.delete("/bulk")
+async def bulk_delete_images(
+    req: BulkDeleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete multiple images at once (max 50)."""
+    if len(req.image_ids) > 50:
+        raise HTTPException(status_code=400, detail="Cannot delete more than 50 images at once")
+
+    result = await db.execute(
+        select(Generation).where(
+            Generation.image_id.in_(req.image_ids),
+            Generation.user_id == current_user.id,
+        )
+    )
+    generations = result.scalars().all()
+
+    deleted = 0
+    for gen in generations:
+        if gen.image_url:
+            filename = gen.image_url.rsplit("/", 1)[-1]
+            await storage.delete(filename)
+        gen.status = "deleted"
+        deleted += 1
+
+    await db.commit()
+    return {"success": True, "deleted": deleted}
+
+
 @router.get("/{image_id}")
 async def get_image(
     image_id: str,
@@ -174,8 +245,10 @@ async def delete_image(
     if not gen:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    # Delete file from active storage backend
-    await storage.delete(f"{image_id}.png")
+    # Delete file from active storage backend — extract real filename from URL
+    if gen.image_url:
+        filename = gen.image_url.rsplit("/", 1)[-1]
+        await storage.delete(filename)
 
     gen.status = "deleted"
     await db.commit()

@@ -10,6 +10,8 @@ import {
   BarChart2,
   History,
   ChevronDown,
+  HardDrive,
+  Image,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { updateProfile, changePassword } from '../api/auth'
@@ -45,12 +47,22 @@ function AccountSettings() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const HISTORY_PAGE = 20
 
+  // Storage stats
+  const [storageStats, setStorageStats] = useState(null)
+  const [storageLoading, setStorageLoading] = useState(true)
+
   useEffect(() => {
     fetchAPI('/api/usage/summary')
       .then(res => safeJson(res))
       .then(data => { if (data) setUsage(data) })
       .catch(() => {})
       .finally(() => setUsageLoading(false))
+
+    fetchAPI('/api/images/storage-stats')
+      .then(res => safeJson(res))
+      .then(data => { if (data) setStorageStats(data) })
+      .catch(() => {})
+      .finally(() => setStorageLoading(false))
 
     loadHistory(0)
   }, [])
@@ -284,6 +296,41 @@ function AccountSettings() {
             </div>
           ) : (
             <p className="settings-empty">Could not load usage data.</p>
+          )}
+        </section>
+
+        {/* Storage Stats Section */}
+        <section className="settings-card settings-card-full">
+          <div className="settings-card-header">
+            <HardDrive size={20} />
+            <h2>Storage</h2>
+          </div>
+
+          {storageLoading ? (
+            <div className="settings-loading"><Loader2 size={20} className="spin" /></div>
+          ) : storageStats ? (
+            <div className="storage-stats-wrap">
+              <div className="storage-backend-badge">
+                <HardDrive size={14} />
+                <span>Backend: <strong>{storageStats.backend.toUpperCase()}</strong></span>
+              </div>
+              <div className="storage-stats-grid">
+                <div className="storage-stat-item">
+                  <Image size={16} />
+                  <span className="storage-stat-value">{storageStats.total_images}</span>
+                  <span className="storage-stat-label">Images stored</span>
+                </div>
+                {Object.entries(storageStats.by_provider || {}).map(([provider, count]) => (
+                  <div key={provider} className="storage-stat-item">
+                    <Zap size={16} />
+                    <span className="storage-stat-value">{count}</span>
+                    <span className="storage-stat-label">{provider}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="settings-empty">Could not load storage data.</p>
           )}
         </section>
 
