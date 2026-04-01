@@ -21,21 +21,49 @@ os.makedirs(settings.storage_path, exist_ok=True)
 async def run_migrations():
     """
     Apply column-level migrations that CREATE TABLE IF NOT EXISTS won't handle.
-    Each ALTER TABLE is wrapped in a try/except so it's safe to run on every startup.
+    Each statement is wrapped in try/except so it's safe to run on every startup.
     """
     from sqlalchemy import text
-    migrations = [
+    col_migrations = [
         # Added after initial schema — eval score JSON stored on the generation record
         "ALTER TABLE generations ADD COLUMN eval_score TEXT",
         # Added after initial schema — archive flag on generations
         "ALTER TABLE generations ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0",
     ]
+    # New tables added after the server was first started
+    table_migrations = [
+        """CREATE TABLE IF NOT EXISTS content_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            tool_type VARCHAR(50) NOT NULL,
+            name VARCHAR(255) NOT NULL DEFAULT 'Untitled',
+            data TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS calibration_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            image_id VARCHAR(50) NOT NULL,
+            image_url VARCHAR(500) NOT NULL,
+            prompt TEXT NOT NULL,
+            content_type VARCHAR(50) DEFAULT 'listing_main',
+            human_scores TEXT NOT NULL,
+            human_composite REAL NOT NULL,
+            human_passed INTEGER NOT NULL DEFAULT 0,
+            human_notes TEXT,
+            ai_scores TEXT,
+            ai_composite REAL,
+            ai_passed INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )""",
+    ]
     async with engine.begin() as conn:
-        for sql in migrations:
+        for sql in table_migrations + col_migrations:
             try:
                 await conn.execute(text(sql))
             except Exception:
-                pass  # column already exists — safe to ignore
+                pass  # already exists — safe to ignore
 
 
 @asynccontextmanager
