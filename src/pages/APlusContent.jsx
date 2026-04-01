@@ -1002,6 +1002,15 @@ function APlusContent() {
 
   const cloudDrafts = useDrafts('aplus_content')
 
+  const handleLoadDraft = (draft) => {
+    const d = draft.data
+    if (d.asinValue) setAsinValue(d.asinValue)
+    if (d.selectedModules?.length) setSelectedModules(d.selectedModules)
+    if (d.moduleData) setModuleData(d.moduleData)
+    if (d.productCategory) setProductCategory(d.productCategory)
+    cloudDrafts.togglePanel()
+  }
+
   // Generate AI text content for module via /api/content/generate
   const handleSave = () => {
     const saveData = { asinValue, productCategory, selectedModules, moduleData, savedAt: new Date().toISOString() }
@@ -1489,9 +1498,26 @@ function APlusContent() {
               {previewMode ? 'Edit' : 'Preview'}
             </button>
             <button className="btn btn-sm btn-secondary" disabled={selectedModules.length === 0} onClick={handleSave}>
-              <Save size={16} />
-              Save
+              {cloudDrafts.saving ? <Loader2 size={16} className="spin" /> : cloudDrafts.saved ? <Check size={16} /> : <Save size={16} />}
+              {cloudDrafts.saved ? 'Saved!' : 'Save'}
             </button>
+            <div style={{ position: 'relative' }}>
+              <button className="btn btn-sm btn-ghost" onClick={cloudDrafts.togglePanel}>
+                <ChevronDown size={15} /> Drafts
+              </button>
+              {cloudDrafts.panelOpen && (
+                <div className="drafts-dropdown">
+                  {cloudDrafts.loading && <div className="drafts-loading">Loading…</div>}
+                  {!cloudDrafts.loading && cloudDrafts.drafts.length === 0 && <div className="drafts-empty">No saved drafts</div>}
+                  {cloudDrafts.drafts.map(d => (
+                    <div key={d.id} className="drafts-item">
+                      <button className="drafts-item-name" onClick={() => handleLoadDraft(d)}>{d.name}</button>
+                      <button className="drafts-item-delete" onClick={() => cloudDrafts.remove(d.id)}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <button className="btn btn-sm btn-primary" disabled={!hasMinModules} onClick={handleExport}>
               <Download size={16} />
               Export
