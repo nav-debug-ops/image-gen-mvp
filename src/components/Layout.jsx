@@ -15,6 +15,7 @@ import {
   Archive,
   LogOut,
   Settings,
+  FlaskConical,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { logout } from '../api/auth'
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Creative Campaigns', href: '/tools/creative-campaigns', icon: Lightbulb },
   { name: 'Listing Copywriter', href: '/tools/listing-copywriter', icon: FileText },
   { name: 'Account Settings', href: '/account', icon: Settings },
+  { name: 'Calibration', href: '/calibration', icon: FlaskConical },
 ]
 
 function Layout() {
