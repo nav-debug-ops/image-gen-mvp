@@ -23,16 +23,17 @@ async def run_migrations():
     Apply column-level migrations that CREATE TABLE IF NOT EXISTS won't handle.
     Each ALTER TABLE is wrapped in a try/except so it's safe to run on every startup.
     """
+    from sqlalchemy import text
     migrations = [
         # Added after initial schema — eval score JSON stored on the generation record
         "ALTER TABLE generations ADD COLUMN eval_score TEXT",
-        # Added for content draft persistence
+        # Added after initial schema — archive flag on generations
         "ALTER TABLE generations ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0",
     ]
     async with engine.begin() as conn:
         for sql in migrations:
             try:
-                await conn.execute(__import__('sqlalchemy').text(sql))
+                await conn.execute(text(sql))
             except Exception:
                 pass  # column already exists — safe to ignore
 
