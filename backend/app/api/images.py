@@ -1,6 +1,7 @@
 import json
 import uuid
 from typing import List
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel
@@ -174,7 +175,7 @@ async def bulk_delete_images(
     deleted = 0
     for gen in generations:
         if gen.image_url:
-            filename = gen.image_url.rsplit("/", 1)[-1]
+            filename = urlparse(gen.image_url).path.split("/")[-1]
             await storage.delete(filename)
         gen.status = "deleted"
         deleted += 1
@@ -258,7 +259,7 @@ async def delete_image(
 
     # Delete file from active storage backend — extract real filename from URL
     if gen.image_url:
-        filename = gen.image_url.rsplit("/", 1)[-1]
+        filename = urlparse(gen.image_url).path.split("/")[-1]
         await storage.delete(filename)
 
     gen.status = "deleted"

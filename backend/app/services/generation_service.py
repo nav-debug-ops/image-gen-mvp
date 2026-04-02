@@ -24,7 +24,12 @@ async def download_and_save(image_url: str) -> tuple[str, str]:
         response.raise_for_status()
         image_bytes = response.content
 
-    saved_url = await storage.save(image_bytes, filename=filename, content_type="image/png")
+    content_type = response.headers.get("content-type", "image/png").split(";")[0].strip()
+    if content_type not in {"image/png", "image/jpeg", "image/webp", "image/gif"}:
+        content_type = "image/png"
+    ext = {"image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}.get(content_type, "png")
+    filename = f"{image_id}.{ext}"
+    saved_url = await storage.save(image_bytes, filename=filename, content_type=content_type)
     return image_id, saved_url
 
 

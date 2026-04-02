@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { lookupASIN } from '../api/asin'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { useDrafts } from '../hooks/useDrafts'
@@ -263,99 +264,46 @@ const CREATIVE_CAMPAIGN_DATA = {
 }
 
 const generateWidgetPrompt = (widgetType, campaignData = CREATIVE_CAMPAIGN_DATA) => {
+  const b     = campaignData.brandName    || 'the brand'
+  const p     = campaignData.productName  || 'the product'
+  const aud   = campaignData.targetAudience || 'Amazon shoppers'
+  const tone  = campaignData.toneOfVoice  || 'professional, premium, aspirational'
+  const story = campaignData.brandStory   || ''
+  const mission = campaignData.brandMission || ''
+  const ben   = campaignData.keyBenefits  || []
+  const emo   = campaignData.emotionalTriggers || []
+  const tops  = campaignData.topProducts  || []
+  const COMPLIANCE = `No pricing text, no competitor brand names, no unverified claims. Photorealistic commercial photography — not illustration, not flat design.`
+
   const prompts = {
-    'hero-header': `Create a stunning storefront hero banner for ${campaignData.brandName}.
-Brand: ${campaignData.brandName} — ${campaignData.brandMission}
-Style: Cinematic, premium, brand-defining storefront header
-Target: ${campaignData.targetAudience}
-Include: Brand essence, flagship product, aspirational lifestyle
-Safe zone: Keep key content in center 70% (sides may be cropped)
-Tone: ${campaignData.toneOfVoice}
-Dimensions: 3000x600 pixels (full-width hero)`,
+    'hero-header': `Amazon Storefront hero banner for ${b}. Full-width cinematic landscape at 3000×600 px — safe zone: keep all critical content inside the center 70% (outer edges may be cropped). ${b} brand hero: aspirational lifestyle scene that captures the brand essence${story ? ` — "${story.slice(0, 80)}"` : ''}. Flagship products visible but supporting the brand story, not dominating. Brand color palette throughout. Cinematic lighting: soft directional key light from upper left, warm and inviting. Mood: ${emo[0] || 'aspirational and premium'}. Target: ${aud}. Tone: ${tone}. ${COMPLIANCE}`,
 
-    'brand-logo': `Create a professional storefront logo for ${campaignData.brandName}.
-Style: Clean, recognizable, works on light and dark backgrounds
-Format: Square, centered, with adequate padding
-Dimensions: 400x400 pixels minimum`,
+    'brand-logo': `UPLOAD ONLY — Do not AI-generate this module. Upload your official ${b} brand logo. AI image generators produce distorted text and unreliable brand marks. Requirements: PNG with transparent background, minimum 400×400 px square format, adequate padding around the mark. Export the logo from your design tool before returning here.`,
 
-    'image-full': `Create a full-width storefront banner for ${campaignData.brandName}.
-Purpose: Showcase brand lifestyle or product category
-Style: Premium, consistent with brand identity
-Key message: ${campaignData.keyBenefits[0]}
-Target: ${campaignData.targetAudience}
-Dimensions: 3000x600 pixels`,
+    'image-full': `Amazon Storefront full-width banner for ${b}. Wide landscape at 3000×600 px — safe zone: keep key content in center 70%. Premium brand lifestyle or category showcase: ${ben[0] || "the brand's primary promise"}. High production value photography, consistent with ${b} brand identity. Warm aspirational lighting. Target: ${aud}. ${COMPLIANCE}`,
 
-    'image-large': `Create a large square storefront tile for ${campaignData.brandName}.
-Purpose: Feature product or brand story element
-Style: Premium product photography or lifestyle
-Benefit: ${campaignData.keyBenefits[1] || campaignData.keyBenefits[0]}
-Dimensions: 1500x1500 pixels (2:2 square)`,
+    'image-large': `Amazon Storefront large square tile for ${b}. Square format at 1500×1500 px. Feature product ${p} or brand story element. Premium studio or lifestyle photography. Key benefit visualized: ${ben[1] || ben[0] || 'core product benefit'}. Clean composition, product or scene filling 80% of frame. Consistent brand color palette. ${COMPLIANCE}`,
 
-    'image-medium': `Create a medium storefront tile for ${campaignData.brandName}.
-Purpose: Highlight product category or feature
-Style: Clean, professional, brand-consistent
-Benefit: ${campaignData.keyBenefits[2] || campaignData.keyBenefits[0]}
-Dimensions: 1500x750 pixels (2:1 landscape)`,
+    'image-medium': `Amazon Storefront medium landscape tile for ${b}. Landscape format at 1500×750 px. Highlight product category or key brand feature. Clean professional photography, on-brand. Key message: ${ben[2] || ben[0] || 'product benefit'}. Warm brand lighting, consistent with overall store aesthetic. ${COMPLIANCE}`,
 
-    'image-small': `Create a small square storefront tile for ${campaignData.brandName}.
-Purpose: Thumbnail or category icon
-Style: Simple, clear, recognizable
-Dimensions: 750x750 pixels (1:1 square)`,
+    'image-small': `Amazon Storefront small square tile for ${b}. Square format at 750×750 px. Thumbnail-scale image: product, icon, or category visual. Simple, bold, immediately legible at small size. Clean neutral background, accurate color, crisp focus. Consistent with ${b} brand style. ${COMPLIANCE}`,
 
-    'image-text': `Create an image with text overlay for ${campaignData.brandName} storefront.
-Purpose: Communicate key benefit with visual support
-Headline area: Top or center
-Body text area: Below headline
-Key message: ${campaignData.keyBenefits[0]}
-Style: Professional, readable text contrast
-Dimensions: 1500x750 pixels`,
+    'image-text': `Amazon Storefront image with text overlay zone for ${b}. Landscape format at 1500×750 px. The image background supports a headline and short body text overlay — leave a clean, relatively lighter area on the left 40% for text readability. Right side: ${p} in premium context or aspirational lifestyle. Key message: ${ben[0] || 'primary benefit'}. Professional readable contrast between text zone and image. ${COMPLIANCE}`,
 
-    'shoppable-image': `Create a shoppable lifestyle image for ${campaignData.brandName}.
-Purpose: Show multiple products in context, clickable discovery
-Products to feature (up to 6 tags):
-${campaignData.topProducts.map((p, i) => `${i + 1}. ${p}`).join('\n')}
-Style: Natural lifestyle scene with products clearly visible
-Dimensions: 3000x1500 pixels`,
+    'shoppable-image': `Amazon Storefront shoppable lifestyle image for ${b}. Wide format at 3000×1500 px. Natural lifestyle scene featuring ${tops.length ? tops.slice(0, 4).join(', ') : 'multiple brand products'} placed naturally in context. Each featured product must be clearly visible and identifiable — not obscured. Scene: ${aud} lifestyle environment, warm natural or studio lighting. Products labeled with hotspot dots by Amazon's module editor — ensure each product has clear visual separation in the scene. Authentic, aspirational, not stock-photo generic. ${COMPLIANCE}`,
 
-    'text-tile': `Write storefront text content for ${campaignData.brandName}.
-Brand: ${campaignData.brandName}
-Tone: ${campaignData.toneOfVoice}
-Key benefits: ${campaignData.keyBenefits.join(', ')}
-Target: ${campaignData.targetAudience}
-Max: 20 lines, concise and scannable
-No: random caps, all-caps, pricing, or competitor mentions`,
+    'text-tile': `TEXT MODULE — No image to generate. Write Amazon Storefront text tile content for ${b}. Brand: ${b}. Tone: ${tone}. Key benefits: ${ben.join(', ')}. Target: ${aud}. Max 20 lines, concise and scannable — shoppers skim. Rules: no all-caps, no pricing, no competitor mentions, no promotional claims.`,
 
-    'video-tile': `Create a video cover image for ${campaignData.brandName} storefront.
-Video concept: Product demo / brand story / feature showcase
-Style: Cinematic thumbnail that encourages play
-Brand: ${campaignData.brandName}
-Cover image: 3000x1500 pixels
-Video: 1920x1080 recommended, <100MB`,
+    'video-tile': `Amazon Storefront video cover image for ${b}. Wide format at 3000×1500 px — this is the static preview frame shown before the video plays. Cinematic single frame: ${b} flagship product or brand story scene with dramatic lighting and motion-suggesting composition. Brand tone: ${tone}. Emotional hook: ${emo[0] || 'compelling, must-watch energy'}. The thumbnail must make a viewer want to press play. ${COMPLIANCE}`,
 
-    'bg-video': `Create a background video concept for ${campaignData.brandName} storefront.
-Duration: 2-20 seconds, auto-loop
-Style: Ambient, atmospheric, brand-defining
-No sound — visual storytelling only
-Show: Product in motion, lifestyle context, or brand elements
-Dimensions: 1280x640 pixels minimum`,
+    'bg-video': `Amazon Storefront ambient background video concept for ${b}. 2–20 second auto-loop, no sound — pure visual storytelling. Scene concept: ${p} in motion, brand lifestyle in action, or atmospheric brand elements. Cinematic, atmospheric, brand-defining. Minimum video resolution: 1280×640 px. Cover frame: premium still that works without motion. ${COMPLIANCE}`,
 
-    'gallery': `Create a gallery of 3-8 images for ${campaignData.brandName} storefront.
-Theme: Product showcase / brand story progression
-${campaignData.topProducts.map((p, i) => `Image ${i + 1}: ${p}`).join('\n')}
-Style: Consistent, premium, swipeable carousel
-Dimensions: 1500x750 pixels per image`,
+    'gallery': `Amazon Storefront image gallery for ${b}. ${tops.length ? tops.length : 4}–8 landscape images at 1500×750 px each. Consistent premium aesthetic, swipeable carousel feel. Theme: product showcase and brand story progression. ${tops.length ? tops.map((t, i) => `Image ${i + 1}: ${t}`).join('. ') + '.' : ''} Consistent warm studio or lifestyle lighting, ${b} brand color palette throughout all images. ${COMPLIANCE}`,
 
-    'product-grid': `Design a product grid layout for ${campaignData.brandName} storefront.
-Products: ${campaignData.topProducts.join(', ')}
-Layout: Standard or tall grid
-Include: Product images, names, ratings, Prime badges
-Style: Clean, shoppable, professional`
+    'product-grid': `Amazon Storefront product grid layout for ${b}. Consistent clean product photography: pure white or very light neutral background, soft even studio lighting, accurate color, product centered. Products: ${tops.join(', ') || 'top brand products'}. Each product: fills 80% of its grid cell, crisp focus, real texture, no color distortion. Consistent treatment across all grid items — same background, same lighting quality. ${COMPLIANCE}`,
   }
 
-  return prompts[widgetType] || `Create professional storefront content for ${campaignData.brandName}.
-Brand: ${campaignData.brandName}
-Target: ${campaignData.targetAudience}
-Style: Premium, brand-consistent`
+  return prompts[widgetType] || `Create professional Amazon Storefront content for ${b}. Target: ${aud}. Tone: ${tone}. Style: premium, brand-consistent, Amazon-compliant. ${COMPLIANCE}`
 }
 
 const _TEMPLATE_WIDGETS = {
@@ -383,6 +331,42 @@ function StorefrontDesigner() {
   const [asinValue, setAsinValue] = useState('')
   const [marketplace, setMarketplace] = useState('US')
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
+
+  // Product lookup for AI prompt personalisation
+  const [product, setProduct] = useState(null)
+  const [asinLoading, setAsinLoading] = useState(false)
+  const [asinError, setAsinError] = useState(null)
+
+  const buildCampaignData = (p) => {
+    const bullets = p?.bullets || []
+    return {
+      productName: p?.title || 'the product',
+      brandName: p?.brand || 'the brand',
+      brandStory: '',
+      brandMission: '',
+      targetAudience: 'Amazon shoppers',
+      keyBenefits: bullets.slice(0, 5),
+      topProducts: [],
+      emotionalTriggers: ['confidence', 'trust', 'quality'],
+      toneOfVoice: 'Professional, aspirational, brand-consistent',
+      keywords: p?.category ? [p.category] : [],
+    }
+  }
+
+  const handleAsinSearch = async () => {
+    if (!isValidASIN(asinValue)) return
+    setAsinLoading(true)
+    setAsinError(null)
+    setProduct(null)
+    try {
+      const data = await lookupASIN(asinValue, marketplace)
+      setProduct(data)
+    } catch (err) {
+      setAsinError(err.message || 'Could not look up product')
+    } finally {
+      setAsinLoading(false)
+    }
+  }
 
   // UI state
   const [productCategory, setProductCategory] = useState('')
@@ -480,7 +464,7 @@ function StorefrontDesigner() {
       ...prev,
       [newWidget.instanceId]: {
         referenceImage: null,
-        aiPrompt: generateWidgetPrompt(widgetType),
+        aiPrompt: generateWidgetPrompt(widgetType, product ? buildCampaignData(product) : undefined),
         images: [],
         headline: '',
         body: '',
@@ -1058,10 +1042,25 @@ function StorefrontDesigner() {
                 className="asin-input-field"
                 placeholder="ASIN for AI content"
                 value={asinValue}
-                onChange={(e) => setAsinValue(e.target.value.trim().toUpperCase())}
+                onChange={(e) => { setAsinValue(e.target.value.trim().toUpperCase()); setProduct(null) }}
+                onKeyDown={(e) => e.key === 'Enter' && handleAsinSearch()}
                 maxLength={10}
               />
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={handleAsinSearch}
+                disabled={!isValidASIN(asinValue) || asinLoading}
+                title="Look up product data to personalise AI prompts"
+              >
+                {asinLoading ? <Loader2 size={13} className="spin" /> : <Search size={13} />}
+              </button>
             </div>
+            {product && (
+              <span className="asin-product-name" title={product.title}>
+                {product.brand ? `${product.brand} · ` : ''}{(product.title || '').slice(0, 40)}{(product.title || '').length > 40 ? '…' : ''}
+              </span>
+            )}
+            {asinError && <span style={{ color: '#e74c3c', fontSize: 12 }}>{asinError}</span>}
             <select
               className="category-dropdown"
               value={productCategory}

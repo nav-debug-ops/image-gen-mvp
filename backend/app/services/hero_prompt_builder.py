@@ -10,10 +10,10 @@ import re
 # Per-category dynamic effects, emotional resonance, and floating particles
 CATEGORY_DEFAULTS = {
     "Pet Supplies": {
-        "floatingEffect": "soft wisps of natural wool or fine organic fibers floating gently near the product, symbolizing gentle care and eco-friendly materials",
-        "particleEffect": "delicate white and natural brown/gray fleck particles near the base, alluding to earthiness and biodegradable story",
-        "glowTone": "warm amber-ivory halo glow",
-        "emotion": "gentleness, love, security, and respectful farewell — serene closure, only the best for a beloved companion",
+        "floatingEffect": "playful colorful wisps or soft paw-print-shaped light particles floating near the product",
+        "particleEffect": "bright cheerful particles near the base evoking play, energy, and care",
+        "glowTone": "warm friendly amber glow",
+        "emotion": "love, playfulness, and attentive care — every pet deserves the best",
         "accentColor": "#A3B18A",
         "accentColorName": "sage green",
     },
@@ -286,12 +286,6 @@ Product placement: center the product large in frame, in its most open, welcomin
 Frame fill: 85–90% of image area, no distortion.
 The product dominates the frame with bold, crisp edges, precisely true-to-life color, and lifelike tactile detail — "so real you want to reach out and touch it" fidelity.
 
---- DYNAMIC EFFECTS (subtle and purpose-driven) ---
-Floating effect: {defaults["floatingEffect"]}. Effect most pronounced on the side opposite accessories for visual balance.
-Soft glow: a diffused {defaults["glowTone"]} emanates subtly from behind and beneath the product, enhancing warmth, comfort, and premium presence, creating gentle edge-lighting that isolates and spotlights the product.
-Particle scatter: {defaults["particleEffect"]}.
-All effects are soft, restrained, and purpose-driven — never overwhelming the product.
-
 --- ACCESSORIES & VISUAL BALANCE ---
 Neatly position any included components ({components_text}) just in front of or alongside the main product, angled to hint at their shape and quality.
 Components must not obscure or visually compete with the main product — they reinforce completeness and category authority, not clutter.
@@ -316,5 +310,4 @@ The image should radiate serene confidence — making the customer believe "only
 Pristine white (#FFFFFF) background — NO lifestyle props, NO text, NO badges, NO watermarks.
 Full clarity and correct proportions, no distortion.
 All key components visible but non-distracting.
-Premium, natural dynamic effects only — all effects soft, restrained, and purpose-driven.
 Photorealistic commercial product photography — NOT illustration, NOT cartoon, NOT 3D render, NOT CGI.""".strip()

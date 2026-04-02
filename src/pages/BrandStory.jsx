@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { lookupASIN } from '../api/asin'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { useDrafts } from '../hooks/useDrafts'
@@ -155,70 +156,29 @@ const CREATIVE_CAMPAIGN_DATA = {
 
 // Generate AI prompt templates for Brand Story modules
 const generateBrandStoryPrompt = (moduleType, campaignData = CREATIVE_CAMPAIGN_DATA) => {
+  const b    = campaignData.brandName    || 'the brand'
+  const aud  = campaignData.targetAudience || 'Amazon shoppers'
+  const tone = campaignData.toneOfVoice  || 'professional, authentic, trustworthy'
+  const story = campaignData.brandStory  || ''
+  const mission = campaignData.brandMission || ''
+  const vals  = (campaignData.brandValues || []).join(', ')
+  const emo   = (campaignData.emotionalTriggers || [])[0] || 'trust and quality'
+  const tops  = campaignData.topProducts || []
+  const COMPLIANCE = `No pricing text, no competitor brand names, no unverified claims. Photorealistic commercial photography — not illustration, not flat design.`
+
   const prompts = {
-    'carousel-background': `Create a stunning brand story carousel background for ${campaignData.brandName}.
-Brand Story: ${campaignData.brandStory}
-Mission: ${campaignData.brandMission}
-Style: Cinematic, premium, brand-defining
-Mood: Aspirational, trustworthy, authentic
-Include: Brand essence imagery, lifestyle context, subtle product presence
-Target: ${campaignData.targetAudience}
-Tone: ${campaignData.toneOfVoice}
-Note: This is the hero background image — must be visually striking
-Dimensions: 1464x625 pixels (full-width carousel background)`,
+    'carousel-background': `Amazon Brand Story carousel background for ${b}. Cinematic full-width landscape at 1464×625 px — this is the brand's first impression. Preserve the horizontal center strip (middle third) as a clean uncluttered zone for headline and body text overlay. Scene: premium lifestyle environment that reflects the brand's origin and values${story ? ` — "${story.slice(0, 80)}"` : ''}. Products present in the scene but supporting the brand narrative, not dominating. Color palette: warm, aspirational, on-brand. Lighting: cinematic soft directional key light, high production quality. Mood: authentic, trustworthy, aspirational. Target: ${aud}. ${COMPLIANCE}`,
 
-    'focus-image': `Create a brand focus image for ${campaignData.brandName}.
-Purpose: Showcase the brand creator, team, or defining product line
-Brand Story: ${campaignData.brandStory}
-Values: ${campaignData.brandValues.join(', ')}
-Style: Authentic, personal, premium quality
-Show: The people or craftsmanship behind the brand
-Emotional appeal: ${campaignData.emotionalTriggers[0]}
-Target: ${campaignData.targetAudience}
-Dimensions: 362x453 pixels (portrait format)`,
+    'focus-image': `Amazon Brand Story focus image for ${b}. Portrait composition at 362×453 px — visually authentic image showcasing the brand creator, a team member, or the defining product line. Warm authentic lifestyle lighting, not overly staged or studio-stiff. Scene conveys the origin story or craftsmanship behind ${b}. Natural, credible, premium. Emotional tone: ${emo}. Upper area of the frame reserved as a lighter zone for short headline text overlay. Photorealistic, authentic — not stock-photo generic. ${COMPLIANCE}`,
 
-    'logo-description': `Create a professional brand logo display for ${campaignData.brandName}.
-Style: Clean, professional, brand-consistent
-Background: White or transparent
-Requirements:
-- High resolution logo centered
-- Adequate padding around logo
-- Horizontal/landscape format
-- Consistent with brand identity
-Brand values: ${campaignData.brandValues.join(', ')}
-Dimensions: 315x145 pixels (landscape logo format)`,
+    'logo-description': `UPLOAD ONLY — Do not AI-generate this module. Upload your official ${b} brand logo. AI image generators produce distorted text and unreliable brand marks. Requirements: PNG with transparent background, minimum 315×145 px, landscape/horizontal format, adequate white padding around the logo mark. If no logo file is available, export one from your design tool before returning here.`,
 
-    'asin-showcase': `Create 4 product showcase images for ${campaignData.brandName}'s top products:
-${campaignData.topProducts.map((p, i) => `Product ${i + 1}: ${p}`).join('\n')}
-Style: Clean product photography, white background
-Purpose: Cross-sell and drive traffic to other listings
-Each image: Professional, consistent lighting, product-focused
-Target: ${campaignData.targetAudience}
-Dimensions: 166x182 pixels each (small product thumbnails)`,
+    'asin-showcase': `Amazon Brand Story product showcase — ${tops.length || 4} portrait product images at 166×182 px each for ${b}'s top products.${tops.length ? ` Products: ${tops.map((p, i) => `${i + 1}. ${p}`).join(', ')}.` : ''} Studio-quality clean photography: pure white or very light neutral background, consistent warm studio lighting, product centered and filling 80% of each frame. All images: accurate color, real texture, crisp focus throughout. Consistent studio treatment across all images. No text in generated images — product names are added separately in Amazon's module editor. ${COMPLIANCE}`,
 
-    'brand-qa': `Write Brand Q&A content for ${campaignData.brandName}.
-Brand: ${campaignData.brandName}
-Tone: ${campaignData.toneOfVoice}
-
-Suggested Q&A pairs:
-Q1: "What makes ${campaignData.brandName} different?"
-A1: Focus on ${campaignData.brandValues[0]} and ${campaignData.brandValues[1]}
-
-Q2: "What is ${campaignData.brandName}'s mission?"
-A2: ${campaignData.brandMission}
-
-Q3: "Who are ${campaignData.brandName} products designed for?"
-A3: ${campaignData.targetAudience}
-
-Style: Helpful, authoritative, brand-consistent
-Total character limit: 750 characters for all Q&A combined
-Note: No pricing, no superlatives, no competitor mentions`
+    'brand-qa': `TEXT MODULE — No image to generate. Write Brand Story Q&A content for ${b}.${mission ? ` Brand mission: ${mission}.` : ''}${vals ? ` Brand values: ${vals}.` : ''} Target audience: ${aud}. Write 3 helpful Q&A pairs: Q1 about what makes ${b} unique, Q2 about the brand mission, Q3 about who the products are designed for. Tone: ${tone}. Rules: no pricing, no superlatives like "best" or "#1", no competitor mentions, no customer reviews or testimonials. Total combined answer length: under 750 characters.`,
   }
 
-  return prompts[moduleType] || `Create professional brand story content for ${campaignData.brandName}.
-Brand: ${campaignData.brandName}
-Target: ${campaignData.targetAudience}
-Style: Premium, authentic, brand-consistent`
+  return prompts[moduleType] || `Create professional brand story content for ${b}. Target: ${aud}. Tone: ${tone}. Style: premium, authentic, Amazon-compliant. ${COMPLIANCE}`
 }
 
 function BrandStory() {
@@ -240,6 +200,43 @@ function BrandStory() {
   // Validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
   const maxModules = 19
+
+  // Product lookup for AI prompt personalisation
+  const [product, setProduct] = useState(null)
+  const [asinLoading, setAsinLoading] = useState(false)
+  const [asinError, setAsinError] = useState(null)
+
+  const buildCampaignData = (p) => {
+    const bullets = p?.bullets || []
+    return {
+      productName: p?.title || 'the product',
+      brandName: p?.brand || 'the brand',
+      brandStory: '',
+      brandMission: '',
+      brandValues: [],
+      targetAudience: 'Amazon shoppers',
+      keyBenefits: bullets.slice(0, 5),
+      topProducts: [],
+      emotionalTriggers: ['confidence', 'trust', 'quality'],
+      toneOfVoice: 'Professional, authentic, trustworthy',
+      keywords: p?.category ? [p.category] : [],
+    }
+  }
+
+  const handleAsinSearch = async () => {
+    if (!isValidASIN(asinValue)) return
+    setAsinLoading(true)
+    setAsinError(null)
+    setProduct(null)
+    try {
+      const data = await lookupASIN(asinValue, marketplace)
+      setProduct(data)
+    } catch (err) {
+      setAsinError(err.message || 'Could not look up product')
+    } finally {
+      setAsinLoading(false)
+    }
+  }
   const canAddModule = selectedModules.length < maxModules
   const hasMinModules = selectedModules.length >= 1
 
@@ -256,7 +253,7 @@ function BrandStory() {
       setModuleData({
         [newModule.instanceId]: {
           referenceImage: null,
-          aiPrompt: generateBrandStoryPrompt('carousel-background'),
+          aiPrompt: generateBrandStoryPrompt('carousel-background', product ? buildCampaignData(product) : undefined),
           images: [],
           headline: '',
           body: '',
@@ -290,7 +287,7 @@ function BrandStory() {
       ...prev,
       [newModule.instanceId]: {
         referenceImage: null,
-        aiPrompt: generateBrandStoryPrompt(moduleType),
+        aiPrompt: generateBrandStoryPrompt(moduleType, product ? buildCampaignData(product) : undefined),
         images: [],
         headline: '',
         body: '',
@@ -1039,7 +1036,8 @@ function BrandStory() {
                 type="text"
                 placeholder="Enter ASIN"
                 value={asinValue}
-                onChange={(e) => setAsinValue(e.target.value.toUpperCase())}
+                onChange={(e) => { setAsinValue(e.target.value.toUpperCase()); setProduct(null) }}
+                onKeyDown={(e) => e.key === 'Enter' && handleAsinSearch()}
                 maxLength={10}
               />
               {asinValue && (
@@ -1047,7 +1045,21 @@ function BrandStory() {
                   {isValidASIN(asinValue) ? <Check size={14} /> : <X size={14} />}
                 </span>
               )}
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={handleAsinSearch}
+                disabled={!isValidASIN(asinValue) || asinLoading}
+                title="Look up product data to personalise AI prompts"
+              >
+                {asinLoading ? <Loader2 size={13} className="spin" /> : <Search size={13} />}
+              </button>
             </div>
+            {product && (
+              <span className="asin-product-name" title={product.title}>
+                {product.brand ? `${product.brand} · ` : ''}{(product.title || '').slice(0, 45)}{(product.title || '').length > 45 ? '…' : ''}
+              </span>
+            )}
+            {asinError && <span style={{ color: '#e74c3c', fontSize: 12 }}>{asinError}</span>}
             <span className="module-counter-badge">
               {selectedModules.length}/{maxModules} modules
             </span>

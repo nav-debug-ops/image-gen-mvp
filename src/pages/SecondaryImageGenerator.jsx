@@ -109,7 +109,7 @@ const ASPECT_RATIOS = [
 // ─── Rich prompt builder ───────────────────────────────────────────────────
 // Generates a 180-250 word professional Amazon listing prompt per image type.
 // Pass `keywords` (string[]) to inject user-curated chips into the prompt.
-function buildPromptForType(typeId, data, keywords = []) {
+function buildPromptForType(typeId, data, keywords = [], category = '') {
   if (!data) return ''
   const { productName } = data
   const kwStr = keywords.length > 0 ? keywords.join(', ') : null
@@ -120,7 +120,16 @@ function buildPromptForType(typeId, data, keywords = []) {
   const quality = kwStr || 'premium grade materials, built to last, quality certified'
   const lifestyle = kwStr || 'active everyday use, modern lifestyle, trusted by customers'
 
-  const GLOBAL = `Product must match reality exactly — accurate proportions, correct color, real texture, crisp studio detail. All on-image text sits inside a semi-transparent rounded-rectangle card with soft drop shadow. Headline up to ten words, bold deep navy. Subheadline one short line in dark grey lighter weight. Clean geometric sans-serif typography fully readable on mobile. Thin-line teal accent icons with rounded corners where used. No watermarks. No borders. Ultra sharp render.`
+  const LIFESTYLE_AGE_MAP = {
+    'Baby Products': 'a parent aged 28–42',
+    'Pet Supplies': 'a pet owner aged 25–55',
+    'Health & Household': 'an adult aged 30–60',
+    'Jewelry & Watches': 'a person aged 25–50',
+    'Toys & Games': 'a parent or child aged 25–45',
+  }
+  const lifestyleAge = LIFESTYLE_AGE_MAP[category] || '28 to 40 years old'
+
+  const GLOBAL = `Product must match reality exactly — accurate proportions, correct color, real texture, crisp studio detail. All on-image text sits inside a semi-transparent rounded-rectangle card with soft drop shadow. Headline up to six words, bold deep navy. Subheadline one short line in dark grey lighter weight. Clean geometric sans-serif typography fully readable on mobile. Thin-line teal accent icons with rounded corners where used. No watermarks. No borders. Ultra sharp render.`
 
   switch (typeId) {
     case 'benefits':
@@ -133,7 +142,7 @@ function buildPromptForType(typeId, data, keywords = []) {
       return `Professional Amazon comparison infographic for "${productName}". Strategic goal: build confident purchase decisions by visually proving clear superiority over generic alternatives. Split composition — left side labeled "Our Product" with the product in crisp studio quality, accurate color, real texture, soft drop shadow. Right side shows a de-emphasized muted representation of a generic alternative. Between them: a vertical comparison column with three to four benefit rows. Each row uses a thin-line teal checkmark for our product and a subtle muted X for competitors. Row labels are short, punchy, bold navy. Advantages shown: ${usp}. Background: clean premium gradient off-white to pale blue-grey. Semi-transparent panel cards frame the comparison column with soft shadow. Typography: bold geometric sans-serif, deep navy headlines, dark grey supporting text. Visual hierarchy flows top to bottom clearly. Tone: calm, confident, premium — not aggressive. No clutter. No excessive labels. Every element points toward one conclusion: this is the better choice. ${GLOBAL}`
 
     case 'lifestyle':
-      return `Professional Amazon lifestyle photograph for "${productName}". Strategic goal: create a warm aspirational real-life moment showing a real person using this product naturally in their daily environment. Scene context: ${lifestyle}. The person is 28 to 40 years old, dressed in clean casual clothing. Their face shows natural micro-imperfections — soft pores, slight asymmetry, relaxed facial muscles, genuine expression of calm satisfaction. No plastic skin, no waxy finish, no overly perfect symmetry. The product is clearly visible and in active use, photographed with accurate color, real texture, and correct proportions. The space feels lived-in but tidy: a bright modern kitchen, airy living room, or clean bathroom — natural window light flooding from one side, warm color temperature, balanced exposure. Lower third of the frame: a semi-transparent rounded-rectangle text card with soft shadow containing a bold navy headline up to ten words describing the key benefit shown and one short dark-grey subheadline. No stock photo stiffness. No forced poses. Authentic emotional resonance. Premium clean realism. ${GLOBAL}`
+      return `Professional Amazon lifestyle photograph for "${productName}". Strategic goal: create a warm aspirational real-life moment showing a real person using this product naturally in their daily environment. Scene context: ${lifestyle}. The person is ${lifestyleAge}, dressed in clean casual clothing. Their face shows natural micro-imperfections — soft pores, slight asymmetry, relaxed facial muscles, genuine expression of calm satisfaction. No plastic skin, no waxy finish, no overly perfect symmetry. The product is clearly visible and in active use, photographed with accurate color, real texture, and correct proportions. The space feels lived-in but tidy: a bright modern kitchen, airy living room, or clean bathroom — natural window light flooding from one side, warm color temperature, balanced exposure. Lower third of the frame: a semi-transparent rounded-rectangle text card with soft shadow containing a bold navy headline up to ten words describing the key benefit shown and one short dark-grey subheadline. No stock photo stiffness. No forced poses. Authentic emotional resonance. Premium clean realism. ${GLOBAL}`
 
     case 'quality':
       return `Professional Amazon macro close-up quality shot for "${productName}". Strategic goal: eliminate any material doubt by proving craftsmanship, surface finish, and build quality at extreme close range. Quality signals highlighted: ${quality}. Camera is positioned very close to the product surface — capturing real texture, stitching or structural detail, material weave, surface finish, and construction precision at a level that product copy alone cannot convey. Lighting: soft directional studio key light plus a subtle rim light bringing out three-dimensional depth in every fiber, edge, and joint. Colors accurate and naturally saturated. Background is a very shallow depth-of-field soft blur — premium neutral off-white or warm grey. Product occupies 70 to 80 percent of the frame. Alongside the macro shot: two to three floating semi-transparent rounded-rectangle cards with soft shadow, each with a bold navy headline up to six words and a short dark-grey subline. Thin-line teal accent icons beside each card. The result: a luxury craftsmanship proof shot. ${GLOBAL}`
@@ -156,7 +165,7 @@ function buildPromptFromBrief(brief, productTitle) {
     const rules = (brief.composition_rules || []).join('. ')
     return (
       `Professional Amazon listing infographic for "${title}". ` +
-      `${brief.purpose}. ` +
+      `${brief.purpose || ''}. ` +
       `Hero shot: ${m1}. Supporting visual: ${m2}. ` +
       `Composition: ${rules}. ` +
       `Headline text on image: "${brief.headline}". ` +
@@ -171,12 +180,12 @@ function buildPromptFromBrief(brief, productTitle) {
     const a = brief.aesthetics || {}
     return (
       `Professional Amazon listing image for "${title}". ` +
-      `${brief.intent}. ` +
+      `${brief.intent || ''}. ` +
       `Primary subject: ${s1}. Secondary subject: ${s2}. ` +
       `Visual style: ${a.visual_style}. Mood: ${a.mood}. ` +
       `Premium cues: ${a.premium_tone_via_material_cues}. ` +
       `${guidelines}. ` +
-      `Focus emphasis: ${brief.emphasis}. ` +
+      `Focus emphasis: ${brief.emphasis || ''}. ` +
       `Ultra sharp studio quality, professional Amazon listing image.`
     )
   }

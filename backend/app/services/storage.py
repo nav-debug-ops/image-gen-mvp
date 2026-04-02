@@ -83,16 +83,25 @@ class R2Storage:
             ext = content_type.split("/")[-1]
             filename = f"{uuid.uuid4().hex}.{ext}"
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self._s3.put_object(
-                Bucket=self._bucket,
-                Key=filename,
-                Body=data,
-                ContentType=content_type,
-            )
-        )
-        return f"{self._public_url}/{filename}"
+        last_err = None
+        for attempt in range(3):
+            try:
+                await loop.run_in_executor(
+                    None,
+                    lambda: self._s3.put_object(
+                        Bucket=self._bucket,
+                        Key=filename,
+                        Body=data,
+                        ContentType=content_type,
+                        CacheControl="max-age=31536000, immutable",
+                    )
+                )
+                return f"{self._public_url}/{filename}"
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+        raise last_err
 
     async def delete(self, filename: str) -> None:
         import asyncio
@@ -149,16 +158,25 @@ class S3Storage:
             ext = content_type.split("/")[-1]
             filename = f"{uuid.uuid4().hex}.{ext}"
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self._s3.put_object(
-                Bucket=self._bucket,
-                Key=filename,
-                Body=data,
-                ContentType=content_type,
-            )
-        )
-        return f"{self._public_url}/{filename}"
+        last_err = None
+        for attempt in range(3):
+            try:
+                await loop.run_in_executor(
+                    None,
+                    lambda: self._s3.put_object(
+                        Bucket=self._bucket,
+                        Key=filename,
+                        Body=data,
+                        ContentType=content_type,
+                        CacheControl="max-age=31536000, immutable",
+                    )
+                )
+                return f"{self._public_url}/{filename}"
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+        raise last_err
 
     async def delete(self, filename: str) -> None:
         import asyncio

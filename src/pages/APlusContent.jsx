@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { PRODUCT_CATEGORIES } from '../constants/productCategories'
 import { generateImage } from '../api/imageGen'
+import { lookupASIN } from '../api/asin'
 import { generateModuleContent as generateModuleContentAPI } from '../api/content'
 import EvalScoreBadge from '../components/EvalScoreBadge'
 import { useDrafts } from '../hooks/useDrafts'
@@ -464,267 +465,78 @@ const CREATIVE_CAMPAIGN_DATA = {
 
 // Generate prompt templates based on module type and campaign data
 const generateModulePrompt = (moduleType, campaignData = CREATIVE_CAMPAIGN_DATA) => {
+  const p    = campaignData.productName || 'the product'
+  const b    = campaignData.brandName   || 'the brand'
+  const aud  = campaignData.targetAudience || 'Amazon shoppers'
+  const ben  = campaignData.keyBenefits || []
+  const emo  = campaignData.emotionalTriggers || []
+  const adv  = campaignData.competitiveAdvantages || campaignData.keyBenefits || []
+  const tone = campaignData.toneOfVoice || 'professional, trustworthy'
+  const pain = campaignData.painPoints || []
+
+  const COMPLIANCE = `No pricing text, no competitor brand names, no unverified claims. Photorealistic commercial photography — not illustration, not flat design, not 3D render.`
+
   const prompts = {
-    'image-header': `Create a stunning hero image for ${campaignData.productName} by ${campaignData.brandName}.
-Target audience: ${campaignData.targetAudience}
-Style: Professional, premium, aspirational
-Key message: Showcase the product as a premium lifestyle choice
-Include: Product prominently displayed, clean background, subtle brand elements
-Mood: ${campaignData.emotionalTriggers.join(', ')}
-Dimensions: 970x600 pixels, full-width banner`,
+    'image-header': `Amazon A+ Content hero banner for ${p} by ${b}. Full-width landscape composition — preserve the upper third as a clean area for Amazon text overlay (no critical product detail in that zone). ${p} is the clear hero: studio-quality photography with accurate color, real material texture, crisp edges, occupying the right 55–65% of the frame at a slight three-quarter angle. Left side: softly blurred lifestyle scene consistent with ${aud} use context, warm shallow depth-of-field background. Soft directional key light from upper left with warm fill, creating depth without harsh shadows. Tone: ${tone}. Mood: ${emo[0] || 'aspirational confidence'}. ${COMPLIANCE}`,
 
-    'company-logo': `Create a professional company logo display for ${campaignData.brandName}.
-Style: Clean, professional, brand-consistent
-Background: Pure white or transparent
-Requirements:
-- High resolution logo centered
-- Adequate padding around logo
-- No taglines or additional text unless part of official logo
-- Consistent with brand identity guidelines
-Tone: ${campaignData.toneOfVoice}
-Dimensions: 600x180 pixels (horizontal/landscape format)`,
+    'company-logo': `UPLOAD ONLY — Do not AI-generate this module. Upload your official ${b} brand logo. AI image generators produce distorted text and unreliable brand marks. Requirements: PNG with transparent background, minimum 600×180 px, landscape/horizontal format, adequate white padding around the logo mark. Export the logo from your design tool before returning here.`,
 
-    'image-light-overlay': `Design a banner image with light text overlay for ${campaignData.productName}.
-Highlight: ${campaignData.keyBenefits[0]}
-Background: Bright, airy lifestyle setting
-Text area: Left or right side for headline overlay
-Target: ${campaignData.targetAudience}
-Tone: ${campaignData.toneOfVoice}
-Dimensions: 970x300 pixels`,
+    'image-light-overlay': `Amazon A+ Content wide banner with light text overlay zone for ${p}. Landscape banner — keep the left 45% as a bright, clean area suitable for light-colored headline text overlay. Right side: ${p} at slight elevation angle, studio-quality photography, accurate color and real texture. Background: bright airy lifestyle scene consistent with ${aud}. Lighting: even natural-feeling key light, bright and inviting, warm color temperature. Key benefit visualized: ${ben[0] || 'core product benefit'}. No text generated in the image itself — text zone reserved for Amazon's module editor. ${COMPLIANCE}`,
 
-    'image-dark-overlay': `Design a banner image with dark text overlay for ${campaignData.productName}.
-Highlight: ${campaignData.keyBenefits[1] || campaignData.keyBenefits[0]}
-Background: Rich, dramatic setting that conveys premium quality
-Text area: Contrasting area for dark text overlay
-Emotional appeal: ${campaignData.emotionalTriggers[0]}
-Dimensions: 970x300 pixels`,
+    'image-dark-overlay': `Amazon A+ Content wide banner with dark text overlay zone for ${p}. Landscape banner — keep the right 45% as a rich darker area suitable for dark-colored headline text overlay. Left side: ${p} shown prominently, studio-quality photography, accurate color and texture. Background: rich dramatic lifestyle scene communicating premium quality. Lighting: directional cinematic key light, creating depth and drama. Key benefit: ${ben[1] || ben[0] || 'premium quality'}. Mood: ${emo[0] || 'premium and aspirational'}. No text generated in the image — text zone reserved for Amazon's module editor. ${COMPLIANCE}`,
 
-    'single-image-highlights': `Create a feature image showcasing ${campaignData.productName} with highlight points.
-Key features to visualize:
-${campaignData.keyBenefits.map((b, i) => `${i + 1}. ${b}`).join('\n')}
-Style: Clean product shot on white/neutral background
-Focus: Clear detail visibility for feature callouts
-Dimensions: 300x300 pixels`,
+    'single-image-highlights': `Amazon A+ Content square feature image for ${p}. Clean square composition — ${p} shown front-facing or at slight elevation angle, filling 75–85% of the frame. Studio-quality photography: accurate color, real material texture, crisp sharp edges. Soft directional key light from 45 degrees, subtle drop shadow beneath. Pure white or near-white background. Product in its most visually clear and appealing state. Highlight bullet callouts are added beside this image in Amazon's module editor — no text in the generated image. ${COMPLIANCE}`,
 
-    'single-image-sidebar': `Create a product image for sidebar layout featuring ${campaignData.productName}.
-Solving pain point: ${campaignData.painPoints[0]}
-Show: Product in use or lifestyle context
-Complement: Space for descriptive text on the side
-Appeal to: ${campaignData.targetAudience}
-Dimensions: 300x400 pixels`,
+    'single-image-sidebar': `Amazon A+ Content portrait feature image for ${p}. Portrait composition — ${p} shown in aspirational lifestyle use context for ${aud}. Product prominently visible and actively in use. Natural or studio lifestyle lighting — warm, inviting, authentic. Shallow depth-of-field background: clean modern environment. Key benefit shown: ${ben[0] || 'primary benefit'}. Mood: ${emo[1] || emo[0] || 'confident satisfaction'}. The right side of the composition should have a lighter area to complement the sidebar text in Amazon's module editor. No text in the generated image. ${COMPLIANCE}`,
 
-    'multiple-image-a': `Create a series of 4 complementary images for ${campaignData.productName}.
-Image 1: Product front view - professional studio shot
-Image 2: Product angle view - showing design details
-Image 3: Product in use - lifestyle context
-Image 4: Key feature close-up - ${campaignData.keyBenefits[0]}
-Style: Consistent lighting and background across all images
-Dimensions: 220x220 pixels each`,
+    'multiple-image-a': `Amazon A+ Content product gallery — 4 square studio images for ${p}. Consistent setup: same neutral background, same lighting, same shadow treatment. Image 1: product front-facing, straight-on angle. Image 2: 3/4 angle showing depth and side profile. Image 3: product in active use showing key functional state. Image 4: close-up detail of the most important quality signal — ${ben[0] || 'key feature'}. All images: crisp focus, accurate color, real texture, true proportions. No text in any image. ${COMPLIANCE}`,
 
-    'four-image-text': `Create 4 feature images with text space for ${campaignData.productName}.
-${campaignData.keyBenefits.slice(0, 4).map((benefit, i) => `Image ${i + 1}: Visualize "${benefit}"`).join('\n')}
-Style: Icon-style or focused product shots
-Background: Clean, consistent across all
-Leave space below for feature descriptions
-Dimensions: 220x220 pixels each`,
+    'four-image-text': `Amazon A+ Content — 4 feature images for ${p}, each visualizing one key benefit. Image 1: visualize "${ben[0] || 'benefit 1'}" — product in context demonstrating this benefit. Image 2: visualize "${ben[1] || ben[0] || 'benefit 2'}". Image 3: visualize "${ben[2] || ben[0] || 'benefit 3'}". Image 4: visualize "${ben[3] || ben[0] || 'benefit 4'}". All images: consistent studio or lifestyle lighting, accurate color, white or near-white background, crisp focus. Text descriptions are added below each image in Amazon's module editor — no text in generated images. ${COMPLIANCE}`,
 
-    'single-image-specs': `Create a technical specification image for ${campaignData.productName}.
-Show: Product with clear visibility of key components
-Style: Technical/informative but still premium
-Highlight areas for spec callouts
-Include: Clean angles showing dimensions and features
-Keywords: ${campaignData.keywords.join(', ')}
-Dimensions: 300x300 pixels`,
+    'single-image-specs': `Amazon A+ Content technical product image for ${p}. Square composition — product shown at slight elevation angle revealing key components, design features, and construction detail. Studio-quality photography with even diffused lighting, accurate color, real material texture. Multiple components or key features simultaneously visible. Product fills 80–85% of the frame. Clean white background, soft natural shadow beneath. This image supports specification callouts added in the Amazon module editor — no text in the generated image. ${COMPLIANCE}`,
 
-    'single-left-image': `Create a left-aligned product image for ${campaignData.productName}.
-Context: ${campaignData.emotionalTriggers[1] || 'Premium lifestyle'}
-Show: Product in aspirational setting
-Solving: ${campaignData.painPoints[1] || campaignData.painPoints[0]}
-Right side: Space for benefit-focused copy
-Dimensions: 300x300 pixels`,
+    'single-left-image': `Amazon A+ Content left-side feature image for ${p}. Square composition — ${p} shown in aspirational use context for ${aud}. Product clearly visible and in active use. Warm lifestyle lighting, authentic scene. Emotional appeal: ${emo[1] || emo[0] || 'satisfaction and confidence'}. The right side of the frame should have a lighter area to complement the text column in Amazon's module editor. Shallow depth-of-field background. No text in generated image. Authentic feel — not stock-photo generic. ${COMPLIANCE}`,
 
-    'single-right-image': `Create a right-aligned product image for ${campaignData.productName}.
-Advantage: ${campaignData.competitiveAdvantages[0]}
-Show: Product demonstrating this competitive edge
-Left side: Space for compelling headline and body text
-Target emotion: ${campaignData.emotionalTriggers[2] || campaignData.emotionalTriggers[0]}
-Dimensions: 300x300 pixels`,
+    'single-right-image': `Amazon A+ Content right-side feature image for ${p}. Square composition — ${p} demonstrating its key advantage: ${adv[0] || ben[0] || 'key benefit'}. Warm lifestyle or studio lighting, authentic scene. The left side of the frame should have a lighter area to complement the text column in Amazon's module editor. Target emotional state: ${emo[2] || emo[0] || 'trust and confidence'}. Shallow depth-of-field background. No text in generated image. ${COMPLIANCE}`,
 
-    'description-text': `Write compelling A+ Content copy for ${campaignData.productName}.
-Brand: ${campaignData.brandName}
-Tone: ${campaignData.toneOfVoice}
-Target: ${campaignData.targetAudience}
+    'description-text': `TEXT MODULE — No image to generate. Write Amazon A+ Content copy for ${p} by ${b}. Tone: ${tone}. Target: ${aud}. Key benefits: ${ben.map(x => `• ${x}`).join(' ')}. ${pain.length ? `Pain points to address: ${pain.map(x => `• ${x}`).join(' ')}.` : ''} Rules: no pricing, no superlatives like "best" or "#1", no competitor brand mentions, no unverified claims, no customer reviews.`,
 
-Key benefits to convey:
-${campaignData.keyBenefits.map(b => `• ${b}`).join('\n')}
+    'comparison-chart': `Amazon A+ Content comparison chart images for ${p}. Portrait format per product slot. ${p} as featured product: vivid studio photography, white background, accurate proportions, real texture, soft directional lighting, clean shadow, product centered filling 80% of frame. Secondary alternative product slots: same composition but muted, desaturated. ${p} should appear visually superior. Competitive advantages: ${adv.slice(0, 3).join('; ') || ben.slice(0, 3).join('; ')}. No pricing text in images. ${COMPLIANCE}`,
 
-Pain points to address:
-${campaignData.painPoints.map(p => `• ${p}`).join('\n')}
+    'three-images-text': `Amazon A+ Content three-image Problem→Solution→Result series for ${p}. Three square images, consistent warm lifestyle lighting and color treatment. Image 1 (Challenge): visualize the pain point "${pain[0] || 'the problem this product solves'}" — authentic relatable scene. Image 2 (Solution): ${p} in active use solving the problem, studio-quality photography. Image 3 (Result): the outcome — ${emo[0] || ben[0] || 'satisfaction achieved'} — aspirational and authentic. No text in any generated image. Text descriptions are added below each image in Amazon's module editor. ${COMPLIANCE}`,
 
-Competitive advantages:
-${campaignData.competitiveAdvantages.map(a => `• ${a}`).join('\n')}
+    'premium-header': `Amazon Premium A+ Content full-width hero banner for ${p} by ${b}. Ultra-wide landscape at 1464×600 px — cinematic production quality. Preserve the upper third as a clean zone for text overlay. ${p} as the undeniable hero: ultra-sharp studio photography, perfect color accuracy, dramatic studio lighting with deep shadows on one side and bright highlights on the other. Background: premium lifestyle environment consistent with ${aud}, shallow depth-of-field. Brand tone: ${tone}. Mood: ${emo[0] || 'premium aspirational'}. ${COMPLIANCE}`,
 
-Note: No pricing, no superlatives like "best", no competitor mentions`,
+    'premium-full-bg-text': `Amazon Premium A+ Content immersive full-background image for ${p}. Wide landscape at 1464×625 px — the entire image is the backdrop for a text overlay. Cinematic lifestyle scene, rich and detailed. ${p} present in the scene but supporting the story rather than dominating. Leave a clean uncluttered center zone for headline text overlay. Rich color palette, emotional depth, atmospheric cinematic lighting. Key benefit story: ${ben[0] || 'core value proposition'}. Mood: ${emo[0] || 'aspirational premium'}. ${COMPLIANCE}`,
 
-    'comparison-chart': `Create comparison chart images for ${campaignData.productName} vs alternatives.
-Our product advantages:
-${campaignData.competitiveAdvantages.map(a => `✓ ${a}`).join('\n')}
-Style: Professional product shots on white background
-Show: Our product as the premium choice
-Include: Up to 5 product slots
-Dimensions: 150x300 pixels per product`,
+    'premium-light-overlay': `Amazon Premium A+ Content banner with light text zone for ${p}. Wide landscape at 1464×350 px — keep the left 50% as a bright clean area for light-colored headline text. Right side: ${p} in premium context, vivid studio quality. Background: bright premium lifestyle setting for ${aud}. Key message: ${ben[0] || 'primary benefit'}. Even bright inviting lighting. ${COMPLIANCE}`,
 
-    'three-images-text': `Create 3 storytelling images for ${campaignData.productName}.
-Image 1 - The Problem: Visualize "${campaignData.painPoints[0]}"
-Image 2 - The Solution: Show ${campaignData.productName} in action
-Image 3 - The Result: ${campaignData.emotionalTriggers[0]} achieved
-Flow: Problem → Solution → Benefit narrative
-Style: Consistent, premium, relatable to ${campaignData.targetAudience}
-Dimensions: 300x300 pixels each`,
+    'premium-dark-overlay': `Amazon Premium A+ Content banner with dark text zone for ${p}. Wide landscape at 1464×350 px — keep the right 50% as a rich dark area for dark-colored headline text. Left side: ${p} dramatically lit, premium quality. Background: rich moody premium scene. Key message: ${ben[1] || ben[0] || 'premium benefit'}. Mood: ${emo[0] || 'luxury confidence'}. ${COMPLIANCE}`,
 
-    // Premium A+ Content Prompts (1464px wide - immersive full-width)
-    'premium-header': `Create a stunning PREMIUM hero image for ${campaignData.productName} by ${campaignData.brandName}.
-Format: Premium A+ Content (1464px wide - full immersive width)
-Target audience: ${campaignData.targetAudience}
-Style: Ultra-premium, cinematic, aspirational
-Key message: Position the product as a luxury lifestyle choice
-Include: Product as hero, dramatic lighting, high-end aesthetic
-Mood: ${campaignData.emotionalTriggers.join(', ')}
-Dimensions: 1464x600 pixels (Premium full-width)`,
+    'premium-single-image': `Amazon Premium A+ Content large feature image for ${p}. Full-width landscape at 1464×600 px — ultra-premium single product showcase. ${p} at a dramatic three-quarter angle with cinema-grade studio lighting: deep rich shadows, brilliant highlights, every surface detail razor sharp. Premium neutral or contextual background. Key quality signal: ${adv[0] || ben[0] || 'signature feature'}. ${COMPLIANCE}`,
 
-    'premium-full-bg-text': `Create an immersive full-background image for ${campaignData.productName}.
-Format: Premium A+ Content - Full Background with Text
-Style: Cinematic, lifestyle-focused, premium atmosphere
-Background: Rich, detailed scene that tells a story
-Text overlay area: Leave space for compelling headline
-Brand essence: ${campaignData.toneOfVoice}
-Key benefit: ${campaignData.keyBenefits[0]}
-Dimensions: 1464x625 pixels`,
+    'premium-two-image-text': `Amazon Premium A+ Content — 2 premium feature images for ${p}. Portrait format at 362×453 px each. Consistent premium studio or lifestyle aesthetic. Image 1: visualize "${ben[0] || 'key benefit 1'}" — product in context, studio-quality. Image 2: visualize "${ben[1] || ben[0] || 'key benefit 2'}" — complementary angle or use context. Both: warm premium lighting, accurate color, shallow depth-of-field. Space below each for text added in Amazon's module editor. ${COMPLIANCE}`,
 
-    'premium-light-overlay': `Design a premium banner with light text overlay for ${campaignData.productName}.
-Format: Premium A+ Content (1464px wide)
-Highlight: ${campaignData.keyBenefits[0]}
-Background: Bright, premium lifestyle setting
-Text area: Generous space for light-colored headline overlay
-Target: ${campaignData.targetAudience}
-Dimensions: 1464x350 pixels`,
+    'premium-three-image-text': `Amazon Premium A+ Content — 3 cinematic storytelling images for ${p}. Portrait format at 362×453 px each. Premium consistent lighting and color. Image 1 (Challenge): "${pain[0] || 'the problem'}" — authentic relatable scene. Image 2 (Solution): ${p} in active use, studio-quality. Image 3 (Transformation): ${emo[0] || ben[0] || 'the positive outcome'} — aspirational, emotionally resonant. No text in images. ${COMPLIANCE}`,
 
-    'premium-dark-overlay': `Design a premium banner with dark text overlay for ${campaignData.productName}.
-Format: Premium A+ Content (1464px wide)
-Highlight: ${campaignData.keyBenefits[1] || campaignData.keyBenefits[0]}
-Background: Rich, dramatic setting conveying luxury
-Text area: Contrasting area for dark text overlay
-Emotional appeal: ${campaignData.emotionalTriggers[0]}
-Dimensions: 1464x350 pixels`,
+    'premium-four-image-text': `Amazon Premium A+ Content — 4 premium feature images for ${p}. Portrait format at 362×453 px each. Consistent premium aesthetic, cinematic lighting. Image 1: "${ben[0] || 'benefit 1'}". Image 2: "${ben[1] || ben[0] || 'benefit 2'}". Image 3: "${ben[2] || ben[0] || 'benefit 3'}". Image 4: "${ben[3] || ben[0] || 'benefit 4'}". Each: lifestyle or studio context visually demonstrating the benefit. No text in images. ${COMPLIANCE}`,
 
-    'premium-single-image': `Create a large premium single image for ${campaignData.productName}.
-Format: Premium A+ Content - Full Width Single Image
-Style: Studio quality, dramatic lighting, ultra-high resolution
-Focus: Product detail and craftsmanship
-Showcase: ${campaignData.competitiveAdvantages[0]}
-Background: Clean, premium gradient or contextual
-Dimensions: 1464x600 pixels`,
+    'premium-four-image-highlight': `Amazon Premium A+ Content — 4 square highlight images for ${p}. Square format at 362×362 px each. Gallery-quality studio production. Image 1: product hero shot — premium three-quarter angle, dramatic lighting. Image 2: close-up detail of key feature — ${ben[0] || 'signature feature'}, macro precision. Image 3: lifestyle context — ${p} in use for ${aud}. Image 4: material or craftsmanship proof shot. All: ultra-sharp, premium color, consistent treatment. ${COMPLIANCE}`,
 
-    'premium-two-image-text': `Create 2 premium feature images for ${campaignData.productName}.
-Image 1: ${campaignData.keyBenefits[0]} - visualize the benefit
-Image 2: ${campaignData.keyBenefits[1] || 'Product in premium context'}
-Style: Consistent premium aesthetic, lifestyle-oriented
-Space below each for feature descriptions
-Target: ${campaignData.targetAudience}
-Dimensions: 362x453 pixels each`,
+    'premium-comparison-chart': `Amazon Premium A+ Content comparison chart for ${p}. Portrait format at 150×300 px per slot. ${p} as featured product: premium vivid studio photography, accurate color, white background, soft shadow. Competitive advantages: ${adv.slice(0, 3).join('; ') || ben.slice(0, 3).join('; ')}. Our product appears visually superior — vibrant vs muted/desaturated competitor slots. Up to 6 comparison slots. No pricing in images. ${COMPLIANCE}`,
 
-    'premium-three-image-text': `Create 3 premium storytelling images for ${campaignData.productName}.
-Image 1: The Challenge - ${campaignData.painPoints[0]}
-Image 2: The Solution - ${campaignData.productName} in action
-Image 3: The Transformation - ${campaignData.emotionalTriggers[0]}
-Flow: Problem → Solution → Success narrative
-Style: Premium, cinematic, emotionally engaging
-Dimensions: 362x453 pixels each`,
+    'premium-hotspot': `Amazon Premium A+ Content hotspot base image for ${p}. Full-width landscape at 1464×600 px — large detailed product shot for interactive hotspot overlays. ${p} at a revealing angle clearly exposing 4–6 distinct feature areas. Studio-quality ultra-sharp photography, accurate color, premium lighting. Features to expose: ${ben.slice(0, 5).join(', ') || 'key product features'}. White or near-white background. Product fills at least 70% of the frame. No text in generated image — callout text is added via hotspot overlays in Amazon's module editor. ${COMPLIANCE}`,
 
-    'premium-four-image-text': `Create 4 premium feature images for ${campaignData.productName}.
-${campaignData.keyBenefits.slice(0, 4).map((benefit, i) => `Image ${i + 1}: "${benefit}"`).join('\n')}
-Style: Premium, consistent lighting and treatment
-Each image should have space below for text
-Target audience: ${campaignData.targetAudience}
-Dimensions: 362x453 pixels each`,
+    'premium-carousel': `Amazon Premium A+ Content carousel — 5 images for ${p}. Portrait format at 362×453 px each. Premium consistent aesthetic across all 5. Slide 1: hero product shot, dramatic lighting. Slide 2: feature highlight — ${ben[0] || 'key feature'}, product in context. Slide 3: lifestyle usage — ${aud} using product authentically. Slide 4: detail close-up — quality craftsmanship or key material. Slide 5: packaging or brand story element. Consistent warm premium color grade across all slides. ${COMPLIANCE}`,
 
-    'premium-four-image-highlight': `Create 4 premium square highlight images for ${campaignData.productName}.
-Image 1: Product hero shot - premium angle
-Image 2: Key feature close-up - ${campaignData.keyBenefits[0]}
-Image 3: Lifestyle context - product in use
-Image 4: Detail/texture shot - quality craftsmanship
-Style: Ultra-premium, gallery-worthy
-Dimensions: 362x362 pixels each`,
+    'premium-video': `VIDEO THUMBNAIL — Generate a static cover image for the ${p} video module. Wide format at 1920×1080 px. Cinematic single frame: ${p} as hero with dramatic lighting, motion-suggesting composition. Brand tone: ${tone}. Emotional hook: ${emo[0] || 'compelling and watchable'}. The thumbnail must make a viewer want to press play. ${COMPLIANCE}`,
 
-    'premium-comparison-chart': `Create premium comparison chart images for ${campaignData.productName}.
-Our product advantages:
-${campaignData.competitiveAdvantages.map(a => `✓ ${a}`).join('\n')}
-Style: Premium product photography, white background
-Show: Our product as the clear premium choice
-Include: Up to 6 product comparison slots
-Visual hierarchy: Our product prominently featured
-Dimensions: 150x300 pixels per product`,
+    'premium-nav-carousel': `Amazon Premium A+ Content navigation thumbnails — 6 square thumbnails for ${p}. Square format at 362×362 px each. Each thumbnail clearly represents a section: 1. Product overview. 2. Key features. 3. Benefits. 4. How to use. 5. Specifications. 6. Brand story. Consistent visual style, color, and lighting across all 6. Clearly distinct subject matter for intuitive navigation. ${COMPLIANCE}`,
 
-    'premium-hotspot': `Create an interactive hotspot image for ${campaignData.productName}.
-Format: Premium A+ Content - Interactive Hotspot Module
-Main image: Full product shot with clear feature areas
-Hotspot areas to highlight:
-${campaignData.keyBenefits.map((b, i) => `${i + 1}. ${b}`).join('\n')}
-Style: Clean, detailed product photography
-Purpose: Users click areas to learn about features
-Dimensions: 1464x600 pixels`,
-
-    'premium-carousel': `Create a premium scrollable image carousel for ${campaignData.productName}.
-5 carousel slides:
-Slide 1: Hero product shot
-Slide 2: Feature highlight - ${campaignData.keyBenefits[0]}
-Slide 3: Lifestyle usage context
-Slide 4: Detail close-up
-Slide 5: Brand story/packaging
-Style: Premium, consistent, scroll-worthy
-Dimensions: 362x453 pixels per image`,
-
-    'premium-video': `Create a video thumbnail/cover for ${campaignData.productName}.
-Format: Premium A+ Content - Video Module
-Video content suggestions:
-- Product demonstration
-- Feature showcase
-- Brand story
-- Customer transformation
-Thumbnail: Compelling frame that encourages play
-Style: Cinematic, professional
-Minimum: 1280x720 pixels (HD)`,
-
-    'premium-nav-carousel': `Create navigation carousel thumbnails for ${campaignData.productName}.
-6 navigation items showcasing:
-1. Product overview
-2. Key features
-3. Benefits
-4. How to use
-5. Specifications
-6. Brand story
-Style: Consistent, clickable thumbnails
-Each should clearly represent its section
-Dimensions: 362x362 pixels per thumbnail`,
-
-    'premium-qa': `Write Premium Q&A content for ${campaignData.productName}.
-Format: Interactive FAQ Module
-Brand: ${campaignData.brandName}
-Tone: ${campaignData.toneOfVoice}
-
-Suggested Q&A pairs addressing:
-${campaignData.painPoints.map(p => `Q: How does this solve "${p}"?`).join('\n')}
-${campaignData.keyBenefits.map(b => `Q: Tell me about "${b}"`).join('\n')}
-
-Style: Helpful, authoritative, brand-consistent
-Note: No pricing, no superlatives, no competitor mentions`
+    'premium-qa': `TEXT MODULE — No image to generate. Write Premium Q&A content for ${p} by ${b}. Write 5 helpful Q&A pairs covering: product use cases, key differentiators (${adv.slice(0, 2).join(', ') || ben.slice(0, 2).join(', ')}), target customer (${aud}), and common objections. Tone: ${tone}. Rules: no pricing, no superlatives, no competitor brand names, no unverified claims, no customer reviews.`,
   }
 
-  return prompts[moduleType] || `Create a professional Amazon A+ Content image for ${campaignData.productName}.
-Brand: ${campaignData.brandName}
-Target: ${campaignData.targetAudience}
-Key benefit: ${campaignData.keyBenefits[0]}
-Style: Premium, professional, Amazon-compliant`
+  return prompts[moduleType] || `Create a professional Amazon A+ Content image for ${p} by ${b}. Target: ${aud}. Key benefit: ${ben[0] || 'primary benefit'}. Tone: ${tone}. Style: premium, photorealistic, Amazon-compliant. ${COMPLIANCE}`
 }
 
 function APlusContent() {
@@ -759,6 +571,41 @@ function APlusContent() {
   // Validation
   const isValidASIN = (asin) => /^[A-Z0-9]{10}$/i.test(asin)
   const canAddModule = selectedModules.length < 7
+
+  // Product lookup for AI prompt personalisation
+  const [product, setProduct] = useState(null)
+  const [asinLoading, setAsinLoading] = useState(false)
+  const [asinError, setAsinError] = useState(null)
+
+  const buildCampaignData = (p) => {
+    const bullets = p?.bullets || []
+    return {
+      productName: p?.title || 'the product',
+      brandName: p?.brand || 'the brand',
+      targetAudience: 'Amazon shoppers',
+      keyBenefits: bullets.slice(0, 5),
+      painPoints: [],
+      emotionalTriggers: ['confidence', 'satisfaction', 'great value'],
+      competitiveAdvantages: bullets.slice(0, 3),
+      toneOfVoice: 'Professional, trustworthy, helpful',
+      keywords: p?.category ? [p.category] : [],
+    }
+  }
+
+  const handleAsinSearch = async () => {
+    if (!isValidASIN(asinValue)) return
+    setAsinLoading(true)
+    setAsinError(null)
+    setProduct(null)
+    try {
+      const data = await lookupASIN(asinValue, marketplace)
+      setProduct(data)
+    } catch (err) {
+      setAsinError(err.message || 'Could not look up product')
+    } finally {
+      setAsinLoading(false)
+    }
+  }
   const hasMinModules = selectedModules.length >= 1
 
   // Get current modules based on content type
@@ -803,7 +650,7 @@ function APlusContent() {
       ...prev,
       [newModule.instanceId]: {
         referenceImage: null,
-        aiPrompt: generateModulePrompt(moduleType),
+        aiPrompt: generateModulePrompt(moduleType, product ? buildCampaignData(product) : undefined),
         images: [],
         headline: '',
         body: '',
@@ -1081,7 +928,7 @@ function APlusContent() {
 
   // Regenerate AI prompt for module
   const regeneratePrompt = (instanceId, moduleType) => {
-    const newPrompt = generateModulePrompt(moduleType)
+    const newPrompt = generateModulePrompt(moduleType, product ? buildCampaignData(product) : undefined)
     updateModuleData(instanceId, 'aiPrompt', newPrompt)
   }
 
@@ -1458,7 +1305,8 @@ function APlusContent() {
                 type="text"
                 placeholder="Enter ASIN"
                 value={asinValue}
-                onChange={(e) => setAsinValue(e.target.value.toUpperCase())}
+                onChange={(e) => { setAsinValue(e.target.value.toUpperCase()); setProduct(null) }}
+                onKeyDown={(e) => e.key === 'Enter' && handleAsinSearch()}
                 maxLength={10}
               />
               {asinValue && (
@@ -1466,7 +1314,21 @@ function APlusContent() {
                   {isValidASIN(asinValue) ? <Check size={14} /> : <X size={14} />}
                 </span>
               )}
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={handleAsinSearch}
+                disabled={!isValidASIN(asinValue) || asinLoading}
+                title="Look up product data to personalise AI prompts"
+              >
+                {asinLoading ? <Loader2 size={13} className="spin" /> : <Search size={13} />}
+              </button>
             </div>
+            {product && (
+              <span className="asin-product-name" title={product.title}>
+                {product.brand ? `${product.brand} · ` : ''}{(product.title || '').slice(0, 45)}{(product.title || '').length > 45 ? '…' : ''}
+              </span>
+            )}
+            {asinError && <span style={{ color: '#e74c3c', fontSize: 12 }}>{asinError}</span>}
             <span className="module-counter-badge">
               {selectedModules.length}/7 modules
             </span>

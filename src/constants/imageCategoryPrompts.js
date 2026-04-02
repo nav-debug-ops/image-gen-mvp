@@ -551,7 +551,7 @@ export function buildImagePrompt(templateName, category, strategy = 'top-perform
   }
 
   // Quality Certification
-  if (/quality|certif/.test(n)) {
+  if (/quality.?cert|certif|quality.?badge|award.?cert/.test(n)) {
     return `Amazon main product image — product with quality certification badge, Amazon-compliant. ${p} is shown at ${catAngle}, ${catScale}. A single professional certification or quality badge is displayed as a physical embossed medallion, seal, or label attached to or positioned directly beside the product — clean, official-looking, with minimal text. This is a physical object, not a digital graphic overlay. ${catLight}. The badge communicates trust, safety, and verified quality. ${drama} ${catExtras ? catExtras + '.' : ''} ${BASE}`
   }
 
