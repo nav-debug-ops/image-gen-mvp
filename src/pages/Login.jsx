@@ -4,15 +4,36 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { forgotPassword } from '../api/auth'
 import { Sparkles, Mail, Lock, User, Loader2, ArrowRight, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
+function getPasswordStrength(pwd) {
+  if (!pwd) return { score: 0, label: '', color: '' }
+  let score = 0
+  if (pwd.length >= 8) score++
+  if (pwd.length >= 12) score++
+  if (/[A-Z]/.test(pwd)) score++
+  if (/[0-9]/.test(pwd)) score++
+  if (/[^A-Za-z0-9]/.test(pwd)) score++
+  const levels = [
+    { label: '', color: '' },
+    { label: 'Weak', color: '#EF4444' },
+    { label: 'Fair', color: '#F97316' },
+    { label: 'Good', color: '#F59E0B' },
+    { label: 'Strong', color: '#84CC16' },
+    { label: 'Very Strong', color: '#22C55E' },
+  ]
+  return { score, ...levels[score] }
+}
+
 function Login() {
   const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const { login, register } = useAuth()
   const navigate = useNavigate()
@@ -29,6 +50,11 @@ function Login() {
       } else if (mode === 'register') {
         if (password.length < 8) {
           setError('Password must be at least 8 characters')
+          setLoading(false)
+          return
+        }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match')
           setLoading(false)
           return
         }
@@ -49,7 +75,11 @@ function Login() {
     setMode(newMode)
     setError('')
     setResetSent(false)
+    setPassword('')
+    setConfirmPassword('')
   }
+
+  const strength = mode === 'register' ? getPasswordStrength(password) : null
 
   return (
     <div className="login-page">
@@ -189,7 +219,50 @@ function Login() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {mode === 'register' && strength && strength.score > 0 && (
+                <div className="password-strength">
+                  <div className="password-strength-bar">
+                    {[1,2,3,4,5].map(i => (
+                      <div
+                        key={i}
+                        className="password-strength-seg"
+                        style={{ background: i <= strength.score ? strength.color : 'var(--border)' }}
+                      />
+                    ))}
+                  </div>
+                  <span className="password-strength-label" style={{ color: strength.color }}>
+                    {strength.label}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {mode === 'register' && (
+              <div className="form-group">
+                <label>
+                  <Lock size={16} />
+                  Confirm Password
+                </label>
+                <div className="password-input-wrap">
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat your password"
+                    required
+                  />
+                  <button type="button" className="password-toggle" onClick={() => setShowConfirm(v => !v)}>
+                    {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <span className="password-mismatch">Passwords do not match</span>
+                )}
+                {confirmPassword && password === confirmPassword && password.length >= 8 && (
+                  <span className="password-match"><CheckCircle size={13} /> Passwords match</span>
+                )}
+              </div>
+            )}
 
             {mode === 'login' && (
               <button

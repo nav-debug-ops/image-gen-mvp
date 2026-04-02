@@ -5,26 +5,43 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-# Simple in-memory rate limiter: max 10 failed attempts per IP per 15 minutes
-_failed_attempts: dict[str, list[datetime]] = defaultdict(list)
-_WINDOW = timedelta(minutes=15)
-_MAX_FAILURES = 10
+# In-memory rate limiter buckets
+_failed_logins: dict[str, list[datetime]] = defaultdict(list)     # login failures
+_register_hits: dict[str, list[datetime]] = defaultdict(list)      # registration attempts
+_reset_hits: dict[str, list[datetime]] = defaultdict(list)         # forgot-password attempts
+
 
 def _check_login_rate(ip: str) -> None:
+    window = timedelta(minutes=15)
     now = datetime.utcnow()
-    attempts = [t for t in _failed_attempts[ip] if now - t < _WINDOW]
-    _failed_attempts[ip] = attempts
-    if len(attempts) >= _MAX_FAILURES:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many failed login attempts. Try again in 15 minutes.",
-        )
+    attempts = [t for t in _failed_logins[ip] if now - t < window]
+    _failed_logins[ip] = attempts
+    if len(attempts) >= 10:
+        raise HTTPException(status_code=429, detail="Too many failed login attempts. Try again in 15 minutes.")
 
 def _record_failure(ip: str) -> None:
-    _failed_attempts[ip].append(datetime.utcnow())
+    _failed_logins[ip].append(datetime.utcnow())
 
 def _clear_failures(ip: str) -> None:
-    _failed_attempts.pop(ip, None)
+    _failed_logins.pop(ip, None)
+
+def _check_register_rate(ip: str) -> None:
+    window = timedelta(hours=1)
+    now = datetime.utcnow()
+    hits = [t for t in _register_hits[ip] if now - t < window]
+    _register_hits[ip] = hits
+    if len(hits) >= 10:
+        raise HTTPException(status_code=429, detail="Too many registration attempts. Try again in 1 hour.")
+    _register_hits[ip].append(now)
+
+def _check_reset_rate(ip: str) -> None:
+    window = timedelta(minutes=15)
+    now = datetime.utcnow()
+    hits = [t for t in _reset_hits[ip] if now - t < window]
+    _reset_hits[ip] = hits
+    if len(hits) >= 5:
+        raise HTTPException(status_code=429, detail="Too many password reset requests. Try again in 15 minutes.")
+    _reset_hits[ip].append(now)
 
 from app.config import get_settings
 from app.database import get_db
@@ -88,8 +105,11 @@ class ChangePasswordRequest(BaseModel):
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(request: RegisterRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
     """Create a new user account."""
+    ip = http_request.client.host if http_request.client else "unknown"
+    _check_register_rate(ip)
+
     if len(request.password) < 8:
         raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
 
@@ -198,8 +218,11 @@ async def change_password(
 
 
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(request: ForgotPasswordRequest, http_request: Request, db: AsyncSession = Depends(get_db)):
     """Request a password reset email. Always returns success to prevent email enumeration."""
+    ip = http_request.client.host if http_request.client else "unknown"
+    _check_reset_rate(ip)
+
     result = await db.execute(select(User).where(User.email == request.email))
     user = result.scalar_one_or_none()
 

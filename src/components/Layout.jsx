@@ -20,6 +20,7 @@ import {
 import { useState, useEffect } from 'react'
 import { logout } from '../api/auth'
 import { fetchAPI, safeJson } from '../api/client'
+import { useAuth } from '../hooks/useAuth.jsx'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -37,6 +38,7 @@ const navigation = [
 
 function Layout() {
   const location = useLocation()
+  const { user } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [usage, setUsage] = useState(null)
 
@@ -87,6 +89,17 @@ function Layout() {
         </nav>
 
         <div className="sidebar-footer">
+          {user && (
+            <div className="sidebar-user">
+              <div className="sidebar-user-avatar">
+                {(user.display_name || user.email || '?')[0].toUpperCase()}
+              </div>
+              <div className="sidebar-user-info">
+                <span className="sidebar-user-name">{user.display_name || user.email.split('@')[0]}</span>
+                <span className="sidebar-user-email">{user.email}</span>
+              </div>
+            </div>
+          )}
           <div className="credits-display">
             <Zap size={18} />
             {usage ? (
@@ -97,12 +110,8 @@ function Layout() {
               <span>— generations</span>
             )}
           </div>
-          <Link to="/legacy" className="legacy-link">
-            Legacy Generator
-          </Link>
           <button className="logout-btn" onClick={logout}>
-            <LogOut size={16} />
-            Sign Out
+            <LogOut size={16} /> Sign Out
           </button>
         </div>
       </aside>
